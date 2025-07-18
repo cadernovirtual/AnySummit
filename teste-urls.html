@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste URLs Amigáveis</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .card { background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border: 1px solid #dee2e6; }
+        .btn { padding: 10px 20px; margin: 5px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block; }
+        .btn:hover { background: #0056b3; }
+        .url-example { background: #e9ecef; padding: 10px; border-radius: 5px; font-family: monospace; margin: 10px 0; }
+        .status { padding: 5px 10px; border-radius: 3px; font-size: 12px; }
+        .status.active { background: #d4edda; color: #155724; }
+        .status.new { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🔗 Teste de URLs Amigáveis - Sistema de Eventos</h1>
+    
+    <div class="card">
+        <h3>📋 URLs Configuradas</h3>
+        <p>As seguintes URLs amigáveis foram configuradas no <code>.htaccess</code>:</p>
+        
+        <div class="url-example">
+            <strong>1. Página do Evento:</strong><br>
+            <code>/evento/goianarh</code> → <code>/evento/index.php?slug=goianarh</code>
+            <span class="status active">✅ ATIVO</span>
+        </div>
+        
+        <div class="url-example">
+            <strong>2. Checkout:</strong><br>
+            <code>/evento/checkout/goianarh</code> → <code>/evento/checkout.php?evento=goianarh</code>
+            <span class="status new">🆕 NOVO</span>
+        </div>
+        
+        <div class="url-example">
+            <strong>3. Pagamento PIX:</strong><br>
+            <code>/evento/pag-pix/goianarh</code> → <code>/evento/pagamento-pix.php?evento=goianarh</code>
+            <span class="status new">🆕 NOVO</span>
+        </div>
+        
+        <div class="url-example">
+            <strong>4. Sucesso (sem evento):</strong><br>
+            <code>/evento/pag-success</code> → <code>/evento/pagamento-sucesso.php</code>
+            <span class="status new">🆕 NOVO</span>
+        </div>
+        
+        <div class="url-example">
+            <strong>5. Sucesso (com evento):</strong><br>
+            <code>/evento/pag-success/goianarh</code> → <code>/evento/pagamento-sucesso.php?evento=goianarh</code>
+            <span class="status new">🆕 NOVO</span>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>🧪 Testar URLs</h3>
+        <p>Clique nos links abaixo para testar se os redirecionamentos estão funcionando:</p>
+        
+        <a href="/evento/goianarh" class="btn" target="_blank">
+            📄 Página do Evento
+        </a>
+        
+        <a href="/evento/checkout/goianarh" class="btn" target="_blank">
+            🛒 Checkout
+        </a>
+        
+        <a href="/evento/pag-pix/goianarh" class="btn" target="_blank">
+            💳 Pagamento PIX
+        </a>
+        
+        <a href="/evento/pag-success" class="btn" target="_blank">
+            ✅ Sucesso (sem evento)
+        </a>
+        
+        <a href="/evento/pag-success/goianarh" class="btn" target="_blank">
+            ✅ Sucesso (com evento)
+        </a>
+    </div>
+    
+    <div class="card">
+        <h3>📝 Regras do .htaccess</h3>
+        <pre style="background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; overflow-x: auto;">
+# Regras para sistema de eventos
+RewriteRule ^evento/([a-z0-9-]+)/?$ /evento/index.php?slug=$1 [NC,L]
+RewriteRule ^evento/checkout/([a-z0-9-]+)/?$ /evento/checkout.php?evento=$1 [NC,L]
+RewriteRule ^evento/pag-pix/([a-z0-9-]+)/?$ /evento/pagamento-pix.php?evento=$1 [NC,L]
+RewriteRule ^evento/pag-success/?$ /evento/pagamento-sucesso.php [NC,L]
+RewriteRule ^evento/pag-success/([a-z0-9-]+)/?$ /evento/pagamento-sucesso.php?evento=$1 [NC,L]</pre>
+    </div>
+    
+    <div class="card">
+        <h3>🔄 Fluxo Completo</h3>
+        <p><strong>Jornada do usuário com URLs amigáveis:</strong></p>
+        <ol>
+            <li><code>/evento/goianarh</code> - Usuário vê o evento</li>
+            <li><code>/evento/checkout/goianarh</code> - Seleciona ingressos e faz checkout</li>
+            <li><code>/evento/pag-pix/goianarh</code> - Realiza pagamento via PIX</li>
+            <li><code>/evento/pag-success/goianarh</code> - Confirma pagamento com sucesso</li>
+        </ol>
+    </div>
+    
+    <div class="card">
+        <h3>⚠️ Observações</h3>
+        <ul>
+            <li><strong>Cache:</strong> Pode ser necessário limpar o cache do navegador/servidor</li>
+            <li><strong>Teste:</strong> Use modo anônimo/privado para testar</li>
+            <li><strong>Logs:</strong> Verifique logs do Apache se alguma URL não funcionar</li>
+            <li><strong>Ordem:</strong> As regras são processadas em ordem, por isso a mais específica vem primeiro</li>
+        </ul>
+    </div>
+
+    <script>
+        // Testar URLs via JavaScript
+        function testarUrl(url) {
+            console.log('Testando URL:', url);
+            
+            fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    console.log(`${url} - Status: ${response.status}`);
+                })
+                .catch(error => {
+                    console.error(`${url} - Erro:`, error);
+                });
+        }
+        
+        // Auto-teste quando carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔗 Testando URLs amigáveis...');
+            
+            const urls = [
+                '/evento/goianarh',
+                '/evento/checkout/goianarh',
+                '/evento/pag-pix/goianarh',
+                '/evento/pag-success',
+                '/evento/pag-success/goianarh'
+            ];
+            
+            urls.forEach(url => {
+                setTimeout(() => testarUrl(url), 1000);
+            });
+        });
+    </script>
+</body>
+</html>

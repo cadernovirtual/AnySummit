@@ -1,0 +1,35 @@
+# Arquivos de configuração com dados sensíveis
+*/conm/conn.php
+conm/conn.php
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+error_log
+debug_*.txt
+
+# Uploads de usuários (manter estrutura, mas não os arquivos)
+uploads/*
+!uploads/.gitkeep
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Arquivos de backup
+*.bak
+*~
+
+# Arquivos de configuração local
+config_local.php
+.env
+
+# Status temporários
+STATUS.md
+STATUS_OLD.md
+
+# Cache
+cache/
+temp/

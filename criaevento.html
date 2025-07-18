@@ -1,0 +1,706 @@
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anysummit - Criar Evento</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="css/criaevento.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Anysummit</div>
+            <div class="subtitle">Criar novo evento</div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-line" id="progressLine"></div>
+                <div class="step active" data-step="1">
+                    <div class="step-number"><span>1</span></div>
+                    <div class="step-title">Informações</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number"><span>2</span></div>
+                    <div class="step-title">Data e Hora</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number"><span>3</span></div>
+                    <div class="step-title">Descrição</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-number"><span>4</span></div>
+                    <div class="step-title">Localização</div>
+                </div>
+                <div class="step" data-step="5">
+                    <div class="step-number"><span>5</span></div>
+                    <div class="step-title">Ingressos</div>
+                </div>
+                <div class="step" data-step="6">
+                    <div class="step-number"><span>6</span></div>
+                    <div class="step-title">Produtor</div>
+                </div>
+                <div class="step" data-step="7">
+                    <div class="step-number"><span>7</span></div>
+                    <div class="step-title">Publicar</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="form-container">
+                <!-- Step 1: Informações Básicas -->
+                <div class="section-card active" data-step-content="1">
+                    <div class="section-header">
+                        <div class="section-number">1</div>
+                        <div>
+                            <div class="section-title">📦 Informações básicas</div>
+                            <div class="section-subtitle">Adicione as principais informações do evento</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="eventName">Nome do evento <span class="required">*</span></label>
+                        <input type="text" id="eventName" placeholder="Ex: Summit de Tecnologia 2025" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Imagem de capa </label>
+                        <div class="upload-area" onClick="document.getElementById('imageUpload').click()">
+                            <div class="upload-icon">🖼️</div>
+                            <div class="upload-text">Clique para adicionar uma imagem</div>
+                            <div class="upload-hint">PNG, JPG até 5MB • Tamanho mínimo: 1200x600px</div>
+                        </div>
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                        <img id="imagePreview" class="image-preview" style="display: none;">
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="classification">Classificação do evento <span class="required">*</span></label>
+                            <select id="classification">
+                                <option value="">Selecione uma classificação</option>
+                                <option value="livre">Livre</option>
+                                <option value="10">10 anos</option>
+                                <option value="12">12 anos</option>
+                                <option value="14">14 anos</option>
+                                <option value="16">16 anos</option>
+                                <option value="18">18 anos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="category">Categoria <span class="required">*</span></label>
+                            <select id="category">
+                                <option value="">Selecione uma categoria</option>
+                                <option value="tecnologia">Tecnologia</option>
+                                <option value="negocios">Negócios</option>
+                                <option value="educacao">Educação</option>
+                                <option value="entretenimento">Entretenimento</option>
+                                <option value="esportes">Esportes</option>
+                                <option value="arte-cultura">Arte e Cultura</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="validation-message" id="validation-step-1">
+                        Por favor, preencha todos os campos obrigatórios.
+                    </div>
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" disabled>← Voltar</button>
+                        <button class="nav-btn btn-continue" onClick="nextStep()">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Data e Horário -->
+                <div class="section-card" data-step-content="2">
+                    <div class="section-header">
+                        <div class="section-number">2</div>
+                        <div>
+                            <div class="section-title">📅 Data e horário</div>
+                            <div class="section-subtitle">Defina quando seu evento irá acontecer</div>
+                        </div>
+                    </div>
+
+                    <div class="datetime-grid">
+                        <div class="form-group">
+                            <label for="startDateTime">Data e hora de início <span class="required">*</span></label>
+                            <input type="datetime-local" id="startDateTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="endDateTime">Data e hora de término</label>
+                            <input type="datetime-local" id="endDateTime">
+                        </div>
+                    </div>
+
+                 <!--   <div class="switch-container">
+                        <div class="switch" id="multiDaySwitch">
+                            <div class="switch-handle"></div>
+                        </div>
+                        <label>Evento com duração em dias diferentes?</label>
+                    </div>-->
+
+                    <div class="validation-message" id="validation-step-2">
+                        Por favor, defina a data e hora de início do evento.
+                    </div>
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                        <button class="nav-btn btn-continue" onClick="nextStep()">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Descrição do Evento -->
+                <div class="section-card" data-step-content="3">
+                    <div class="section-header">
+                        <div class="section-number">3</div>
+                        <div>
+                            <div class="section-title">📝 Descrição do evento</div>
+                            <div class="section-subtitle">Conte sobre o seu evento, inclua detalhes e formatação</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Descrição completa</label>
+                        <div class="editor-toolbar">
+                            <button type="button" class="editor-btn" data-command="bold" title="Negrito">
+                                <strong>B</strong>
+                            </button>
+                            <button type="button" class="editor-btn" data-command="italic" title="Itálico">
+                                <em>I</em>
+                            </button>
+                            <button type="button" class="editor-btn" data-command="underline" title="Sublinhado">
+                                <u>U</u>
+                            </button>
+                            <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Lista">
+                                •
+                            </button>
+                        </div>
+                        <div id="eventDescription" class="rich-editor" contenteditable="true" placeholder="Descreva detalhadamente seu evento, inclua agenda, palestrantes, benefícios..."></div>
+                        <div class="char-counter" id="charCounter">0 caracteres</div>
+                    </div>
+
+                <!--    <div class="info-box">
+                        <div class="info-box-title">📋 Política de cancelamento</div>
+                        <div class="info-box-text">
+                            Você pode cancelar ou reagendar seu evento até 7 dias antes da data de realização. 
+                            Cancelamentos realizados com menos de 7 dias de antecedência podem estar sujeitos a taxas. 
+                            <a href="#" style="color: #00C2FF;">Saiba mais sobre nossa política</a>
+                        </div>
+                    </div>-->
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                        <button class="nav-btn btn-continue" onClick="nextStep()">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Localização -->
+                <div class="section-card" data-step-content="4">
+                    <div class="section-header">
+                        <div class="section-number">4</div>
+                        <div>
+                            <div class="section-title">📍 Onde o seu evento vai acontecer</div>
+                            <div class="section-subtitle">Local físico ou plataforma online</div>
+                        </div>
+                    </div>
+
+                    <div class="switch-container">
+                        <div class="switch active" id="locationTypeSwitch">
+                            <div class="switch-handle"></div>
+                        </div>
+                        <label>Evento presencial</label>
+                    </div>
+
+                    <div class="conditional-section show" id="presentialLocation">
+                        <div class="form-group full-width">
+                            <label for="addressSearch">Buscar endereço <span class="required">*</span></label>
+                            <input type="text" id="addressSearch" placeholder="Digite o endereço completo ou nome do local">
+                            <div id="addressSuggestions" class="address-suggestions"></div>
+                        </div>
+                        
+                        <div class="location-grid">
+                            <div class="form-group">
+                                <label for="venueName">Nome do local <span class="required">*</span></label>
+                                <input type="text" id="venueName" placeholder="Ex: Centro de Convenções Anhembi">
+                            </div>
+                            <div class="form-group">
+                                <label for="cep">CEP</label>
+                                <input type="text" id="cep" placeholder="00000-000" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="street">Rua</label>
+                                <input type="text" id="street" placeholder="Nome da rua" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="number">Número</label>
+                                <input type="text" id="number" placeholder="123">
+                            </div>
+                            <div class="form-group">
+                                <label for="complement">Complemento</label>
+                                <input type="text" id="complement" placeholder="Sala, andar...">
+                            </div>
+                            <div class="form-group">
+                                <label for="neighborhood">Bairro</label>
+                                <input type="text" id="neighborhood" placeholder="Nome do bairro" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="city">Cidade</label>
+                                <input type="text" id="city" placeholder="Nome da cidade" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="state">Estado</label>
+                                <input type="text" id="state" placeholder="Estado" readonly>
+                            </div>
+                        </div>
+                        <div id="map" class="map-container" style="display:none;"></div>
+                    </div>
+
+                    <div class="conditional-section" id="onlineLocation">
+                        <div class="form-group">
+                            <label for="eventLink">Link do evento <span class="required">*</span></label>
+                            <input type="url" id="eventLink" placeholder="https://zoom.us/j/123456789">
+                        </div>
+                    </div>
+
+                    <div class="validation-message" id="validation-step-4">
+                        Por favor, informe o local do evento.
+                    </div>
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                        <button class="nav-btn btn-continue" onClick="nextStep()">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 5: Ingressos -->
+                <div class="section-card" data-step-content="5">
+                    <div class="section-header">
+                        <div class="section-number">5</div>
+                        <div>
+                            <div class="section-title">🎟️ Ingressos</div>
+                            <div class="section-subtitle">Configure os tipos de ingresso e valores</div>
+                        </div>
+                    </div>
+
+                    <div class="ticket-list" id="ticketList"></div>
+
+                    <div class="ticket-actions">
+                        <button class="btn btn-outline" type="button" id="addPaidTicket">
+                            ➕ Ingresso pago
+                        </button>
+                        <button class="btn btn-outline" type="button" id="addFreeTicket">
+                            🆓 Ingresso gratuito
+                        </button>
+                      
+                         
+                    </div>
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                        <button class="nav-btn btn-continue" onClick="nextStep()">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 6: Sobre o Produtor -->
+                <div class="section-card" data-step-content="6">
+                    <div class="section-header">
+                        <div class="section-number">6</div>
+                        <div>
+                            <div class="section-title">🧑‍💼 Sobre o produtor</div>
+                            <div class="section-subtitle">Informações sobre quem está organizando o evento</div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="producer">Selecionar produtor</label>
+                            <select id="producer">
+                                <option value="current">Você (João Silva)</option>
+                                <option value="new">Novo produtor</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="conditional-section" id="newProducerFields">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="producerName">Nome do produtor <span class="required">*</span></label>
+                                <input type="text" id="producerName" placeholder="Nome completo ou empresa">
+                            </div>
+                            <div class="form-group">
+                                <label for="displayName">Nome de exibição</label>
+                                <input type="text" id="displayName" placeholder="Como aparecerá no evento">
+                            </div>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="producerDescription">Descrição do produtor (opcional)</label>
+                            <textarea id="producerDescription" rows="4" placeholder="Conte um pouco sobre você ou sua empresa..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                        <button class="nav-btn btn-continue" onClick="nextStep()">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 7: Responsabilidades e Publicação -->
+                <div class="section-card" data-step-content="7">
+                    <div class="section-header">
+                        <div class="section-number">7</div>
+                        <div>
+                            <div class="section-title">📜 Responsabilidades e publicação</div>
+                            <div class="section-subtitle">Configurações finais e termos de uso</div>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <div class="checkbox" id="termsCheckbox"></div>
+                        <label for="termsCheckbox">
+                            Concordo com os <a href="#" style="color: #00C2FF;">Termos de uso</a> e 
+                            <a href="#" style="color: #00C2FF;">Políticas de privacidade</a> da plataforma
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Visibilidade do evento</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <div class="radio checked" data-value="public"></div>
+                                <div>
+                                    <div style="font-weight: 500;">Público</div>
+                                    <div style="font-size: 0.85rem; color: #8B95A7;">Qualquer pessoa pode encontrar e se inscrever no seu evento</div>
+                                </div>
+                            </div>
+                            <div class="radio-item">
+                                <div class="radio" data-value="private"></div>
+                                <div>
+                                    <div style="font-weight: 500;">Privado</div>
+                                    <div style="font-size: 0.85rem; color: #8B95A7;">Apenas pessoas com convite ou link direto podem acessar</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="validation-message" id="validation-step-7">
+                        Por favor, aceite os termos de uso para publicar o evento.
+                    </div>
+
+                    <div class="step-navigation">
+                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                        <button class="nav-btn btn-publish" onClick="publishEvent()">
+                            ✓ Publicar evento
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="preview-card">
+                <div class="preview-title">
+                    👁️ Prévia do Evento
+                </div>
+                <div class="event-preview">
+                    <div class="preview-image" id="previewImage">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; margin-bottom: 5px;">🖼️</div>
+                            <div>Imagem do evento</div>
+                        </div>
+                    </div>
+                    <div class="preview-content">
+                        <div class="preview-event-title" id="previewTitle">Nome do evento</div>
+                        <div class="preview-description" id="previewDescription">Descrição do evento aparecerá aqui...</div>
+                        <div class="preview-details">
+                            <div class="preview-detail">
+                                <div class="detail-icon"></div>
+                                <span id="previewDate">Data não definida</span>
+                            </div>
+                            <div class="preview-detail">
+                                <div class="detail-icon"></div>
+                                <span id="previewLocation">Local não definido</span>
+                            </div>
+                            <div class="preview-detail">
+                                <div class="detail-icon"></div>
+                                <span id="previewCategory">Categoria não definida</span>
+                            </div>
+                            <div class="preview-detail">
+                                <div class="detail-icon"></div>
+                                <span id="previewType">Presencial</span>
+                            </div>
+                        </div>
+                         
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Criar Ingresso Pago -->
+    <div class="modal-overlay" id="paidTicketModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Criar ingresso pago</div>
+                <button class="modal-close" onClick="closeModal('paidTicketModal')">&times;</button>
+            </div>
+            
+            <div class="info-banner">
+                Ao absorver a taxa de serviço, ela será incluída no preço final de venda e não será mostrada ao comprador
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Título do ingresso <span class="required">*</span></label>
+                    <input type="text" id="paidTicketTitle" placeholder="Ingresso único, Meia-Entrada, VIP, etc." maxlength="45">
+                    <small style="color: #8B95A7;">45 caracteres restantes</small>
+                </div>
+                <div class="form-group">
+                    <label>Quantidade <span class="required">*</span></label>
+                    <input type="number" id="paidTicketQuantity" placeholder="Ex. 100" min="1">
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Valor do comprador <span class="required">*</span></label>
+                    <input type="text" id="paidTicketPrice" placeholder="R$ 0,00" maxlength="15">
+                </div>
+                <div class="form-group">
+                    <label>Valor a receber</label>
+                    <input type="text" id="paidTicketReceive" placeholder="R$ 0,00" readonly>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <div class="ticket-type-section">
+                <h4 style="color: #00C2FF; margin-bottom: 15px;">Período das vendas deste ingresso:</h4>
+
+                <div class="form-grid" id="paidDateFields">
+                    <div class="form-group">
+                        <label>Data de Início das Vendas <span class="required">*</span></label>
+                        <input type="datetime-local" id="paidSaleStart">
+                        <small style="color: #8B95A7;">Horário de Brasília</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Término das Vendas <span class="required">*</span></label>
+                        <input type="datetime-local" id="paidSaleEnd">
+                        <small style="color: #8B95A7;">Horário de Brasília</small>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h4 style="color: #00C2FF; margin-bottom: 15px;">Quantidade permitida por compra:</h4>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Mínima</label>
+                    <input type="number" id="paidMinQuantity" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Máxima</label>
+                    <input type="number" id="paidMaxQuantity" value="5" min="1">
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Descrição do Ingresso (opcional):</label>
+                <textarea id="paidTicketDescription" rows="3" placeholder="Informações adicionais ao nome do ingresso. Ex.: Esse ingresso dá direito a um copo" maxlength="100"></textarea>
+                <small style="color: #8B95A7;">100 caracteres restantes</small>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onClick="closeModal('paidTicketModal')">Cancelar</button>
+                <button class="btn btn-primary" onClick="createPaidTicket()">Criar Ingresso</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Criar Ingresso Gratuito -->
+    <div class="modal-overlay" id="freeTicketModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Criar ingresso gratuito</div>
+                <button class="modal-close" onClick="closeModal('freeTicketModal')">&times;</button>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Título do ingresso <span class="required">*</span></label>
+                    <input type="text" id="freeTicketTitle" placeholder="Ingresso único, Meia-Entrada, VIP, etc." maxlength="45">
+                    <small style="color: #8B95A7;">45 caracteres restantes</small>
+                </div>
+                <div class="form-group">
+                    <label>Quantidade <span class="required">*</span></label>
+                    <input type="number" id="freeTicketQuantity" placeholder="Ex. 100" min="1">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Valor do comprador</label>
+                <input type="text" value="Grátis" readonly style="background: rgba(139, 149, 167, 0.1);">
+            </div>
+
+            <hr class="section-divider">
+
+            <div class="ticket-type-section">
+                <h4 style="color: #00C2FF; margin-bottom: 15px;">Período das vendas deste ingresso:</h4>
+
+                <div class="form-grid" id="freeDateFields">
+                    <div class="form-group">
+                        <label>Data de Início das Vendas <span class="required">*</span></label>
+                        <input type="datetime-local" id="freeSaleStart">
+                        <small style="color: #8B95A7;">Horário de Brasília</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Término das Vendas <span class="required">*</span></label>
+                        <input type="datetime-local" id="freeSaleEnd">
+                        <small style="color: #8B95A7;">Horário de Brasília</small>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+            
+            <h4 style="color: #00C2FF; margin-bottom: 15px;">Quantidade permitida por compra:</h4>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Mínima</label>
+                    <input type="number" id="freeMinQuantity" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Máxima</label>
+                    <input type="number" id="freeMaxQuantity" value="5" min="1">
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Descrição do Ingresso (opcional):</label>
+                <textarea id="freeTicketDescription" rows="3" placeholder="Informações adicionais ao nome do ingresso. Ex.: Esse ingresso dá direito a um copo" maxlength="100"></textarea>
+                <small style="color: #8B95A7;">100 caracteres restantes</small>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onClick="closeModal('freeTicketModal')">Cancelar</button>
+                <button class="btn btn-primary" onClick="createFreeTicket()">Criar Ingresso</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Criar Ingresso Códigos -->
+    <div class="modal-overlay" id="codeTicketModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Criar ingresso códigos</div>
+                <button class="modal-close" onClick="closeModal('codeTicketModal')">&times;</button>
+            </div>
+
+            <div class="info-banner">
+                Os códigos serão gerados automaticamente e poderão ser compartilhados individualmente com os participantes
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Título do ingresso <span class="required">*</span></label>
+                    <input type="text" id="codeTicketTitle" placeholder="Convite VIP, Acesso Restrito, etc." maxlength="45">
+                    <small style="color: #8B95A7;">45 caracteres restantes</small>
+                </div>
+                <div class="form-group">
+                    <label>Quantidade de códigos <span class="required">*</span></label>
+                    <input type="number" id="codeTicketQuantity" placeholder="Ex. 50" min="1" max="1000">
+                    <small style="color: #8B95A7;">Máximo 1000 códigos</small>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Valor do ingresso</label>
+                <input type="text" value="Acesso via código" readonly style="background: rgba(139, 149, 167, 0.1);">
+            </div>
+
+            <hr class="section-divider">
+
+            <div class="ticket-type-section">
+                <h4 style="color: #00C2FF; margin-bottom: 15px;">Período de validade dos códigos:</h4>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Data de Início <span class="required">*</span></label>
+                        <input type="datetime-local" id="codeSaleStart">
+                        <small style="color: #8B95A7;">Horário de Brasília</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Término <span class="required">*</span></label>
+                        <input type="datetime-local" id="codeSaleEnd">
+                        <small style="color: #8B95A7;">Horário de Brasília</small>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <div class="form-group full-width">
+                <label>Descrição do Ingresso (opcional):</label>
+                <textarea id="codeTicketDescription" rows="3" placeholder="Informações sobre este tipo de acesso especial..." maxlength="100"></textarea>
+                <small style="color: #8B95A7;">100 caracteres restantes</small>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onClick="closeModal('codeTicketModal')">Cancelar</button>
+                <button class="btn btn-primary" onClick="createCodeTicket()">Gerar Códigos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Listar Códigos -->
+    <div class="modal-overlay" id="codesListModal">
+        <div class="modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <div class="modal-title">Gerenciar Códigos - <span id="codesModalTitle">Nome do Ingresso</span></div>
+                <button class="modal-close" onClick="closeModal('codesListModal')">&times;</button>
+            </div>
+
+            <div class="codes-actions">
+                <button class="btn btn-outline btn-small" onClick="exportCodes()">📋 Exportar todos</button>
+                <button class="btn btn-outline btn-small" onClick="copyAllCodes()">📄 Copiar todos</button>
+                <button class="btn btn-secondary btn-small" onClick="regenerateUsedCodes()">🔄 Regenerar usados</button>
+            </div>
+
+            <input type="text" class="search-codes" id="searchCodes" placeholder="Buscar por código, email ou status..." onKeyUp="filterCodes()">
+
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="codes-table" id="codesTable">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Encaminhado para</th>
+                            <th>Utilizado</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codesTableBody">
+                        <!-- Códigos serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onClick="closeModal('codesListModal')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <button onClick="testarConexaoAPI()" style="position: fixed; top: 10px; right: 10px; z-index: 9999;">
+        Testar API
+    </button>
+
+    <script language='javascript' src="js/criaevento.js"></script>
+
+     
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>
+                

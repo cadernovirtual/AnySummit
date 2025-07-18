@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor Conexão - Participantes</title>
+     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .vendor-info {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .vendor-info h3 {
+            color: #10b981;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+
+        .vendor-info p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .scanner-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .qr-frame {
+            width: 200px;
+            height: 200px;
+            border: 3px dashed #10b981;
+            border-radius: 12px;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .qr-frame.active {
+            border-color: #059669;
+            border-style: solid;
+        }
+
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        #qr-video.active {
+            display: block;
+        }
+
+        .qr-icon {
+            font-size: 4rem;
+            color: #10b981;
+            opacity: 0.5;
+        }
+
+        .scan-button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .scan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .scan-button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .participant-info {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px 20px;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .participant-info.show {
+            display: block;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .participant-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            border: 3px solid #10b981;
+            object-fit: cover;
+            display: block;
+        }
+
+        .participant-details h3 {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .participant-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .participant-field:last-of-type {
+            border-bottom: none;
+        }
+
+        .field-label {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .field-value {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .send-message-button {
+            width: 100%;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+        }
+
+        .send-message-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #10b981;
+            margin: 20px 0;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .whatsapp-redirect {
+            background: rgba(37, 211, 102, 0.1);
+            border: 1px solid rgba(37, 211, 102, 0.3);
+            color: #86efac;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+            text-align: center;
+        }
+
+        .whatsapp-redirect.show {
+            display: block;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .instructions h4 {
+            color: #10b981;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .instructions ul {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Leitor Conexão</h1>
+            <p>Conecte-se com os participantes</p>
+        </div>
+
+
+
+        <div class="scanner-section">
+            <div class="qr-frame" id="reader">
+                <video id="qr-video"></video>
+                <div class="qr-icon" id="qr-icon">📱</div>
+            </div>
+               
+            <button class="scan-button" href="javascript:void(0);" id="start-button" >
+                <span id="button-text">Ler QR Code</span>
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <p>Carregando informações do participante...</p>
+        </div>
+
+        <div class="error-message" id="error-message"></div>
+        <div class="success-message" id="success-message"></div>
+        <div class="whatsapp-redirect" id="whatsapp-redirect"></div>
+
+
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const startButton = document.getElementById('start-button');
+    const loading = document.getElementById('loading');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+    const whatsappRedirect = document.getElementById('whatsapp-redirect');
+    
+    let html5QrCode;
+    let isScanning = false;
+
+    // ID do usuário fictício (pode ser gerado dinamicamente ou vir de um login)
+    const userId = 'USR001';
+
+    // Função para mostrar/esconder elementos
+    function showElement(element) {
+        element.classList.add('show');
+    }
+
+    function hideElement(element) {
+        element.classList.remove('show');
+    }
+
+    function hideMessages() {
+        hideElement(errorMessage);
+        hideElement(successMessage);
+        hideElement(whatsappRedirect);
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        showElement(errorMessage);
+        setTimeout(() => hideMessages(), 5000);
+    }
+
+    function showSuccess(message) {
+        successMessage.textContent = message;
+        showElement(successMessage);
+        setTimeout(() => hideMessages(), 4000);
+    }
+
+    function showWhatsappRedirect(message) {
+        whatsappRedirect.textContent = message;
+        showElement(whatsappRedirect);
+        setTimeout(() => hideMessages(), 5000);
+    }
+
+    function showLoading() {
+        showElement(loading);
+    }
+
+    function hideLoading() {
+        hideElement(loading);
+    }
+
+    // Função para chamar o webhook
+    async function callWebhook(qrData) {
+        try {
+            const response = await fetch('https://n8n.webtoyou.com.br/webhook/any-leitor-participante', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    qrData: qrData,
+                    evento: "conexao",
+                    userId: userId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erro na resposta do servidor: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao chamar webhook:', error);
+            throw error;
+        }
+    }
+
+    // Função para resetar a aplicação
+    function resetApp() {
+        hideMessages();
+    }
+
+    // Event listener para o botão de scan
+    startButton.addEventListener('click', function () {
+        if (isScanning) {
+            html5QrCode.stop().then(() => {
+                console.log("Leitura parada.");
+                startButton.innerHTML = '<span id="button-text">Ler QR Code</span>';
+                isScanning = false;
+            }).catch((err) => {
+                console.error("Erro ao parar o leitor: ", err);
+            });
+        } else {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            const qrCodeSuccessCallback = async (decodedText, decodedResult) => {
+                console.log('QR Code lido:', decodedText);
+                
+                // Parar o scanner
+                html5QrCode.stop().then(() => {
+                    console.log("Leitura parada.");
+                    startButton.innerHTML = '<span id="button-text">Ler QR Code</span>';
+                    isScanning = false;
+                }).catch((err) => {
+                    console.error("Erro ao parar o leitor: ", err);
+                });
+
+                try {
+                    hideMessages();
+                    showLoading();
+                    
+                    // Chamar o webhook com o conteúdo do QR Code
+                    const response = await callWebhook(decodedText);
+                    
+                    hideLoading();
+                    
+                    // Verificar o tipo de resposta
+                    if (response.link) {
+                        // Se retornou um link, redirecionar em nova aba
+                        showWhatsappRedirect('Redirecionando...');
+                        setTimeout(() => {
+							window.location.href = response.link;
+                           // window.location(response.link, '_top');
+                            resetApp();
+                        }, 1500);
+                    } else if (response.status === 'ok' || response === 'ok') {
+                        // Se retornou OK, mostrar mensagem de sucesso
+                        showSuccess('Leitura realizada com sucesso!');
+                        setTimeout(() => {
+                            resetApp();
+                        }, 3000);
+                    } else {
+                        // Caso não seja nem link nem ok
+                        showError('Resposta inesperada do servidor.');
+                    }
+                    
+                } catch (error) {
+                    hideLoading();
+                    console.error('Erro ao processar QR Code:', error);
+                    showError('Erro ao carregar dados do participante. Tente novamente.');
+                }
+            };
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                qrCodeSuccessCallback
+            ).then(() => {
+                console.log("Leitura iniciada.");
+                startButton.innerHTML = '<span id="button-text">Fechar Leitor de QR Code</span>';
+                isScanning = true;
+            }).catch(err => {
+                console.error("Erro ao iniciar o leitor: ", err);
+                showError('Erro ao acessar a câmera. Verifique as permissões.');
+            });
+        }
+    });
+
+
+});
+    </script>
+</body>
+</html>

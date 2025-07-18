@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Conta - Anysummit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0A0A0F 0%, #1A1A2E 35%, #16213E 70%, #0F3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #FFFFFF;
+        }
+
+        .signup-container {
+            background: rgba(42, 42, 56, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .signup-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00C2FF, #725EFF, transparent);
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00C2FF, #725EFF);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0, 194, 255, 0.3);
+            position: relative;
+        }
+
+        .logo::before {
+            content: 'A';
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(45deg, #00C2FF, #725EFF, #00C2FF);
+            border-radius: 18px;
+            z-index: -1;
+            filter: blur(8px);
+            opacity: 0.7;
+        }
+
+        .brand-name {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00C2FF, #725EFF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #B8B8C8;
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #E0E0E8;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: #888899;
+        }
+
+        .form-input:focus {
+            border-color: #00C2FF;
+            box-shadow: 
+                0 0 0 3px rgba(0, 194, 255, 0.1),
+                0 0 20px rgba(0, 194, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .create-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #00C2FF, #725EFF);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .create-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .create-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 25px rgba(0, 194, 255, 0.4),
+                0 0 40px rgba(114, 94, 255, 0.3);
+        }
+
+        .create-button:hover::before {
+            left: 100%;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-link a {
+            color: #00C2FF;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .login-link a:hover {
+            color: #725EFF;
+            text-shadow: 0 0 8px rgba(0, 194, 255, 0.5);
+        }
+
+        .legal-text {
+            font-size: 12px;
+            color: #888899;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .legal-text a {
+            color: #00C2FF;
+            text-decoration: none;
+        }
+
+        .legal-text a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .signup-container {
+                padding: 32px 24px;
+                margin: 20px;
+                border-radius: 20px;
+            }
+
+            .brand-name {
+                font-size: 24px;
+            }
+
+            .form-input {
+                padding: 14px 16px;
+            }
+
+            .create-button {
+                padding: 16px;
+            }
+        }
+
+        /* Floating particles animation */
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, #00C2FF, transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) {
+            width: 4px;
+            height: 4px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .particle:nth-child(2) {
+            width: 6px;
+            height: 6px;
+            top: 60%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+
+        .particle:nth-child(3) {
+            width: 3px;
+            height: 3px;
+            bottom: 30%;
+            left: 20%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 0.7; }
+            50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+
+    <div class="signup-container">
+        <div class="logo-section">
+            <div class="logo"></div>
+            <h1 class="brand-name">Anysummit</h1>
+            <p class="subtitle">Crie sua conta e comece sua jornada</p>
+        </div>
+
+        <form>
+            <div class="form-group">
+                <label class="form-label" for="fullName">Nome completo</label>
+                <input type="text" id="fullName" class="form-input" placeholder="Digite seu nome completo" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">E-mail</label>
+                <input type="email" id="email" class="form-input" placeholder="Digite seu e-mail" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="phone">Celular</label>
+                <input type="tel" id="phone" class="form-input" placeholder="(11) 99999-9999" maxlength="15" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Senha</label>
+                <input type="password" id="password" class="form-input" placeholder="Crie uma senha segura" required>
+            </div>
+
+            <button type="submit" class="create-button">
+                Criar conta
+            </button>
+        </form>
+
+        <div class="login-link">
+            <a href="#login">Já tenho uma conta</a>
+        </div>
+
+        <div class="legal-text">
+            Ao criar sua conta, você concorda com os 
+            <a href="#terms">Termos de uso</a> e a 
+            <a href="#privacy">Política de privacidade</a>.
+        </div>
+    </div>
+
+    <script>
+        // Phone mask function
+        function phoneMask(input) {
+            let value = input.value.replace(/\D/g, ''); // Remove non-digits
+            
+            if (value.length <= 11) {
+                // Format: (XX) XXXXX-XXXX
+                value = value.replace(/(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            }
+            
+            input.value = value;
+        }
+
+        // Apply phone mask
+        const phoneInput = document.getElementById('phone');
+        phoneInput.addEventListener('input', function() {
+            phoneMask(this);
+        });
+
+        // Add form interaction effects
+        const inputs = document.querySelectorAll('.form-input');
+        
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'translateY(-2px)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Form submission handler
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const button = document.querySelector('.create-button');
+            const originalText = button.textContent;
+            
+            button.textContent = 'Criando conta...';
+            button.style.background = 'linear-gradient(135deg, #666, #888)';
+            
+            setTimeout(() => {
+                button.textContent = 'Conta criada! ✓';
+                button.style.background = 'linear-gradient(135deg, #00C851, #007E33)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(135deg, #00C2FF, #725EFF)';
+                }, 2000);
+            }, 1500);
+        });
+
+        // Add smooth scroll and page interactions
+        document.addEventListener('mousemove', function(e) {
+            const particles = document.querySelectorAll('.particle');
+            const mouseX = e.clientX / window.innerWidth;
+            const mouseY = e.clientY / window.innerHeight;
+            
+            particles.forEach((particle, index) => {
+                const speed = (index + 1) * 0.5;
+                const x = mouseX * speed;
+                const y = mouseY * speed;
+                
+                particle.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        });
+    </script>
+</body>
+</html>
