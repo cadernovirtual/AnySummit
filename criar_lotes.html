@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Criar Tabela Lotes - AnySummit</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Criação da Tabela Lotes</h1>
+    <div id="resultado"></div>
+
+    <script>
+        // Executar via fetch para criar tabela lotes
+        fetch('executar_lotes.php')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('resultado').innerHTML = '<pre>' + data + '</pre>';
+            })
+            .catch(error => {
+                document.getElementById('resultado').innerHTML = 'Erro: ' + error;
+            });
+    </script>
+</body>
+</html>

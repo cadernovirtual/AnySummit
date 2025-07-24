@@ -1,0 +1,42 @@
+# Status da Sessão Atual
+
+## Ajustes na Preview Visual
+
+### Modificações Realizadas
+
+1. **Preview Simplificada**
+   - Removidos: título, data, local e botão
+   - Foco apenas no posicionamento visual das imagens
+   - Tamanho fixo: 426px × 200px (proporção Full HD)
+
+2. **Elementos Visuais**
+   - **Fundo**: imagem_fundo ou cor_fundo
+   - **Logo**: posicionada no topo, centralizada
+   - **Capa Quadrada**: centralizada no meio da preview
+   - Overlay sutil para melhor contraste
+
+3. **Comportamento**
+   - Atualiza em tempo real conforme uploads
+   - Mostra/esconde elementos conforme disponibilidade
+   - Cor de fundo como fallback quando sem imagem
+
+## Arquivos Modificados
+
+1. **produtor/novoevento.php**
+   - HTML simplificado da preview
+   - CSS atualizado com tamanho fixo
+   - Estrutura focada em visualização
+
+2. **produtor/js/criaevento.js**
+   - `updateHeroPreview()` simplificada
+   - Adicionada atualização da imagem_capa
+   - Removidas partes de texto
+
+3. **evento/template_hero_section.php**
+   - Adicionada imagem_capa na section real
+
+## Resultado
+Preview visual limpa mostrando apenas:
+- Posicionamento do fundo (imagem ou cor)
+- Logo no topo (se existir)
+- Imagem capa quadrada centralizada (se existir)

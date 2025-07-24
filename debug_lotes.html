@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Sistema de Lotes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .debug-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .error { background: #fee; border: 1px solid #fcc; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #efe; border: 1px solid #cfc; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .warning { background: #ffd; border: 1px solid #ffb; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .code { background: #f8f8f8; padding: 10px; border-radius: 4px; font-family: monospace; margin: 10px 0; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-test { background: #007bff; color: white; }
+        .btn-clear { background: #dc3545; color: white; }
+        #results { margin-top: 20px; max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔧 Debug - Sistema de Lotes</h1>
+        <p><strong>Objetivo:</strong> Identificar e corrigir erros nas funções de lotes</p>
+        
+        <div class="warning">
+            <h3>⚠️ Erros Reportados:</h3>
+            <ul>
+                <li><code>Cannot read properties of null (reading 'style')</code></li>
+                <li>Elementos DOM não encontrados: lotesPorDataList, loteDataEmpty, etc.</li>
+                <li>Funções não executando corretamente</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Testes de Debug</h3>
+        <button class="btn-test" onclick="testarElementosDOM()">1. Testar Elementos DOM</button>
+        <button class="btn-test" onclick="testarFuncoesLotes()">2. Testar Funções de Lotes</button>
+        <button class="btn-test" onclick="testarCookies()">3. Testar Cookies</button>
+        <button class="btn-test" onclick="simularCriacaoLote()">4. Simular Criação de Lote</button>
+        <button class="btn-test" onclick="testarFluxoCompleto()">5. Teste Fluxo Completo</button>
+        <button class="btn-clear" onclick="limparResultados()">Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <!-- Elementos DOM simulados para teste -->
+    <div class="debug-container">
+        <h3>🧪 Elementos DOM Simulados</h3>
+        <p>Elementos criados para teste das funções de lotes:</p>
+        
+        <!-- Elementos necessários para os lotes -->
+        <div style="display: none;">
+            <!-- Lotes por Data -->
+            <div id="lotesPorDataList"></div>
+            <div id="loteDataEmpty">Estado vazio - lotes por data</div>
+            
+            <!-- Lotes por Percentual -->
+            <div id="lotesPorPercentualList"></div>
+            <div id="lotePercentualEmpty">Estado vazio - lotes por percentual</div>
+            
+            <!-- Summary de Percentual -->
+            <div id="percentualSummary">
+                <div class="summary-item">
+                    <span>Total configurado:</span>
+                    <span id="totalPercentual">0%</span>
+                </div>
+                <div class="summary-item">
+                    <span>Restante:</span>
+                    <span id="restantePercentual">100%</span>
+                </div>
+            </div>
+            
+            <!-- Modais simulados -->
+            <div id="loteDataModal"></div>
+            <div id="lotePercentualModal"></div>
+            <div id="editLoteDataModal"></div>
+            <div id="editLotePercentualModal"></div>
+            
+            <!-- Campos de formulário simulados -->
+            <input type="text" id="loteDataNome">
+            <input type="datetime-local" id="loteDataInicio">
+            <input type="datetime-local" id="loteDataFim">
+            <input type="checkbox" id="loteDataDivulgar">
+            
+            <input type="text" id="lotePercentualNome">
+            <input type="number" id="lotePercentualValor">
+            <input type="checkbox" id="lotePercentualDivulgar">
+            
+            <input type="hidden" id="editLoteDataId">
+            <input type="text" id="editLoteDataNome">
+            <input type="datetime-local" id="editLoteDataInicio">
+            <input type="datetime-local" id="editLoteDataFim">
+            <input type="checkbox" id="editLoteDataDivulgar">
+            
+            <input type="hidden" id="editLotePercentualId">
+            <input type="text" id="editLotePercentualNome">
+            <input type="number" id="editLotePercentualValor">
+            <input type="checkbox" id="editLotePercentualDivulgar">
+            
+            <!-- Campo de data do evento -->
+            <input type="datetime-local" id="startDateTime" value="2025-09-15T18:00">
+        </div>
+        
+        <div class="success">
+            ✅ Elementos DOM criados para simular ambiente do novoevento.php
+        </div>
+    </div>
+
+    <div class="debug-container">
+        <h3>📋 Elementos DOM Necessários</h3>
+        <div class="code">
+IDs que devem existir no HTML:
+- lotesPorDataList
+- loteDataEmpty  
+- lotesPorPercentualList
+- lotePercentualEmpty
+- percentualSummary
+- totalPercentual
+- restantePercentual
+
+Modais:
+- loteDataModal
+- lotePercentualModal
+- editLoteDataModal
+- editLotePercentualModal
+        </div>
+    </div>
+
+    <div class="debug-container">
+        <h3>🔧 Soluções Implementadas</h3>
+        <div class="success">
+            <h4>✅ Verificações de Segurança Adicionadas</h4>
+            <ul>
+                <li>Verificação se elementos existem antes de acessar .style</li>
+                <li>Console.error para debugging</li>
+                <li>Funções tornadas globais (window.funcao)</li>
+                <li>Timeout para garantir DOM carregado</li>
+                <li>Try/catch em operações críticas</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Incluir o script de lotes para teste -->
+    <script src="/produtor/js/lotes.js"></script>
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function testarElementosDOM() {
+            log('🔍 Testando Elementos DOM...', 'warning');
+            
+            const elementos = [
+                'lotesPorDataList',
+                'loteDataEmpty', 
+                'lotesPorPercentualList',
+                'lotePercentualEmpty',
+                'percentualSummary',
+                'totalPercentual',
+                'restantePercentual'
+            ];
+            
+            elementos.forEach(id => {
+                const elemento = document.getElementById(id);
+                if (elemento) {
+                    log(`✅ ${id}: ENCONTRADO`, 'success');
+                } else {
+                    log(`❌ ${id}: NÃO ENCONTRADO`, 'error');
+                }
+            });
+        }
+
+        function testarFuncoesLotes() {
+            log('🔍 Testando Funções de Lotes...', 'warning');
+            
+            const funcoes = [
+                'adicionarLotePorData',
+                'adicionarLotePorPercentual', 
+                'criarLoteData',
+                'criarLotePercentual',
+                'editarLoteData',
+                'editarLotePercentual',
+                'excluirLoteData',
+                'excluirLotePercentual',
+                'validarLotes'
+            ];
+            
+            funcoes.forEach(nome => {
+                if (typeof window[nome] === 'function') {
+                    log(`✅ ${nome}: FUNÇÃO DISPONÍVEL`, 'success');
+                } else {
+                    log(`❌ ${nome}: FUNÇÃO NÃO ENCONTRADA`, 'error');
+                }
+            });
+        }
+
+        function testarCookies() {
+            log('🔍 Testando Sistema de Cookies...', 'warning');
+            
+            // Testar salvamento
+            try {
+                const teste = { teste: 'valor', timestamp: Date.now() };
+                document.cookie = `testeDebug=${JSON.stringify(teste)};path=/`;
+                log('✅ Cookie de teste salvo', 'success');
+                
+                // Testar leitura
+                const cookieValue = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('testeDebug='));
+                
+                if (cookieValue) {
+                    const valor = JSON.parse(cookieValue.split('=')[1]);
+                    log(`✅ Cookie lido: ${JSON.stringify(valor)}`, 'success');
+                } else {
+                    log('❌ Não foi possível ler o cookie', 'error');
+                }
+            } catch (error) {
+                log(`❌ Erro no sistema de cookies: ${error.message}`, 'error');
+            }
+        }
+
+        function simularCriacaoLote() {
+            log('🔍 Simulando Criação de Lote...', 'warning');
+            
+            // Simular dados
+            const loteSimulado = {
+                id: Date.now(),
+                nome: 'Lote Teste Debug',
+                dataInicio: '2025-08-01T10:00',
+                dataFim: '2025-08-31T23:59',
+                divulgar: true,
+                tipo: 'POR DATA'
+            };
+            
+            log(`Lote simulado: ${JSON.stringify(loteSimulado)}`, 'info');
+            
+            // Testar se consegue acessar window.lotesData
+            if (typeof window.lotesData !== 'undefined') {
+                log('✅ window.lotesData disponível', 'success');
+            } else {
+                log('❌ window.lotesData não encontrado', 'error');
+            }
+            
+            // Testar renderização (se elementos existirem)
+            const container = document.getElementById('lotesPorDataList');
+            if (container) {
+                log('✅ Container encontrado, pode renderizar', 'success');
+            } else {
+                log('❌ Container não encontrado, não pode renderizar', 'error');
+            }
+        }
+
+        function testarFluxoCompleto() {
+            log('🚀 Testando Fluxo Completo de Lotes...', 'warning');
+            
+            try {
+                // 1. Testar criação de lote por data
+                log('📅 Testando criação de lote por data...', 'info');
+                
+                // Preencher campos
+                document.getElementById('loteDataNome').value = 'Lote Teste Debug';
+                document.getElementById('loteDataInicio').value = '2025-08-01T10:00';
+                document.getElementById('loteDataFim').value = '2025-08-31T23:59';
+                document.getElementById('loteDataDivulgar').checked = true;
+                
+                if (typeof window.criarLoteData === 'function') {
+                    window.criarLoteData();
+                    log('✅ Lote por data criado com sucesso', 'success');
+                } else {
+                    log('❌ Função criarLoteData não disponível', 'error');
+                }
+                
+                // 2. Testar criação de lote por percentual
+                log('📊 Testando criação de lote por percentual...', 'info');
+                
+                document.getElementById('lotePercentualNome').value = 'Lote Percentual Teste';
+                document.getElementById('lotePercentualValor').value = '50';
+                document.getElementById('lotePercentualDivulgar').checked = false;
+                
+                if (typeof window.criarLotePercentual === 'function') {
+                    window.criarLotePercentual();
+                    log('✅ Lote por percentual criado com sucesso', 'success');
+                } else {
+                    log('❌ Função criarLotePercentual não disponível', 'error');
+                }
+                
+                // 3. Verificar dados salvos
+                if (typeof window.lotesData !== 'undefined') {
+                    log(`📊 Lotes por data: ${window.lotesData.porData.length}`, 'success');
+                    log(`📊 Lotes por percentual: ${window.lotesData.porPercentual.length}`, 'success');
+                } else {
+                    log('❌ window.lotesData não disponível', 'error');
+                }
+                
+                // 4. Testar validação
+                if (typeof window.validarLotes === 'function') {
+                    const validacao = window.validarLotes();
+                    log(`✅ Validação: ${validacao ? 'PASSOU' : 'FALHOU'}`, validacao ? 'success' : 'error');
+                } else {
+                    log('❌ Função validarLotes não disponível', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro no fluxo completo: ${error.message}`, 'error');
+            }
+        }
+
+        function limparResultados() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Debug iniciado - Sistema de Lotes', 'warning');
+            log('💡 Use os botões acima para testar diferentes aspectos', 'info');
+        });
+    </script>
+</body>
+</html>

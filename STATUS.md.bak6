@@ -1,0 +1,62 @@
+# Status da Sessão Atual
+
+## Tarefa Concluída: Preview Hero Section
+
+### Implementação da Miniatura
+- Criada miniatura proporcional da hero section na preview-image
+- Mostra exatamente como ficará a section no evento publicado
+- Background: usa imagem_fundo quando disponível, senão cor_fundo
+- Logo do evento posicionada no topo quando disponível
+- Informações dinâmicas: título, data, local
+
+### Funcionalidades Implementadas
+
+1. **Preview em Tempo Real**
+   - Atualiza conforme usuário preenche os campos
+   - Mostra imagem de fundo ou cor alternativa
+   - Logo aparece/desaparece conforme upload
+   - Data formatada em português
+   - Local muda entre presencial/online
+
+2. **Integração com Uploads**
+   - Imagem de fundo atualiza preview ao fazer upload
+   - Logo aparece automaticamente quando carregada
+   - Cor de fundo aplicada quando alterada
+
+3. **Template para Página do Evento**
+   - Criado `evento/template_hero_section.php`
+   - Utiliza variáveis do banco de dados
+   - Responsivo para mobile
+   - Efeitos hover no botão
+
+## Arquivos Criados/Modificados
+
+1. **produtor/novoevento.php**
+   - HTML da miniatura hero na preview-image
+   - CSS completo para estilização
+   - Estrutura idêntica ao template final
+
+2. **produtor/js/criaevento.js**
+   - Função `updateHeroPreview()` criada
+   - Integrada com `updatePreview()`
+   - Atualiza ao carregar imagens
+   - Atualiza ao mudar cor
+
+3. **evento/template_hero_section.php** (novo)
+   - Template PHP para usar em /evento/{slug}
+   - Usa variáveis do banco
+   - Fallbacks quando não há imagens
+   - CSS responsivo incluso
+
+## Como Funciona
+- Preview mostra miniatura proporcional
+- Imagem de fundo ou cor sólida como background
+- Logo centralizada no topo (se existir)
+- Título, data e local do evento
+- Botão de inscrição
+- Tudo atualiza em tempo real
+
+## Próximos Passos
+- Integrar template_hero_section.php na página do evento
+- Testar com diferentes combinações de imagens
+- Verificar responsividade em mobile

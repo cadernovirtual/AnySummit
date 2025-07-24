@@ -1,298 +1,155 @@
-# AnySummit - Estrutura do Banco de Dados
+# Estrutura do Banco de Dados - AnySummit
 
-## Visão Geral
-Este documento mapeia todas as tabelas identificadas no código e suas relações com as telas do sistema.
+## Tabelas Existentes Relevantes
 
-## Tabelas Principais
+### 1. Tabela `eventos`
+- **Campos principais**: id, nome, descricao, data_inicio, data_fim, tipo_local, status
+- **Campos de localização**: busca_endereco, nome_local, rua (não 'endereco'), numero, complemento, bairro, cidade, estado, cep, pais, latitude, longitude
+- **Campos de produtor**: produtor_selecionado, nome_produtor, nome_exibicao_produtor, descricao_produtor
+- **Visibilidade**: campo 'visibilidade' (enum: 'publico', 'privado') - não tem opção 'password'
 
-### 1. **eventos**
-**Descrição**: Tabela principal de eventos
-**Relacionamento com telas**: 
-- `/produtor/novoevento.php` - Criação de eventos
-- `/produtor/editar-evento.php` - Edição de eventos
-- `/evento/index.php` - Visualização pública
-
-**Campos**:
-- `id` - ID único do evento
-- `contratante_id` - FK para contratantes
-- `usuario_id` - FK para usuarios
-- `categoria_id` - FK para categorias
-- `nome` - Nome do evento
-- `descricao` - Descrição completa
-- `imagem_capa` - URL da imagem
-- `classificacao` - Classificação etária (livre, etc)
-- `slug` - URL amigável
-- `data_inicio` - Data/hora de início
-- `data_fim` - Data/hora de término
-- `evento_multiplos_dias` - Boolean
-- `tipo_local` - presencial/online
-- `busca_endereco` - Endereço de busca
-- `nome_local` - Nome do local
-- `cep` - CEP
-- `rua` - Rua
-- `numero` - Número
-- `complemento` - Complemento
-- `bairro` - Bairro
-- `cidade` - Cidade
-- `estado` - Estado
-- `pais` - País (padrão: Brasil)
-- `link_online` - Link para evento online
-- `produtor_selecionado` - novo/atual
-- `nome_produtor` - Nome do produtor
-- `nome_exibicao_produtor` - Nome de exibição
-- `descricao_produtor` - Descrição do produtor
-- `visibilidade` - publico/privado
-- `termos_aceitos` - Boolean
-- `status` - Status do evento (publicado, etc)
-- `criado_em` - Timestamp de criação
-
-### 2. **ingressos**
-**Descrição**: Tipos de ingressos disponíveis
-**Relacionamento com telas**:
-- `/produtor/novoevento.php` - Criação de ingressos (Step 5)
-- `/evento/checkout.php` - Seleção de ingressos
-
-**Campos**:
-- `id` - ID único
-- `evento_id` - FK para eventos
-- `tipo` - Tipo do ingresso
-- `titulo` - Título do ingresso
-- `descricao` - Descrição
-- `quantidade_total` - Quantidade disponível
-- `quantidade_vendida` - Quantidade vendida
-- `quantidade_reservada` - Quantidade reservada
-- `preco` - Preço unitário
-- `taxa_plataforma` - Taxa da plataforma
-- `valor_receber` - Valor líquido
-- `disponibilidade` - publico/privado
-- `ativo` - Boolean
-- `posicao_ordem` - Ordem de exibição
-- `inicio_venda` - Data/hora início vendas
-- `fim_venda` - Data/hora fim vendas
-- `limite_min` - Mínimo por compra
-- `limite_max` - Máximo por compra
-- `criado_em` - Timestamp
-
-### 3. **participantes**
-**Descrição**: Dados dos participantes
-**Relacionamento com telas**:
-- `/participante/index.php` - Login
-- `/participante/checkin.php` - Check-in
-- `/evento/checkout.php` - Cadastro durante compra
-
-**Campos**:
-- `participanteid` - ID único
-- `Nome` - Nome completo
-- `email` - Email
-- `celular` - Celular/WhatsApp
-- `eventoid` - FK para evento
-- `senha` - Senha (hash)
-
-### 4. **compradores**
-**Descrição**: Dados dos compradores (podem ser diferentes dos participantes)
-**Relacionamento com telas**:
-- `/evento/checkout.php` - Cadastro durante compra
-- `/evento/criar-senha.php` - Criação de senha
-
-**Campos**:
-- `id` - ID único
-- `nome` - Nome completo
-- `email` - Email
-- `celular` - Celular
-- `cpf` - CPF (se pessoa física)
-- `cnpj` - CNPJ (se pessoa jurídica)
-- `tipo_documento` - CPF/CNPJ
-- `cep` - CEP
-- `endereco` - Endereço
-- `numero` - Número
-- `complemento` - Complemento
-- `bairro` - Bairro
-- `cidade` - Cidade
-- `estado` - Estado
-- `telefone` - Telefone adicional
-- `senha` - Senha (hash)
-- `senha_criada_em` - Data criação senha
-- `ativo` - Boolean
-- `criado_em` - Timestamp
-
-### 5. **tb_pedidos**
-**Descrição**: Pedidos realizados
-**Relacionamento com telas**:
-- `/evento/checkout.php` - Criação do pedido
-- `/evento/pagamento-sucesso.php` - Confirmação
-
-**Campos**:
-- `id` - ID único
-- `eventoid` - FK para eventos
-- `participanteid` - FK para participantes
-- `compradorid` - FK para compradores
-- `valor_total` - Valor total do pedido
-- `metodo_pagamento` - pix/cartao
-- `parcelas` - Número de parcelas
-- `comprador_nome` - Nome do comprador (snapshot)
-- `comprador_documento` - CPF/CNPJ (snapshot)
-- `comprador_tipo_documento` - Tipo documento
-- `comprador_cep` - CEP (snapshot)
-- `codigo_pedido` - Código único (PED_YYYYMMDD_XXXX)
-- `status` - Status do pedido
-- `criado_em` - Timestamp
-
-### 6. **tb_itens_pedido**
-**Descrição**: Itens de cada pedido
-**Relacionamento com telas**:
-- `/evento/api/processar-pedido.php` - Criação automática
-
-**Campos**:
-- `id` - ID único
-- `pedidoid` - FK para tb_pedidos
-- `eventoid` - FK para eventos
-- `ingresso_id` - FK para ingressos
-- `quantidade` - Quantidade comprada
-- `preco_unitario` - Preço unitário
-- `subtotal` - Subtotal do item
-
-### 7. **tb_ingressos_individuais**
-**Descrição**: Ingressos individuais gerados
-**Relacionamento com telas**:
-- `/evento/api/processar-pedido.php` - Geração automática
-- `/participante/checkin.php` - Validação
-
-**Campos**:
-- `id` - ID único
-- `pedidoid` - FK para tb_pedidos
-- `eventoid` - FK para eventos
-- `ingresso_id` - FK para ingressos
-- `compradorid` - FK para compradores
-- `codigo_ingresso` - Código único (8 caracteres)
-- `titulo_ingresso` - Título (snapshot)
-- `preco_unitario` - Preço (snapshot)
-- `qr_code_data` - Dados JSON do QR Code
-- `hash_validacao` - Hash SHA256 para validação
-- `usado` - Boolean (já foi usado no check-in)
-- `usado_em` - Timestamp do uso
-- `criado_em` - Timestamp
-
-### 8. **usuarios**
-**Descrição**: Usuários do sistema (produtores)
-**Relacionamento com telas**:
-- `/produtor/index.php` - Login
-- `/produtor/cadastro.php` - Cadastro
-
-**Campos**:
-- `id` - ID único
-- `nome` - Nome completo
-- `nome_exibicao` - Nome de exibição
-- `email` - Email
-- `senha` - Senha (hash)
-- `ativo` - Boolean
-- `criado_em` - Timestamp
-
-### 9. **contratantes**
-**Descrição**: Empresas/produtores contratantes
-**Relacionamento com telas**:
-- `/produtor/cadastro.php` - Cadastro
-
-**Campos**:
-- `id` - ID único
-- `nome_fantasia` - Nome fantasia
-- `razao_social` - Razão social
-- `cnpj` - CNPJ
-- `email` - Email
-- `telefone` - Telefone
-- `ativo` - Boolean
-- `criado_em` - Timestamp
-
-### 10. **categorias**
-**Descrição**: Categorias de eventos
-**Relacionamento com telas**:
-- `/produtor/novoevento.php` - Seleção de categoria
-
-**Campos**:
-- `id` - ID único
-- `nome` - Nome da categoria
-- `slug` - Slug da categoria
-- `ativo` - Boolean
-
-### 11. **password_tokens**
-**Descrição**: Tokens temporários para criação/reset de senha
-**Relacionamento com telas**:
-- `/evento/criar-senha.php` - Criação de senha
-
-**Campos**:
-- `id` - ID único
-- `email` - Email do usuário
-- `token` - Token único
-- `expires_at` - Data de expiração
-- `used` - Boolean (já foi usado)
-- `created_at` - Timestamp
-
-### 12. **tb_logcli**
-**Descrição**: Log de ações dos clientes
-**Relacionamento com telas**:
-- Todas as telas que salvam dados
-
-**Campos**:
-- `id` - ID único
-- `acao` - Ação realizada
-- `contratanteid` - FK para contratantes
-- `msgacao` - Mensagem da ação
-- `criado_em` - Timestamp
-
-## Relacionamentos Entre Tabelas
-
-```
-eventos
-├── contratantes (N:1)
-├── usuarios (N:1)
-├── categorias (N:1)
-├── ingressos (1:N)
-└── tb_pedidos (1:N)
-
-tb_pedidos
-├── eventos (N:1)
-├── participantes (N:1)
-├── compradores (N:1)
-├── tb_itens_pedido (1:N)
-└── tb_ingressos_individuais (1:N)
-
-ingressos
-├── eventos (N:1)
-├── tb_itens_pedido (1:N)
-└── tb_ingressos_individuais (1:N)
-
-compradores
-├── tb_pedidos (1:N)
-└── tb_ingressos_individuais (1:N)
-
-participantes
-└── tb_pedidos (1:N)
+### 2. Tabela `lotes` (JÁ EXISTE!)
+```sql
+CREATE TABLE `lotes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `evento_id` int(11) NOT NULL,
+  `nome` varchar(255) NOT NULL,
+  `data_inicio` datetime NOT NULL,
+  `data_fim` datetime NOT NULL,
+  `tipo` varchar(50) DEFAULT NULL,
+  `percentual_venda` int(11) DEFAULT NULL,
+  `percentual_aumento_valor` int(11) DEFAULT NULL,
+  `divulgar_criterio` tinyint(4) DEFAULT '0',
+  `criado_em` datetime DEFAULT NULL,
+  `atualizado_em` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
 ```
 
-## Mapeamento Tela x Banco
+**OBSERVAÇÕES**:
+- Campo `tipo` já existe (usar 'data' ou 'percentual')
+- Campo `percentual_venda` já existe para lotes por quantidade
+- Falta adicionar campo `quantidade` para lotes por quantidade
+- Falta adicionar campo `ordem` para ordenação
 
-### Tela de Criação de Evento (`/produtor/novoevento.php`)
-- **Step 1 (Informações)**: `eventos.nome`, `eventos.categoria_id`, `eventos.classificacao`
-- **Step 2 (Data e Hora)**: `eventos.data_inicio`, `eventos.data_fim`, `eventos.evento_multiplos_dias`
-- **Step 3 (Descrição)**: `eventos.descricao`, `eventos.imagem_capa`
-- **Step 4 (Localização)**: `eventos.tipo_local`, `eventos.nome_local`, `eventos.cep`, etc
-- **Step 5 (Ingressos)**: Tabela `ingressos` completa
-- **Step 6 (Produtor)**: `eventos.nome_produtor`, `eventos.descricao_produtor`
-- **Step 7 (Publicar)**: `eventos.visibilidade`, `eventos.status`
+### 3. Tabela `ingressos`
+```sql
+-- Estrutura atual já tem:
+- `tipo` enum('pago','gratuito','codigo','combo')
+- `lote_id` int(11) - JÁ EXISTE!
+- `conteudo_combo` json - JÁ EXISTE!
+```
 
-### Tela de Checkout (`/evento/checkout.php`)
-- **Seleção de Ingressos**: `ingressos.*`
-- **Dados do Participante**: `participantes.*`
-- **Dados do Comprador**: `compradores.*`
-- **Criação do Pedido**: `tb_pedidos.*`, `tb_itens_pedido.*`, `tb_ingressos_individuais.*`
+**OBSERVAÇÕES**:
+- Campo `lote_id` JÁ EXISTE na tabela ingressos
+- Campo `conteudo_combo` JÁ EXISTE e é JSON
+- Tipo 'combo' JÁ EXISTE no enum
 
-### Tela de Check-in (`/participante/checkin.php`)
-- **Validação**: `tb_ingressos_individuais.codigo_ingresso`, `tb_ingressos_individuais.hash_validacao`
-- **Registro de Uso**: `tb_ingressos_individuais.usado`, `tb_ingressos_individuais.usado_em`
+## Alterações Necessárias no Banco
 
-## Observações Importantes
+### 1. Adicionar campos faltantes em `lotes`:
+```sql
+ALTER TABLE `lotes` 
+ADD COLUMN `quantidade` INT(11) NULL AFTER `percentual_venda`,
+ADD COLUMN `ordem` INT(11) DEFAULT 0 AFTER `quantidade`;
+```
 
-1. **Charset**: Todas as tabelas devem usar `utf8mb4` para suportar emojis e caracteres especiais
-2. **Índices**: Criar índices em campos de busca frequente (email, codigo_ingresso, slug)
-3. **Constraints**: Implementar FK constraints para garantir integridade
-4. **Soft Delete**: Usar campo `ativo` ao invés de deletar registros
-5. **Auditoria**: Usar `tb_logcli` para rastrear ações importantes
+### 2. Adicionar chave estrangeira de lotes:
+```sql
+ALTER TABLE `lotes`
+ADD CONSTRAINT `lotes_evento_fk` 
+FOREIGN KEY (`evento_id`) REFERENCES `eventos`(`id`) ON DELETE CASCADE;
+```
+
+### 3. Adicionar chave estrangeira lote_id em ingressos:
+```sql
+ALTER TABLE `ingressos`
+ADD CONSTRAINT `ingressos_lote_fk` 
+FOREIGN KEY (`lote_id`) REFERENCES `lotes`(`id`) ON DELETE SET NULL;
+```
+
+### 4. Adicionar campos de taxa em ingressos (se não existirem):
+```sql
+ALTER TABLE `ingressos`
+ADD COLUMN `cobra_taxa` TINYINT(1) DEFAULT 0 AFTER `valor_receber`,
+ADD COLUMN `valor_taxa` DECIMAL(10,2) DEFAULT 0.00 AFTER `cobra_taxa`;
+```
+
+## Estrutura JSON para `conteudo_combo`
+```json
+[
+  {
+    "ticket_id": "123",
+    "ticket_name": "Ingresso VIP",
+    "quantidade": 2
+  },
+  {
+    "ticket_id": "124", 
+    "ticket_name": "Ingresso Pista",
+    "quantidade": 1
+  }
+]
+```
+
+## Mapeamento Frontend -> Backend
+
+### Campos do Evento:
+- `eventName` -> `nome`
+- `classification` -> `classificacao`
+- `category` -> `categoria_id` (precisa buscar ID)
+- `imagePreview` -> `imagem_capa` (salvar arquivo e guardar path)
+- `startDateTime` -> `data_inicio`
+- `endDateTime` -> `data_fim`
+- `multiDaySwitch` -> `evento_multiplos_dias`
+- `locationTypeSwitch` -> `tipo_local` ('presencial' ou 'online')
+- `addressSearch` -> `busca_endereco`
+- `venueName` -> `nome_local`
+- `address` -> `rua` (NÃO 'endereco')
+- `addressNumber` -> `numero`
+- `addressComplement` -> `complemento`
+- `neighborhood` -> `bairro`
+- `city` -> `cidade`
+- `state` -> `estado`
+- `postalCode` -> `cep`
+- `country` -> `pais`
+- `streamingLink` -> `link_online`
+- `accessInstructions` -> usar campo `descricao` ou criar novo campo
+- `eventDescription` -> `descricao`
+- `producer` -> `produtor_selecionado` ('atual' ou 'novo')
+- `producerName` -> `nome_produtor`
+- `displayName` -> `nome_exibicao_produtor`
+- `producerDescription` -> `descricao_produtor`
+- Visibilidade: converter 'public' -> 'publico', 'private' -> 'privado'
+- `termsCheckbox` -> `termos_aceitos`
+
+### Campos de Lotes:
+- Frontend `tipo: 'data'` -> Backend `tipo: 'data'`
+- Frontend `tipo: 'percentual'` -> Backend `tipo: 'percentual'`
+- Frontend `percentual` -> Backend `percentual_venda`
+- Frontend `quantidade` -> Backend `quantidade` (adicionar campo)
+- Frontend `ordem` -> Backend `ordem` (adicionar campo)
+
+### Campos de Ingressos:
+- Frontend `type: 'paid'` -> Backend `tipo: 'pago'`
+- Frontend `type: 'free'` -> Backend `tipo: 'gratuito'`
+- Frontend `loteId` -> Backend `lote_id`
+- Frontend `saleStart` -> Backend `inicio_venda`
+- Frontend `saleEnd` -> Backend `fim_venda`
+- Frontend `minQuantity` -> Backend `limite_min`
+- Frontend `maxQuantity` -> Backend `limite_max`
+- Frontend `serviceTax` -> Backend `cobra_taxa` (adicionar)
+- Frontend `taxAmount` -> Backend `valor_taxa` (adicionar)
+
+### Campos de Combos:
+- Salvar como ingresso com `tipo: 'combo'`
+- Frontend `items` -> Backend `conteudo_combo` (JSON)
+
+## IMPORTANTE - Senha do Evento
+O campo visibilidade no banco só aceita 'publico' ou 'privado'.
+Se o frontend enviar 'password', precisamos:
+1. Salvar como 'privado' no campo visibilidade
+2. Criar novo campo na tabela eventos para armazenar a senha:
+```sql
+ALTER TABLE `eventos`
+ADD COLUMN `senha_acesso` VARCHAR(255) NULL AFTER `visibilidade`;
+```

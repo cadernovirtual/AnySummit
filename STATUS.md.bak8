@@ -1,0 +1,61 @@
+# Status da Sessão Atual
+
+## Preview Proporcional com Ajustes de Container
+
+### Estrutura da Miniatura (426x200px)
+Baseada na section original do GoianaRH com proporções corretas:
+
+1. **Layout de 2 Colunas**
+   - Coluna esquerda: 66% (logo do evento)
+   - Coluna direita: 33% (imagem capa)
+   - Gap proporcional entre colunas
+
+2. **Background**
+   - Imagem_fundo com opacity 0.1 (sutil como no original)
+   - Cor_fundo sólida quando não há imagem
+   - Comportamento idêntico à section real
+
+3. **Dimensões Proporcionais**
+   - Logo: max-height 60px (50% de 120px)
+   - Capa: 120x120px mantido (cabe perfeitamente)
+   - Padding: 20px (proporcional ao container)
+
+### Ajustes de Container
+Para acomodar preview de 426px:
+
+1. **Desktop (≥1200px)**
+   - `.main-content`: grid de `1fr 460px` (aumentado de 380px)
+   - `.preview-card`: max-width 460px
+   - Preview centralizada com margin
+
+2. **Tablet (768-1199px)**  
+   - Preview escala para 90% do tamanho
+   - Mantém proporções com transform scale
+
+3. **Mobile (<768px)**
+   - Preview escala para 80% 
+   - Width 100% com max-width 426px
+   - Totalmente responsivo
+
+## Arquivos Modificados
+
+1. **produtor/novoevento.php**
+   - HTML com estrutura de 2 colunas
+   - CSS com ajustes de container
+   - Media queries para responsividade
+
+2. **produtor/js/criaevento.js**
+   - updateHeroPreview() ajustada
+   - Controle de opacity do background
+   - Toggle de classe solid-bg
+
+3. **evento/template_hero_section.php**
+   - Reescrito para match exato com original
+   - Background como style inline da section
+   - Estrutura idêntica ao GoianaRH
+
+## Resultado
+- Preview cabe perfeitamente no layout
+- Responsivo em todas as telas
+- Proporções mantidas com scale quando necessário
+- Grid ajustado para nova largura

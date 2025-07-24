@@ -1,0 +1,46 @@
+# Status da Sessão Atual
+
+## Tarefas Concluídas
+
+### 1. Remoção da Imagem de Capa Principal
+- Imagem de Capa Principal removida
+- Imagem de Fundo movida para o lugar da antiga capa principal
+- Mantido exatamente o mesmo layout visual
+- Upload principal agora é da imagem de fundo (1920x640px)
+
+### 2. Correção do Alinhamento Vertical
+- CSS `.form-grid` corrigido com `align-items: start`
+- Grid definido com `grid-template-columns: 1fr 1fr`
+- Removido `margin-bottom` dos `.form-group` dentro do grid
+- Campos agora alinhados perfeitamente na horizontal
+
+### 3. Melhorias no Seletor de Cor
+- Criado preview visual da cor selecionada
+- Quadrado completamente preenchido com a cor escolhida
+- Click no preview abre o color picker
+- Sincronização entre color picker e input hexadecimal
+- Visual melhorado com bordas, sombras e hover effects
+
+## Arquivos Modificados
+
+1. **produtor/novoevento.php**
+   - Removida seção de Imagem de Capa Principal
+   - Imagem de Fundo movida para posição principal
+   - Grid reduzido para 2 colunas (logo e capa quadrada)
+   - HTML do seletor de cor melhorado
+   - CSS adicionado para alinhamento e visual
+
+2. **produtor/js/criaevento.js**
+   - Função `initImageUpload()` desativada
+   - Função `handleMainImageUpload()` criada para fundo principal
+   - Seletor de cor atualizado com preview visual
+   - Restauração inclui colorPreview
+
+## Estrutura Final
+- **Etapa 1**: Nome + Imagem Fundo (principal) + Logo/Capa (grid 2 colunas) + Cor
+- **Etapa 2**: Classificação/Categoria (grid 2 colunas) + Data/Hora
+
+## Próximos Passos
+- Testar upload da imagem de fundo principal
+- Verificar alinhamento em diferentes resoluções
+- Confirmar funcionamento do seletor de cor

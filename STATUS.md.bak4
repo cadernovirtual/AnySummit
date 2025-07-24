@@ -1,0 +1,45 @@
+# Status da Sessão Atual
+
+## Tarefas Concluídas
+
+### 1. Criação da coluna cor_fundo no MySQL
+- Adicionada coluna `cor_fundo VARCHAR(10)` na tabela `eventos`
+- Coluna criada com sucesso via MCP MySQL
+
+### 2. Novos campos de upload na etapa 1
+- **Logo do evento**: 800x200px, fundo transparente
+- **Imagem capa quadrada**: 450x450px, fundo transparente  
+- **Imagem de fundo**: 1920x640px
+- **Cor de fundo alternativa**: Seletor de cor hexadecimal
+- Preview das imagens após upload
+- Sistema preparado para salvar em `/uploads/capas/`
+
+### 3. Movimentação de campos
+- Classificação e Categoria movidos da etapa 1 para etapa 2
+- Validações atualizadas conforme nova estrutura
+
+## Arquivos Modificados
+
+1. **produtor/novoevento.php**
+   - Removidos campos classificação/categoria da etapa 1
+   - Adicionados novos campos de upload de imagens
+   - Adicionado seletor de cor hexadecimal
+   - Campos classificação/categoria adicionados na etapa 2
+   - CSS adicionado para preview de imagens
+
+2. **produtor/js/criaevento.js**
+   - Função `initAdditionalUploads()` para novos uploads
+   - Função `handleImageUpload()` para processar imagens
+   - Atualizada `saveWizardData()` para salvar novas imagens
+   - Atualizada `restoreWizardData()` para restaurar imagens
+   - Validações ajustadas (step 1 e 2)
+
+3. **produtor/upload_imagem_evento.php** (novo)
+   - Script PHP para processar uploads
+   - Deleta imagens antigas ao substituir
+   - Nomeia arquivos no padrão solicitado
+
+## Próximos Passos
+- Testar uploads de imagens
+- Integrar upload com criação de evento
+- Verificar persistência das novas imagens na sessão

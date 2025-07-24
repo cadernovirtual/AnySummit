@@ -1,0 +1,36 @@
+# Status da Sessão Atual
+
+## Tarefa Concluída
+Correção da formatação dos combos conforme plano CORRIGIR_COMBO.md
+
+## Arquivos Modificados
+1. **produtor/js/criaevento.js** (linha ~2469: função addComboToList)
+   - Removido emoji 📦
+   - Adicionado span com classe ticket-name para o título
+   - Badge (Combo) em roxo
+   - Informações do lote formatadas corretamente
+   - Seção "Inclui:" com estilo melhorado
+
+2. **produtor/novoevento.php**
+   - Adicionado CSS para .ticket-name (cor azul #00C2FF)
+   - Removidas referências aos scripts de correção
+   - Removido código inline de correção
+
+## Arquivos Deletados (renomeados com .deleted)
+- combo-final-fix.js
+- super-combo-fix.js
+- lotes-combo-fixes.js
+- correção-definitiva-combo.js
+
+## Resultado Esperado
+Combos agora aparecem com:
+- Nome em azul
+- Badge (Combo) em roxo
+- Informações do lote visíveis
+- Seção "Inclui:" com fundo azul claro
+- Formato idêntico aos ingressos pagos
+
+## Próximos Passos
+1. Testar criação de novo combo
+2. Verificar se ainda há arquivos de correção desnecessários
+3. Possível limpeza adicional de arquivos JS conflitantes

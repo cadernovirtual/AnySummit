@@ -560,6 +560,16 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             console.log('Clique no botão pago');
             openModal('paidTicketModal');
+            // Carregar lotes após abrir o modal
+            setTimeout(function() {
+                if (typeof carregarLotesIngressoPago === 'function') {
+                    carregarLotesIngressoPago();
+                } else if (typeof carregarLotesNoModal === 'function') {
+                    carregarLotesNoModal();
+                } else {
+                    console.error('Função para carregar lotes não encontrada');
+                }
+            }, 300);
         });
     }
     

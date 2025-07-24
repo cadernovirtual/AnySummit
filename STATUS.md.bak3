@@ -1,0 +1,44 @@
+# Status da Sessão Atual
+
+## Tarefas Concluídas
+
+### 1. Implementação da função editCombo
+- Adicionada exposição da função `editCombo` ao escopo global
+- Corrigido erro "editCombo is not defined"
+
+### 2. Salvamento de ingressos gratuitos na sessão
+- Modificada função `addTicketToList` para aceitar parâmetros adicionais
+- Adicionado salvamento automático via `saveWizardData()`
+- Implementada função `getTicketsFromList()` para coletar ingressos
+- Corrigida restauração de ingressos ao recarregar
+
+### 3. Correção do checkbox de termos
+- Variável `termsAccepted` tornada global
+- Adicionados logs de debug
+- Implementado retry automático se elementos não encontrados
+- Corrigido evento de clique no checkbox
+
+### 4. Persistência de dados na sessão
+- Descrição: Corrigido salvamento (innerHTML ao invés de value)
+- Imagem: Adicionado salvamento após upload
+- Combos: Salvamento após adicionar
+- Ingressos: Salvamento após criar/remover
+- Adicionado listener blur para salvar ao perder foco
+
+## Arquivos Modificados
+1. **produtor/js/criaevento.js**
+   - Exposta função editCombo
+   - Modificada addTicketToList
+   - Adicionada getTicketsFromList
+   - Corrigido saveWizardData/restoreWizardData
+   - Adicionados salvamentos automáticos
+
+2. **produtor/js/terms-privacy-handler.js**
+   - termsAccepted agora é window.termsAccepted
+   - Adicionados logs de debug
+   - Implementado retry para elementos não encontrados
+
+## Próximos Passos
+- Testar todas as funcionalidades
+- Verificar console para logs de debug
+- Confirmar persistência ao recarregar página
