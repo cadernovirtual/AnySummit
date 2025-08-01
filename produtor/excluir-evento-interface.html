@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Excluir Evento 36</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        pre {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+        }
+        button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Excluir Evento ID 36</h1>
+    <p>Este script irá excluir o evento ID 36 e todos os dados relacionados (lotes, ingressos, combos).</p>
+    
+    <button onclick="executarExclusao()">🗑️ Executar Exclusão</button>
+    
+    <pre id="resultado"></pre>
+    
+    <script>
+        async function executarExclusao() {
+            const resultado = document.getElementById('resultado');
+            resultado.textContent = 'Executando exclusão...';
+            
+            try {
+                const response = await fetch('excluir-evento-36.php');
+                const text = await response.text();
+                resultado.textContent = text;
+            } catch (error) {
+                resultado.textContent = 'Erro ao executar: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

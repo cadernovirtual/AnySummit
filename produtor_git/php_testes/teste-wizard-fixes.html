@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Correções do Wizard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+        }
+        .test-item.success {
+            border-left-color: #4CAF50;
+            background: #f1f8f4;
+        }
+        .test-item.error {
+            border-left-color: #f44336;
+            background: #fef1f0;
+        }
+        .test-item.warning {
+            border-left-color: #ff9800;
+            background: #fff8e1;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste de Correções do Wizard AnySummit</h1>
+        
+        <div id="test-results"></div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="testValidation()">Testar Validação</button>
+            <button onclick="testCookies()">Testar Cookies</button>
+            <button onclick="testCleanup()">Testar Limpeza</button>
+            <button onclick="testAutoSave()">Testar Salvamento</button>
+            <button onclick="clearAllData()">Limpar Tudo</button>
+        </div>
+    </div>
+
+    <script>
+        const results = document.getElementById('test-results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-item ${type}`;
+            div.innerHTML = `<strong>${type.toUpperCase()}:</strong> ${message}`;
+            results.appendChild(div);
+        }
+        
+        function testValidation() {
+            results.innerHTML = '<h3>📋 Testando Validação</h3>';
+            
+            // Verificar se função validateStep existe
+            if (typeof window.validateStep === 'function') {
+                addResult('Função validateStep encontrada', 'success');
+                
+                // Testar validação do step 1
+                try {
+                    const isValid = window.validateStep(1);
+                    addResult(`Validação step 1: ${isValid ? 'Passou' : 'Falhou'}`, isValid ? 'warning' : 'error');
+                } catch (e) {
+                    addResult(`Erro ao validar: ${e.message}`, 'error');
+                }
+            } else {
+                addResult('Função validateStep não encontrada', 'error');
+            }
+        }
+        
+        function testCookies() {
+            results.innerHTML = '<h3>🍪 Testando Cookies</h3>';
+            
+            // Criar cookie de teste
+            document.cookie = 'testCookie=testValue; path=/';
+            
+            // Verificar se foi criado
+            if (document.cookie.includes('testCookie')) {
+                addResult('Cookie criado com sucesso', 'success');
+                
+                // Listar todos os cookies
+                const cookies = document.cookie.split(';');
+                addResult(`Total de cookies: ${cookies.length}`, 'info');
+                
+                cookies.forEach(cookie => {
+                    const [name, value] = cookie.trim().split('=');
+                    addResult(`Cookie: ${name} = ${value?.substring(0, 50)}...`, 'info');
+                });
+            } else {
+                addResult('Falha ao criar cookie', 'error');
+            }
+        }
+        
+        function testCleanup() {
+            results.innerHTML = '<h3>🧹 Testando Limpeza</h3>';
+            
+            // Criar dados de teste
+            document.cookie = 'eventoWizard=teste; path=/';
+            localStorage.setItem('wizardData', 'teste');
+            
+            addResult('Dados de teste criados', 'info');
+            
+            // Verificar se função clearAllWizardData existe
+            if (typeof window.clearAllWizardData === 'function') {
+                addResult('Função clearAllWizardData encontrada', 'success');
+                
+                // Executar limpeza
+                window.clearAllWizardData();
+                
+                // Verificar se foi limpo
+                const cookieClean = !document.cookie.includes('eventoWizard');
+                const storageClean = !localStorage.getItem('wizardData');
+                
+                if (cookieClean && storageClean) {
+                    addResult('Dados limpos com sucesso', 'success');
+                } else {
+                    addResult('Alguns dados não foram limpos', 'warning');
+                }
+            } else {
+                addResult('Função clearAllWizardData não encontrada', 'error');
+            }
+        }
+        
+        function testAutoSave() {
+            results.innerHTML = '<h3>💾 Testando Salvamento Automático</h3>';
+            
+            // Verificar se saveWizardData existe
+            if (typeof window.saveWizardData === 'function') {
+                addResult('Função saveWizardData encontrada', 'success');
+                
+                // Verificar se autoSaveInterval está ativo
+                if (typeof window.autoSaveInterval !== 'undefined') {
+                    addResult('Salvamento automático está ativo', 'success');
+                } else {
+                    addResult('Salvamento automático não está ativo', 'warning');
+                }
+            } else {
+                addResult('Função saveWizardData não encontrada', 'error');
+            }
+            
+            // Verificar AJAX
+            addResult('Testando conexão AJAX...', 'info');
+            fetch('ajax/salvar_wizard_rascunho.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    dados_wizard: '{"test": true}',
+                    step_atual: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addResult('Conexão AJAX funcionando', 'success');
+                } else {
+                    addResult(`AJAX retornou erro: ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                addResult(`Erro de conexão AJAX: ${error.message}`, 'error');
+            });
+        }
+        
+        function clearAllData() {
+            results.innerHTML = '<h3>🗑️ Limpando Todos os Dados</h3>';
+            
+            // Limpar cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            // Limpar localStorage
+            localStorage.clear();
+            
+            addResult('Todos os dados foram limpos', 'success');
+        }
+        
+        // Teste inicial
+        window.onload = function() {
+            addResult('Página de teste carregada', 'success');
+            addResult('Aguardando comandos...', 'info');
+        };
+    </script>
+</body>
+</html>

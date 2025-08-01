@@ -1046,6 +1046,10 @@ include("conm/conn.php");
                             <a href="#" style="color: #00C2FF;">Saiba mais sobre nossa política</a>
                         </div>
                     </div>-->
+                    
+                    <div class="validation-message" id="validation-step-3">
+                        Por favor, preencha todos os campos obrigatórios.
+                    </div>
 
                     <div class="step-navigation">
                         <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
@@ -1241,6 +1245,10 @@ include("conm/conn.php");
                             📦 Combo de Tipos de Ingresso
                         </button>
                     </div>
+                    
+                    <div class="validation-message" id="validation-step-6">
+                        Por favor, preencha todos os campos obrigatórios.
+                    </div>
 
                     <div class="step-navigation">
                         <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
@@ -1263,13 +1271,13 @@ include("conm/conn.php");
                         <div class="form-group">
                             <label for="producer">Selecionar produtor</label>
                             <select id="producer">
-                                <option value="current">Você (João Silva)</option>
+                                <option value="current">Você (<?php echo isset($_SESSION['usuario_nome']) ? htmlspecialchars($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>)</option>
                                 <option value="new">Novo produtor</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="conditional-section" id="newProducerFields">
+                    <div class="conditional-section" id="newProducerFields" style="display: none;">
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="producerName">Nome do produtor <span class="required">*</span></label>
@@ -1284,6 +1292,16 @@ include("conm/conn.php");
                             <label for="producerDescription">Descrição do produtor (opcional)</label>
                             <textarea id="producerDescription" rows="4" placeholder="Conte um pouco sobre você ou sua empresa..."></textarea>
                         </div>
+                    </div>
+                    
+                    <!-- Passar dados do usuário para JavaScript -->
+                    <script>
+                        window.currentUserName = '<?php echo isset($_SESSION['usuario_nome']) ? addslashes($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>';
+                        window.currentUserId = '<?php echo isset($_SESSION['usuarioid']) ? $_SESSION['usuarioid'] : ''; ?>';
+                    </script>
+                    
+                    <div class="validation-message" id="validation-step-7">
+                        Por favor, preencha todos os campos obrigatórios.
                     </div>
 
                     <div class="step-navigation">
@@ -2421,13 +2439,32 @@ include("conm/conn.php");
     </div>
     <!-- ==================== FIM DOS MODAIS DE LOTES ==================== -->
     
+     <!-- CORREÇÃO DEFINITIVA TOTAL - DEVE SER O PRIMEIRO SCRIPT -->
+     <!-- <script language='javascript' src="/produtor/js/correcao-definitiva-total.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
+     <!-- CORREÇÃO TOTAL V2 - RESOLVE TUDO -->
+     <!-- <script language='javascript' src="/produtor/js/correcao-total-v2.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
+     
+     <!-- Scripts de recuperação e salvamento -->
+     <script language='javascript' src="/produtor/js/save-fix.js?v=<?php echo time(); ?>"></script>
+     <!-- <script language='javascript' src="/produtor/js/custom-recovery.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
+     
+     <!-- Scripts anteriores desabilitados temporariamente
+     <script language='javascript' src="/produtor/js/json-recovery-fix.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/wizard-management.js?v=<?php echo time(); ?>"></script>
+     -->
+     
      <script language='javascript' src="/produtor/js/custom-dialogs.js"></script>
      <script language='javascript' src="/produtor/js/alert-overrides.js"></script>
      <script language='javascript' src="/produtor/js/temporary-tickets.js"></script>
      <script language='javascript' src="/produtor/js/lotes.js"></script>
      <script language='javascript' src="/produtor/js/lote-protection.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/ingressos-pagos.js"></script>
+     
+     <!-- SOLUÇÃO SIMPLES DE NAVEGAÇÃO - ANTES DO CRIAEVENTO.JS -->
+     <script src="js/simple-navigation-fix.js?v=<?php echo time(); ?>"></script>
+     
      <script language='javascript' src="/produtor/js/criaevento.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/debug-validacoes.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/combo-functions.js"></script>
      <script language='javascript' src="/produtor/js/combo-override.js"></script>
      <script language='javascript' src="/produtor/js/ingressos-pagos-edit.js"></script>
@@ -2543,14 +2580,20 @@ include("conm/conn.php");
      });
      </script>
 
-       <!-- Scripts principais do sistema -->
+       <!-- Scripts principais do sistema - REMOVIDOS DUPLICADOS (já carregados acima) -->
+     <!-- 
      <script language='javascript' src="/produtor/js/custom-dialogs.js"></script>
      <script language='javascript' src="/produtor/js/alert-overrides.js"></script>
      <script language='javascript' src="/produtor/js/temporary-tickets.js"></script>
      <script language='javascript' src="/produtor/js/lotes.js"></script>
      <script language='javascript' src="/produtor/js/lote-protection.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/ingressos-pagos.js"></script>
+     
+     <!-- SOLUÇÃO SIMPLES DE NAVEGAÇÃO - ANTES DO CRIAEVENTO.JS -->
+     <script src="js/simple-navigation-fix.js?v=<?php echo time(); ?>"></script>
+     
      <script language='javascript' src="/produtor/js/criaevento.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/debug-validacoes.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/combo-functions.js"></script>
      <script language='javascript' src="/produtor/js/combo-override.js"></script>
      <script language='javascript' src="/produtor/js/ingressos-pagos-edit.js"></script>
@@ -2558,20 +2601,22 @@ include("conm/conn.php");
      <script language='javascript' src="/produtor/js/ingressos-gratuitos-create.js"></script>
      <script language='javascript' src="/produtor/js/address-improvements.js"></script>
      <script language='javascript' src="/produtor/js/modal-correto.js"></script>
+     -->
      
      <!-- Google Maps API -->
      <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>
      
      <!-- Scripts de correção -->
+     <!-- <script src="js/wizard-validation-definitive.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
      <script src="js/publish-event-fix.js?v=<?php echo time(); ?>"></script>
      <script src="js/modal-fixes.js"></script>
      <script src="js/terms-privacy-handler.js"></script>
-     <script src="js/wizard-debug.js"></script>
-     <script src="js/wizard-fix.js"></script>
+     <!-- <script src="js/wizard-debug.js"></script> DESABILITADO: Debug -->
+     <!-- <script src="js/wizard-fix.js"></script> DESABILITADO: Conflito -->
      <script src="js/preview-fix.js"></script>
-     <script src="js/wizard-fix-definitivo.js"></script>
+     <!-- <script src="js/wizard-fix-definitivo.js"></script> DESABILITADO: Conflito -->
      <script src="js/maps-fix.js"></script>
-     <script src="js/restore-fix.js"></script>
+     <!-- <script src="js/restore-fix.js"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
      <script src="js/complete-fixes.js"></script>
 <script src="js/ticket-functions-fix.js"></script>
 <script src="js/lote-ticket-functions.js"></script>
@@ -2579,7 +2624,7 @@ include("conm/conn.php");
 <script src="js/edit-combo-functions.js"></script>
 <script src="js/correcoes-definitivas.js"></script>
 <script src="js/lote-edit-free-fix.js"></script>
-<script src="js/lotes-ingressos-persistence.js"></script>
+<!-- <script src="js/lotes-ingressos-persistence.js"></script> DESABILITADO: causando erro de JSON -->
 <script src="js/combo-complete-fix.js?v=<?php echo time(); ?>"></script> 
 <script src="js/combo-tax-fix.js?v=<?php echo time(); ?>"></script>
 <script src="js/lote-dates-fix.js?v=<?php echo time(); ?>"></script>
@@ -2601,5 +2646,71 @@ include("conm/conn.php");
 <script src="js/combo-visual-fixes.js?v=<?php echo time(); ?>"></script>
 <script src="js/combo-final-fixes.js?v=<?php echo time(); ?>"></script>
 <script src="js/combo-fixes-v3.js?v=<?php echo time(); ?>"></script>
+<script src="js/image-upload-fix.js?v=<?php echo time(); ?>"></script>
+<script src="js/color-fix.js?v=<?php echo time(); ?>"></script>
+<script src="js/cleanup-after-publish.js?v=<?php echo time(); ?>"></script>
+<script src="js/producer-fix.js?v=<?php echo time(); ?>"></script>
+<script src="js/test-recovery.js?v=<?php echo time(); ?>"></script>
+<script src="js/force-save.js?v=<?php echo time(); ?>"></script>
+<!-- <script src="js/cookie-monitor.js?v=<?php echo time(); ?>"></script> DESABILITADO: loop desnecessário no console -->
+<script src="js/override-save.js?v=<?php echo time(); ?>"></script>
+<!-- <script src="js/diagnostico.js?v=<?php echo time(); ?>"></script> REMOVIDO: causava dialog de teste -->
+<!-- Remover todos os scripts de validação anteriores -->
+
+<!-- CORREÇÃO DEFINITIVA FINAL - USA window.customDialog -->
+<script src="js/fixes/correcao-definitiva-final.js?v=<?php echo time(); ?>"></script>
+<!-- Correção para exclusão de lotes -->
+<script src="js/lote-exclusao-fix.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO FINAL ABSOLUTA - DEVE SER O ÚLTIMO SCRIPT -->
+<!-- <script src="js/correcao-exclusao-final.js?v=<?php echo time(); ?>"></script> REMOVIDO: Usa callback errado -->
+<!-- CORREÇÃO DEFINITIVA COM PROMISE -->
+<!-- <script src="js/correcao-lote-promise.js?v=<?php echo time(); ?>"></script> DESABILITADO: Dialog test desnecessário -->
+<!-- CORREÇÃO DEFINITIVA DE ASSOCIAÇÃO LOTES/INGRESSOS -->
+<script src="js/correcao-associacao-definitiva.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO URGENTE - RENDERIZAÇÃO DE LOTES -->
+<script src="js/correcao-urgente-lotes.js?v=<?php echo time(); ?>"></script>
+<!-- GARANTIA FINAL - FORÇA ATUALIZAÇÃO -->
+<script src="js/garantia-final-lotes.js?v=<?php echo time(); ?>"></script>
+<!-- VERIFICAÇÃO DE INGRESSOS EM LOTES -->
+<script src="js/verificacao-ingressos-final.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO DO ENVIO DO EVENTO -->
+<script src="js/correcao-envio-evento.js?v=<?php echo time(); ?>"></script>
+<!-- DEBUG DO ENVIO -->
+<script src="js/debug-envio-api.js?v=<?php echo time(); ?>"></script>
+<!-- Correção de performance na descrição -->
+<script src="js/descricao-performance-fix.js?v=<?php echo time(); ?>"></script>
+<!-- Correção do salvamento de dados do wizard -->
+<script src="js/wizard-data-fix.js?v=<?php echo time(); ?>"></script>
+<!-- Debug melhorado -->
+<script src="js/debug-wizard-data.js?v=<?php echo time(); ?>"></script>
+<!-- Correção dos checkboxes de termos -->
+<script src="js/terms-checkbox-fix.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO COMPLETA CHECKBOX E DEBUG -->
+<script src="js/correcao-checkbox-debug.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO PARA CHECKBOX CUSTOMIZADO (DIV) -->
+<script src="js/checkbox-customizado-fix.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO DE COOKIES E RECUPERAÇÃO -->
+<!-- <script src="js/correcao-cookies-recuperacao.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
+<!-- OVERRIDE TOTAL - FORÇA PUBLICAÇÃO -->
+<script src="js/override-total-publicacao.js?v=<?php echo time(); ?>"></script>
+<!-- DEBUG COMPLETO DA API -->
+<script src="js/debug-api-completo.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO DE COLETA DE DADOS v3 -->
+<script src="js/correcao-coleta-dados-v3.js?v=<?php echo time(); ?>"></script>
+<!-- TESTE API MÍNIMA -->
+<script src="js/teste-api-minima.js?v=<?php echo time(); ?>"></script>
+
+<!-- SISTEMA DE SALVAMENTO V2 - ESTRUTURA COMPATÍVEL COM CRIAEVENTOS.JS -->
+<script src="js/wizard-save-system-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/wizard-recovery-confirm-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/complete-recovery-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/specific-data-recovery-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/lotes-save-system-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/image-recovery-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/wizard-publish-integration-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/api-format-fix-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/id-mapping-fix-v2.js?v=<?php echo time(); ?>"></script>
+<script src="js/save-debug-v2.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

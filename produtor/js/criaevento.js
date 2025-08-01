@@ -1,7 +1,9 @@
-﻿    // Variáveis globais
+﻿console.log('🚀 criaevento.js iniciando carregamento...');
+    // Variáveis globais
 // Escopo global para funçÃµes
 (function() {
     'use strict';
+    console.log('✅ IIFE iniciada');
     
     let currentStep = 1;
         const totalSteps = 8;
@@ -64,149 +66,160 @@
             console.log('🔍 ValidateStep chamado para step:', stepNumber);
             const validationMessage = document.getElementById(`validation-step-${stepNumber}`);
             let isValid = true;
+            let camposInvalidos = [];
+
+            // Remover classes de erro anteriores
+            document.querySelectorAll('.error-field').forEach(el => el.classList.remove('error-field'));
 
             switch(stepNumber) {
                 case 1:
-                    const eventName = document.getElementById('eventName').value;
-                    const logoContainer = document.getElementById('logoPreviewContainer');
-                    const capaContainer = document.getElementById('capaPreviewContainer');
-                    
-                    console.log('📋 Validando Step 1:', {
-                        eventName: eventName,
-                        logoContainer: !!logoContainer,
-                        capaContainer: !!capaContainer
-                    });
-                    
-                    // Verificar se tem imagem no logo
-                    const hasLogo = logoContainer && logoContainer.querySelector('img') !== null;
-                    // Verificar se tem imagem na capa
-                    const hasCapa = capaContainer && capaContainer.querySelector('img') !== null;
-                    
-                    console.log('🖼️ Status das imagens:', {
-                        hasLogo: hasLogo,
-                        hasCapa: hasCapa
-                    });
-                    
-                    // Remover classes de erro anteriores
-                    document.querySelectorAll('.error-field').forEach(el => el.classList.remove('error-field'));
-                    
                     // Validar nome do evento
-                    if (eventName.trim() === '') {
-                        document.getElementById('eventName').classList.add('error-field');
+                    const eventName = document.getElementById('eventName');
+                    if (!eventName || eventName.value.trim() === '') {
+                        if (eventName) eventName.classList.add('error-field');
+                        camposInvalidos.push('Nome do evento');
                         isValid = false;
                     }
                     
                     // Validar logo
+                    const logoContainer = document.getElementById('logoPreviewContainer');
+                    const hasLogo = logoContainer && logoContainer.querySelector('img') !== null;
                     if (!hasLogo) {
-                        const logoArea = document.querySelector('#logoUpload').closest('.upload-area');
+                        const logoArea = document.querySelector('#logoUpload')?.closest('.upload-area');
                         if (logoArea) logoArea.classList.add('error-field');
+                        camposInvalidos.push('Logo do evento');
                         isValid = false;
                     }
                     
                     // Validar capa
+                    const capaContainer = document.getElementById('capaPreviewContainer');
+                    const hasCapa = capaContainer && capaContainer.querySelector('img') !== null;
                     if (!hasCapa) {
-                        const capaArea = document.querySelector('#capaUpload').closest('.upload-area');
+                        const capaArea = document.querySelector('#capaUpload')?.closest('.upload-area');
                         if (capaArea) capaArea.classList.add('error-field');
+                        camposInvalidos.push('Imagem de capa');
                         isValid = false;
                     }
-                    
                     break;
+                    
                 case 2:
-                    const startDateTime = document.getElementById('startDateTime').value;
-                    const classificationnew = document.getElementById('classification').value;
-					const categorynew = document.getElementById('category').value;
-                    
-                    // Remover classes de erro anteriores
-                    document.querySelectorAll('.error-field').forEach(el => el.classList.remove('error-field'));
-                    
-                    // Validar campos
-                    if (startDateTime === '') {
-                        document.getElementById('startDateTime').classList.add('error-field');
-                        isValid = false;
-                    }
-                    if (classificationnew === '') {
-                        document.getElementById('classification').classList.add('error-field');
-                        isValid = false;
-                    }
-                    if (categorynew === '') {
-                        document.getElementById('category').classList.add('error-field');
+                    // Data e hora de início
+                    const startDateTime = document.getElementById('startDateTime');
+                    if (!startDateTime || startDateTime.value === '') {
+                        if (startDateTime) startDateTime.classList.add('error-field');
+                        camposInvalidos.push('Data e hora de início');
                         isValid = false;
                     }
                     
-                    isValid = startDateTime !== '' && classificationnew !== '' && categorynew !== '';
+                    // Classificação
+                    const classification = document.getElementById('classification');
+                    if (!classification || classification.value === '') {
+                        if (classification) classification.classList.add('error-field');
+                        camposInvalidos.push('Classificação');
+                        isValid = false;
+                    }
+                    
+                    // Categoria
+                    const category = document.getElementById('category');
+                    if (!category || category.value === '') {
+                        if (category) category.classList.add('error-field');
+                        camposInvalidos.push('Categoria');
+                        isValid = false;
+                    }
                     break;
+                    
+                case 3:
+                    // Descrição do evento
+                    const eventDescription = document.getElementById('eventDescription');
+                    const descriptionText = eventDescription ? 
+                        (eventDescription.innerText || eventDescription.textContent || '').trim() : '';
+                    
+                    if (descriptionText === '' || descriptionText === 'Digite a descrição do seu evento aqui...') {
+                        if (eventDescription) eventDescription.classList.add('error-field');
+                        camposInvalidos.push('Descrição do evento');
+                        isValid = false;
+                    }
+                    break;
+                    
                 case 4:
-                    // Simplificado - sempre válido por enquanto
-                    isValid = true;
+                    // Verificar se é presencial ou online
+                    const isPresential = document.getElementById('locationTypeSwitch')?.classList.contains('active');
+                    
+                    if (isPresential) {
+                        // Validar endereço para evento presencial
+                        const addressSearch = document.getElementById('addressSearch');
+                        const venueName = document.getElementById('venueName');
+                        
+                        if (!addressSearch || addressSearch.value.trim() === '') {
+                            if (addressSearch) addressSearch.classList.add('error-field');
+                            camposInvalidos.push('Endereço do evento');
+                            isValid = false;
+                        }
+                        
+                        if (!venueName || venueName.value.trim() === '') {
+                            if (venueName) venueName.classList.add('error-field');
+                            camposInvalidos.push('Nome do local');
+                            isValid = false;
+                        }
+                    } else {
+                        // Validar link para evento online
+                        const eventLink = document.getElementById('eventLink');
+                        if (!eventLink || eventLink.value.trim() === '') {
+                            if (eventLink) eventLink.classList.add('error-field');
+                            camposInvalidos.push('Link do evento online');
+                            isValid = false;
+                        }
+                    }
                     break;
+                    
                 case 5:
                     // Validar se há pelo menos um lote cadastrado
                     const loteCards = document.querySelectorAll('.lote-card');
-                    const hasLotes = loteCards && loteCards.length > 0;
-                    
-                    if (!hasLotes) {
-                        if (window.customDialog && window.customDialog.warning) {
-                            window.customDialog.warning(
-                                'Atenção',
-                                'Você precisa cadastrar pelo menos 1 lote para prosseguir.'
-                            );
-                        } else {
-                            alert('Você precisa cadastrar pelo menos 1 lote para prosseguir.');
-                        }
-                        
-                        // Mostrar mensagem de validação
-                        const validationMsg = document.querySelector('[data-step-content="5"] .validation-message');
-                        if (validationMsg) {
-                            validationMsg.textContent = 'Você precisa cadastrar pelo menos 1 lote para prosseguir.';
-                            validationMsg.style.display = 'block';
-                        }
-                        
+                    if (!loteCards || loteCards.length === 0) {
+                        camposInvalidos.push('Pelo menos 1 lote');
                         isValid = false;
-                    } else {
-                        // Validar lotes (função definida em lotes.js)
-                        if (typeof validarLotes === 'function') {
-                            isValid = validarLotes();
-                        } else {
-                            isValid = true; // Fallback se função não existir
-                        }
                     }
                     break;
+                    
                 case 6:
                     // Verificar se há pelo menos um ingresso cadastrado
                     const ticketList = document.getElementById('ticketList');
                     const hasTickets = ticketList && ticketList.children.length > 0;
                     
                     if (!hasTickets) {
-                        if (window.customDialog && window.customDialog.warning) {
-                            window.customDialog.warning(
-                                'Atenção',
-                                'Você precisa cadastrar pelo menos 1 Tipo de Ingresso para prosseguir.'
-                            );
-                        } else {
-                            alert('Você precisa cadastrar pelo menos 1 Tipo de Ingresso para prosseguir.');
-                        }
-                        
-                        // Mostrar mensagem de validação também
-                        const validationMsg = document.querySelector('[data-step-content="6"] .validation-message');
-                        if (validationMsg) {
-                            validationMsg.textContent = 'Você precisa cadastrar pelo menos 1 Tipo de Ingresso para prosseguir.';
-                            validationMsg.style.display = 'block';
-                        }
+                        camposInvalidos.push('Pelo menos 1 tipo de ingresso');
+                        isValid = false;
                     }
-                    
-                    isValid = hasTickets;
                     break;
+                    
+                case 7:
+                    // Produtor - geralmente sempre válido pois usa o produtor atual por padrão
+                    isValid = true;
+                    break;
+                    
                 case 8:
-                    const termsAccepted = document.getElementById('termsCheckbox').classList.contains('checked');
-                    isValid = termsAccepted;
+                    // Termos de uso
+                    const termsCheckbox = document.getElementById('termsCheckbox');
+                    const termsAccepted = termsCheckbox && termsCheckbox.classList.contains('checked');
+                    
+                    if (!termsAccepted) {
+                        camposInvalidos.push('Aceitar os termos de uso');
+                        isValid = false;
+                    }
                     break;
             }
 
+            // Mostrar ou esconder mensagem de validação
             if (!isValid && validationMessage) {
+                validationMessage.textContent = 'Todos os campos obrigatórios precisam ser preenchidos!';
+                validationMessage.style.display = 'block';
                 validationMessage.classList.add('show');
-                setTimeout(() => {
-                    validationMessage.classList.remove('show');
-                }, 3000);
+                
+                // Log dos campos inválidos
+                console.log('❌ Campos inválidos:', camposInvalidos);
+            } else if (validationMessage) {
+                validationMessage.style.display = 'none';
+                validationMessage.classList.remove('show');
             }
 
             console.log('✅ Resultado da validação do step', stepNumber, ':', isValid);
@@ -372,9 +385,10 @@
                 console.log('✅ Anysummit inicializado com sucesso');
                 
                 // Verificar dados salvos APÓS tudo estar carregado
-                setTimeout(() => {
-                    checkAndRestoreWizardData();
-                }, 100);
+                // DESABILITADO - Usando wizard-recovery-confirm-v2.js
+                // setTimeout(() => {
+                //     checkAndRestoreWizardData();
+                // }, 100);
                 
                 // Debug para combo
                 const comboBtn = document.getElementById('addComboTicket');
@@ -1322,8 +1336,13 @@
         }
         
         function clearAllWizardData() {
+            console.log('🧹 Limpando todos os dados do wizard...');
+            
+            // Limpar cookies
             deleteCookie('eventoWizard');
             deleteCookie('lotesData');
+            deleteCookie('ingressosData');
+            deleteCookie('ingressosSalvos');
             
             // Limpar lotes usando a função global
             if (window.limparTodosLotes) {
@@ -1341,7 +1360,16 @@
                 ticketList.innerHTML = '';
             }
             
-            // Limpar localStorage se usado
+            // Limpar localStorage
+            if (typeof(Storage) !== "undefined") {
+                localStorage.removeItem('wizardData');
+                localStorage.removeItem('lotesData');
+                localStorage.removeItem('ingressosData');
+                localStorage.removeItem('temporaryTickets');
+            }
+            
+            console.log('✅ Wizard limpo completamente');
+        }
             if (typeof(Storage) !== "undefined") {
                 localStorage.removeItem('temporaryTickets');
             }
@@ -1951,6 +1979,7 @@
         
         // Tornar validateStep global para debug
         window.validateStep = validateStep;
+        console.log('✅ validateStep exposta globalmente:', typeof window.validateStep);
 
         function initPreviewListeners() {
             const fields = ['eventName', 'startDateTime', 'endDateTime', 'category', 'venueName', 'eventLink'];
@@ -2916,14 +2945,54 @@
         }
 
         function removeTicket(ticketId) {
+            // Verificar se o ingresso está em algum combo
+            if (verificarIngressoEmCombo(ticketId)) {
+                alert('Não é possível excluir este ingresso pois ele está sendo usado em um combo. Remova-o do combo primeiro.');
+                return;
+            }
+            
             if (confirm('Tem certeza que deseja excluir este ingresso?')) {
                 const ticketElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
                 if (ticketElement) {
                     ticketElement.remove();
+                    
+                    // Remover também de temporaryTickets se existir
+                    if (window.temporaryTickets && window.temporaryTickets.tickets) {
+                        window.temporaryTickets.tickets = window.temporaryTickets.tickets.filter(
+                            ticket => ticket.id !== ticketId
+                        );
+                    }
+                    
                     // Salvar após remover
                     saveWizardData();
                 }
             }
+        }
+        
+        // Função para verificar se ingresso está em combo
+        function verificarIngressoEmCombo(ticketId) {
+            // Verificar em temporaryTickets
+            if (window.temporaryTickets && window.temporaryTickets.tickets) {
+                const combos = window.temporaryTickets.tickets.filter(ticket => ticket.type === 'combo');
+                
+                for (let combo of combos) {
+                    if (combo.items && Array.isArray(combo.items)) {
+                        const hasTicket = combo.items.some(item => 
+                            item.ticketId === ticketId || item.ingresso_id === ticketId
+                        );
+                        if (hasTicket) return true;
+                    }
+                }
+            }
+            
+            // Verificar na lista visual de combos
+            const comboItems = document.querySelectorAll('.combo-item');
+            for (let item of comboItems) {
+                const itemTicketId = item.dataset.ticketId || item.getAttribute('data-ticket-id');
+                if (itemTicketId == ticketId) return true;
+            }
+            
+            return false;
         }
 
         // =====================================================
@@ -4185,10 +4254,26 @@ window.goToStep = function(step) {
 };
 
 window.updateStepDisplay = updateStepDisplay;
-window.validateStep = validateStep; = validateStep;
+window.validateStep = validateStep;
+console.log('✅ Funções expostas no escopo global - validateStep:', typeof window.validateStep);
 window.initMap = initMap;
 window.createFreeTicket = createFreeTicket;
-window.createPaidTicket = createPaidTicket; = validateStep;
+window.createPaidTicket = createPaidTicket;
+window.initImageUpload = initImageUpload;
+window.initAdditionalUploads = initAdditionalUploads;
+window.handleImageUpload = handleImageUpload;
+window.initSwitches = initSwitches;
+window.initProducerSelection = initProducerSelection;
+window.initRichEditor = initRichEditor;
+window.initCheckboxes = initCheckboxes;
+window.initRadioButtons = initRadioButtons;
+window.initTicketManagement = initTicketManagement;
+window.initAddressSearch = initAddressSearch;
+window.initPreviewListeners = initPreviewListeners;
+window.initFormSubmission = initFormSubmission;
+window.initPriceInput = initPriceInput;
+window.initMiniSwitches = initMiniSwitches;
+window.initCodeTicketButton = initCodeTicketButton;
 window.editTicket = editTicket;
 window.removeTicket = removeTicket;
 window.openModal = openModal;
@@ -4227,7 +4312,8 @@ window.debugWizardCookie = function() {
         }
     }
     console.log('customDialog disponível?', window.customDialog ? 'SIM' : 'NÃO');
-    console.log('checkAndRestoreWizardData disponível?', window.checkAndRestoreWizardData ? 'SIM' : 'NÃO');
+    // DESABILITADO - Usando wizard-recovery-confirm-v2.js
+    // console.log('checkAndRestoreWizardData disponível?', window.checkAndRestoreWizardData ? 'SIM' : 'NÃO');
 };
 
 // Função para limpar cookie corrompido
@@ -4254,3 +4340,12 @@ if (window.nextStep && window.saveWizardData) {
 } else {
     console.error('Não foi possível configurar override de nextStep - funções não encontradas');
 }
+    } else {
+        console.error('Não foi possível configurar override de nextStep - funções não encontradas');
+    }
+    
+    console.log('✅ criaevento.js carregado completamente! nextStep disponível:', typeof window.nextStep);
+
+})(); // Fechar escopo IIFE
+
+console.log('🎯 Teste final - window.nextStep:', window.nextStep);

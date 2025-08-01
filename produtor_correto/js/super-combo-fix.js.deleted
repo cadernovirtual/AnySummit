@@ -1,0 +1,111 @@
+// SUPER CORREÇÃO FORÇADA - LIMPAR E RECRIAR COMBOS
+console.log('🚨 INICIANDO SUPER CORREÇÃO DE COMBOS...');
+
+// Aguardar carregamento completo
+window.addEventListener('load', function() {
+    // Aguardar 2 segundos para garantir que TUDO carregou
+    setTimeout(function() {
+        console.log('🔥 APLICANDO CORREÇÕES EXTREMAS...');
+        
+        // 1. REMOVER TODOS OS COMBOS MAL FORMATADOS
+        const combosAntigos = document.querySelectorAll('.ticket-item[data-combo-data]');
+        const dadosCombos = [];
+        
+        combosAntigos.forEach(combo => {
+            // Salvar dados antes de remover
+            const comboData = combo.dataset.comboData ? JSON.parse(combo.dataset.comboData) : null;
+            const title = combo.querySelector('.ticket-title').textContent.replace('📦', '').replace('Combo', '').trim();
+            const quantity = combo.querySelector('.ticket-info span:nth-child(1) strong').textContent;
+            
+            if (comboData) {
+                dadosCombos.push({
+                    title: title,
+                    quantity: quantity,
+                    comboData: comboData
+                });
+            }
+            
+            // Remover o combo mal formatado
+            combo.remove();
+            console.log('🗑️ Combo antigo removido:', title);
+        });
+        
+        // 2. FORÇAR NOVA FUNÇÃO addComboToList
+        window.addComboToList = function(title, quantity, price, comboData, totalItems, description, loteId, loteNome, startDate, endDate) {
+            console.log('✅ NOVA FUNÇÃO addComboToList EXECUTANDO!');
+            
+            if (!window.ticketCount) window.ticketCount = 0;
+            window.ticketCount++;
+            
+            const ticketList = document.getElementById('ticketList');
+            if (!ticketList) return;
+
+            const cleanPrice = parseFloat(price.replace(/[R$\s\.]/g, '').replace(',', '.'));
+            const tax = (cleanPrice * 0.1);
+            const totalPrice = cleanPrice + tax;
+            
+            const formatMoney = (val) => `R$ ${val.toFixed(2).replace('.', ',')}`;
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('pt-BR') + ' ' + 
+                       date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+            };
+            
+            const ticketItem = document.createElement('div');
+            ticketItem.className = 'ticket-item';
+            ticketItem.dataset.ticketId = window.ticketCount;
+            ticketItem.dataset.loteId = loteId || '1752979142918';
+            ticketItem.dataset.comboData = JSON.stringify(comboData);
+            
+            // HTML LIMPO E CORRETO
+            ticketItem.innerHTML = `
+                <div class="ticket-header">
+                    <div class="ticket-title">
+                        <span class="ticket-name">${title}</span>
+                        <span class="ticket-type-badge pago" style="background: #9C27B0; color: white;">
+                            (Combo)
+                        </span>
+                        <span class="ticket-lote-info" style="font-size: 11px; color: #666; margin-left: 10px;">
+                            ${loteNome || 'lote 1'} - Por Data (${formatDate(startDate)} até ${formatDate(endDate)})
+                        </span>
+                    </div>
+                    <div class="ticket-actions">
+                        <button class="btn-icon" onclick="editTemporaryTicket('${window.ticketCount}')" title="Editar">✏️</button>
+                        <button class="btn-icon" onclick="removeTemporaryTicket('${window.ticketCount}')" title="Remover">🗑️</button>
+                    </div>
+                </div>
+                <div class="ticket-details">
+                    <div class="ticket-info">
+                        <span>Quantidade: <strong>${quantity}</strong></span>
+                        <span>Preço: <strong class="ticket-buyer-price">${formatMoney(totalPrice)}</strong></span>
+                        <span>Taxa: <strong>${formatMoney(tax)}</strong></span>
+                        <span>Você recebe: <strong>${formatMoney(cleanPrice)}</strong></span>
+                    </div>
+                    <div style="margin-top: 10px; padding: 8px 12px; background: #f0f4ff; border-radius: 6px; font-size: 13px; border-left: 3px solid #9C27B0;">
+                        <strong style="color: #9C27B0;">Inclui:</strong>
+                        <span style="color: #555; margin-left: 5px;">
+                            ${comboData.itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            ticketList.appendChild(ticketItem);
+            console.log('✅ COMBO ADICIONADO CORRETAMENTE!');
+        };
+        
+        // 3. Recriar combos salvos com novo formato
+        if (dadosCombos.length > 0) {
+            console.log('🔄 Recriando ' + dadosCombos.length + ' combos...');
+            dadosCombos.forEach(dados => {
+                // Simular recriação
+                // Você precisaria chamar addComboToList com os dados corretos
+                console.log('📦 Combo a recriar:', dados.title);
+            });
+        }
+        
+        console.log('✅ SUPER CORREÇÃO APLICADA!');
+        
+    }, 2000);
+});

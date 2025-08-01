@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Criação de Evento - AnySummit</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .json-preview {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Criação de Evento - AnySummit</h1>
+        
+        <div class="test-section">
+            <h2>📋 Dados do Teste</h2>
+            <p>Este teste enviará um evento completo com:</p>
+            <ul>
+                <li>✅ Informações básicas do evento</li>
+                <li>✅ 2 Lotes (1 por data, 1 por percentual)</li>
+                <li>✅ 3 Ingressos (1 pago, 1 gratuito, 1 VIP)</li>
+                <li>✅ 1 Combo (inclui ingresso pago + VIP)</li>
+            </ul>
+        </div>
+
+        <button id="btnTestar" onclick="testarCriacaoEvento()">🚀 Executar Teste de Criação</button>
+        
+        <div id="result" class="result"></div>
+        
+        <div class="json-preview">
+            <h3>📄 JSON que será enviado:</h3>
+            <pre id="jsonPreview"></pre>
+        </div>
+        
+        <div class="log">
+            <h3>📊 Log de Execução:</h3>
+            <div id="logContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Função para adicionar log
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<strong>[${time}]</strong> ${message}`;
+            entry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#333';
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Dados de teste
+        function gerarDadosTeste() {
+            const now = new Date();
+            const startDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 dias no futuro
+            const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 horas depois
+            
+            const formatDate = (date) => {
+                const pad = (n) => n.toString().padStart(2, '0');
+                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+            };
+
+            return {
+                // Informações básicas
+                nome: "Festival de Música Teste 2025",
+                classificacao: "livre",
+                categoria: "1", // Assumindo categoria 1 existe
+                imagem_capa: "", // Sem imagem no teste
+                
+                // Data e horário
+                data_inicio: formatDate(startDate),
+                data_fim: formatDate(endDate),
+                evento_multiplos_dias: false,
+                
+                // Descrição
+                descricao_completa: "<p>Este é um evento de <strong>teste</strong> para verificar o funcionamento completo do sistema de criação de eventos.</p><p>Incluindo lotes, ingressos e combos!</p>",
+                descricao_texto: "Este é um evento de teste para verificar o funcionamento completo do sistema de criação de eventos. Incluindo lotes, ingressos e combos!",
+                
+                // Localização
+                tipo_local: "presencial",
+                busca_endereco: "Av. Paulista, 1000 - São Paulo",
+                nome_local: "Centro de Convenções Teste",
+                endereco: "Av. Paulista",
+                numero: "1000",
+                complemento: "Salão Principal",
+                bairro: "Bela Vista",
+                cidade: "São Paulo",
+                estado: "SP",
+                cep: "01311-100",
+                pais: "Brasil",
+                latitude: -23.5629,
+                longitude: -46.6544,
+                link_transmissao: "",
+                instrucoes_acesso: "",
+                
+                // Lotes
+                lotes: [
+                    {
+                        id: "lote_temp_1",
+                        nome: "Lote Promocional",
+                        tipo: "data",
+                        ordem: 1,
+                        data_inicio: formatDate(new Date()),
+                        data_fim: formatDate(new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000)), // 7 dias antes do evento
+                        percentual: null,
+                        quantidade: null
+                    },
+                    {
+                        id: "lote_temp_2",
+                        nome: "Lote Final",
+                        tipo: "percentual",
+                        ordem: 2,
+                        data_inicio: null,
+                        data_fim: null,
+                        percentual: 80,
+                        quantidade: 100
+                    }
+                ],
+                
+                // Ingressos
+                ingressos: [
+                    {
+                        id: "ingresso_temp_1",
+                        titulo: "Ingresso Pista",
+                        descricao: "Acesso à pista do evento",
+                        tipo: "paid",
+                        preco: 50.00,
+                        quantidade_total: 500,
+                        quantidade_por_pessoa_min: 1,
+                        quantidade_por_pessoa_max: 4,
+                        lote_id: "lote_temp_1",
+                        inicio_vendas: formatDate(new Date()),
+                        fim_vendas: formatDate(startDate),
+                        cobra_taxa: true,
+                        valor_taxa: 5.00
+                    },
+                    {
+                        id: "ingresso_temp_2",
+                        titulo: "Ingresso Solidário",
+                        descricao: "Entrada gratuita mediante doação de alimento",
+                        tipo: "free",
+                        preco: 0,
+                        quantidade_total: 100,
+                        quantidade_por_pessoa_min: 1,
+                        quantidade_por_pessoa_max: 2,
+                        lote_id: "lote_temp_1",
+                        inicio_vendas: formatDate(new Date()),
+                        fim_vendas: formatDate(startDate),
+                        cobra_taxa: false,
+                        valor_taxa: 0
+                    },
+                    {
+                        id: "ingresso_temp_3",
+                        titulo: "Ingresso VIP",
+                        descricao: "Acesso VIP com open bar",
+                        tipo: "paid",
+                        preco: 150.00,
+                        quantidade_total: 100,
+                        quantidade_por_pessoa_min: 1,
+                        quantidade_por_pessoa_max: 2,
+                        lote_id: "lote_temp_2",
+                        inicio_vendas: formatDate(new Date()),
+                        fim_vendas: formatDate(startDate),
+                        cobra_taxa: true,
+                        valor_taxa: 15.00
+                    }
+                ],
+                
+                // Combos
+                combos: [
+                    {
+                        id: "combo_temp_1",
+                        titulo: "Combo Casal VIP",
+                        descricao: "2 ingressos pista + 2 ingressos VIP",
+                        preco: 350.00,
+                        quantidade_total: 50,
+                        lote_id: "lote_temp_2",
+                        inicio_vendas: formatDate(new Date()),
+                        fim_vendas: formatDate(startDate),
+                        itens: [
+                            {
+                                ticket_id: "ingresso_temp_1",
+                                quantidade: 2
+                            },
+                            {
+                                ticket_id: "ingresso_temp_3",
+                                quantidade: 2
+                            }
+                        ]
+                    }
+                ],
+                
+                // Produtor
+                tipo_produtor: "current",
+                nome_produtor: "Produtor Teste",
+                nome_exibicao: "Festival Productions",
+                descricao_produtor: "<p>Empresa especializada em eventos musicais</p>",
+                
+                // Configurações
+                visibilidade: "public",
+                senha: "",
+                aceita_termos: true,
+                aceita_privacidade: true
+            };
+        }
+
+        // Função principal de teste
+        async function testarCriacaoEvento() {
+            const btnTestar = document.getElementById('btnTestar');
+            btnTestar.disabled = true;
+            btnTestar.textContent = '⏳ Processando...';
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+            
+            // Limpar logs anteriores
+            document.getElementById('logContainer').innerHTML = '';
+            
+            addLog('Iniciando teste de criação de evento...', 'info');
+            
+            try {
+                // Gerar dados de teste
+                const dados = gerarDadosTeste();
+                
+                // Mostrar JSON
+                document.getElementById('jsonPreview').textContent = JSON.stringify(dados, null, 2);
+                
+                addLog('Dados de teste gerados com sucesso', 'success');
+                addLog(`Total de lotes: ${dados.lotes.length}`, 'info');
+                addLog(`Total de ingressos: ${dados.ingressos.length}`, 'info');
+                addLog(`Total de combos: ${dados.combos.length}`, 'info');
+                
+                // Fazer requisição
+                addLog('Enviando requisição para API...', 'info');
+                
+                const response = await fetch('/produtor/criaeventoapi-debug.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+                
+                addLog(`Status da resposta: ${response.status}`, 'info');
+                
+                const resultado = await response.json();
+                
+                if (resultado.success) {
+                    addLog('✅ Evento criado com sucesso!', 'success');
+                    addLog(`ID do evento: ${resultado.data.evento_id}`, 'success');
+                    addLog(`Slug: ${resultado.data.slug}`, 'success');
+                    addLog(`URL: ${resultado.data.url}`, 'success');
+                    addLog(`Lotes criados: ${resultado.data.lotes_criados}`, 'success');
+                    addLog(`Ingressos criados: ${resultado.data.ingressos_criados}`, 'success');
+                    addLog(`Combos criados: ${resultado.data.combos_criados}`, 'success');
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Sucesso!</h3>
+                        <p>Evento criado com ID: <strong>${resultado.data.evento_id}</strong></p>
+                        <p>URL do evento: <a href="${resultado.data.url}" target="_blank">${resultado.data.url}</a></p>
+                        <p>Lotes: ${resultado.data.lotes_criados} | Ingressos: ${resultado.data.ingressos_criados} | Combos: ${resultado.data.combos_criados}</p>
+                    `;
+                } else {
+                    throw new Error(resultado.message || 'Erro desconhecido');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Erro: ${error.message}`, 'error');
+                
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Erro!</h3>
+                    <p>${error.message}</p>
+                    <p>Verifique o console do navegador para mais detalhes.</p>
+                `;
+                
+                console.error('Erro completo:', error);
+            } finally {
+                resultDiv.style.display = 'block';
+                btnTestar.disabled = false;
+                btnTestar.textContent = '🚀 Executar Teste de Criação';
+            }
+        }
+
+        // Ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('Página de teste carregada', 'info');
+            addLog('Pronto para executar testes', 'success');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<?php
+// INÍCIO DO ARQUIVO - mantém o conteúdo original até a linha 2530
+// Este é apenas um marcador para indicar onde fazer o corte
+?>
+
+<!-- CORTAR O ARQUIVO ORIGINAL ATÉ AQUI (linha 2530) E COLAR O CONTEÚDO ABAIXO -->
+
+                 </div>
+             `).join('');
+         };
+         console.log('✅ Função updateComboItemsList corrigida com ícone SVG');
+     });
+     </script>
+
+     <!-- Scripts principais do sistema -->
+     <script language='javascript' src="/produtor/js/custom-dialogs.js"></script>
+     <script language='javascript' src="/produtor/js/alert-overrides.js"></script>
+     <script language='javascript' src="/produtor/js/temporary-tickets.js"></script>
+     <script language='javascript' src="/produtor/js/lotes.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-pagos.js"></script>
+     <script language='javascript' src="/produtor/js/criaevento.js"></script>
+     <script language='javascript' src="/produtor/js/combo-functions.js"></script>
+     <script language='javascript' src="/produtor/js/combo-override.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-pagos-edit.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-gratuitos.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-gratuitos-create.js"></script>
+     <script language='javascript' src="/produtor/js/address-improvements.js"></script>
+     <script language='javascript' src="/produtor/js/modal-correto.js"></script>
+     
+     <!-- Google Maps API -->
+     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>
+     
+     <!-- Scripts de correção -->
+     <script src="js/modal-fixes.js"></script>
+     <script src="js/terms-privacy-handler.js"></script>
+     <script src="js/wizard-debug.js"></script>
+     <script src="js/wizard-fix.js"></script>
+     <script src="js/preview-fix.js"></script>
+     <script src="js/wizard-fix-definitivo.js"></script>
+     <script src="js/maps-fix.js"></script>
+     <script src="js/restore-fix.js"></script>
+     <script src="js/complete-fixes.js"></script>
+    
+</body>
+</html>

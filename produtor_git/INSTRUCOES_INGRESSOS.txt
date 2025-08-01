@@ -1,0 +1,45 @@
+# INSTRUÇÕES - Adicionar Scripts de Correção de Ingressos
+
+## Arquivos Criados
+- `/produtor/js/ticket-functions-fix.js`
+- `/produtor/js/lote-ticket-functions.js`
+
+## Como Adicionar ao HTML
+
+1. Abra o arquivo `/produtor/novoevento.php`
+
+2. Localize esta linha (próxima ao final do arquivo):
+```html
+<script src="js/complete-fixes.js"></script>
+```
+
+3. LOGO APÓS essa linha, adicione:
+```html
+<script src="js/ticket-functions-fix.js"></script>
+<script src="js/lote-ticket-functions.js"></script>
+```
+
+4. O resultado final deve ficar assim:
+```html
+     <script src="js/complete-fixes.js"></script>
+     <script src="js/ticket-functions-fix.js"></script>
+     <script src="js/lote-ticket-functions.js"></script>
+    
+</body>
+</html>
+```
+
+5. Salve o arquivo e limpe o cache (Ctrl+F5)
+
+## O que isso corrige
+- Erro "createPaidTicket is not defined"
+- Permite criar ingressos pagos e gratuitos
+- Calcula automaticamente as taxas
+- Popula os selects de lotes nos modais
+
+## Teste Rápido
+1. Vá para etapa 5 e crie um lote
+2. Vá para etapa 6
+3. Clique em "Tipo de Ingresso Pago"
+4. O modal deve abrir com o select de lotes preenchido
+5. Preencha os campos e clique em "Criar Tipo de Ingresso"
