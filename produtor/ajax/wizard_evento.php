@@ -17,15 +17,12 @@ ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(0);
 
-// CORREÇÃO: Headers para JSON
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-cache, must-revalidate');
-
 require_once '../conm/conn.php';
 session_start();
 
-// Headers para CORS e JSON
+// Headers para JSON - APENAS UMA VEZ
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -41,7 +38,7 @@ $usuario_id = $_SESSION['usuarioid'];
 $contratante_id = $_SESSION['contratanteid'] ?? null;
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-error_log("wizard_evento.php - Action: $action, Usuario: $usuario_id");
+// error_log("wizard_evento.php - Action: $action, Usuario: $usuario_id");
 
 switch ($action) {
     case 'verificar_rascunho':
