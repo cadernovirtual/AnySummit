@@ -2678,11 +2678,8 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- CORREÇÃO RADICAL E IMEDIATA DOS PROBLEMAS REPORTADOS - DEVE SER CARREGADO PRIMEIRO -->
 <script src="js/correcao-radical-problemas.js?v=<?php echo time(); ?>"></script>
 
-<!-- CORREÇÃO ESPECÍFICA APENAS PARA INGRESSOS - NÃO INTERFERE COM RASCUNHOS -->
-<script src="js/correcao-especifica-ingressos.js?v=<?php echo time(); ?>"></script>
-
-<!-- RESTAURAR FETCH ORIGINAL PARA OUTRAS FUNCIONALIDADES -->
-<script src="js/restaurar-fetch-original.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO SIMPLES E DIRETA - APENAS PARA removeTicket e editTicket -->
+<script src="js/correcao-simples-direta.js?v=<?php echo time(); ?>"></script>
 
 <!-- DEBUG RESPOSTA DO SERVIDOR - CORRIGE JSON CORROMPIDO -->
 <script src="js/debug-resposta-servidor.js?v=<?php echo time(); ?>"></script>

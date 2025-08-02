@@ -1312,14 +1312,5 @@ try {
     <script src="/produtor/js/modal-rascunho.js"></script>
     <script src="/produtor/js/gerenciar-rascunhos.js"></script>
     
-    <!-- DEBUG ESPECÍFICO PARA PROBLEMA DOS RASCUNHOS -->
-    <script src="/produtor/js/debug-rascunhos.js?v=<?php echo time(); ?>"></script>
-    
-    <!-- TESTE DIRETO DA API DE RASCUNHO -->
-    <script src="/produtor/js/teste-api-rascunho.js?v=<?php echo time(); ?>"></script>
-    
-    <!-- TESTE DA CORREÇÃO DA SESSÃO -->
-    <script src="/produtor/js/teste-correcao-sessao.js?v=<?php echo time(); ?>"></script>
-    
 </body>
 </html>
