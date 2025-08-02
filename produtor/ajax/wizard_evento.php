@@ -12,10 +12,14 @@
 // Iniciar buffer de output para evitar headers já enviados
 ob_start();
 
-// Configurar relatório de erros para debug
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// CORREÇÃO: Configurar para evitar warnings e garantir JSON limpo
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
+
+// CORREÇÃO: Headers para JSON
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, must-revalidate');
 
 require_once '../conm/conn.php';
 session_start();
@@ -1263,13 +1267,14 @@ function excluirRascunho($con, $usuario_id) {
  * Salvar ingresso individual (para edição imediata)
  */
 function salvarIngressoIndividual($con, $usuario_id) {
-    error_log("=== SALVANDO INGRESSO INDIVIDUAL ===");
+    // Remover error_log que contamina o JSON
+    // error_log("=== SALVANDO INGRESSO INDIVIDUAL ===");
     
     $evento_id = intval($_POST['evento_id']);
     $ingresso_data = json_decode($_POST['ingresso'], true);
     
-    error_log("Evento ID: $evento_id");
-    error_log("Dados do ingresso: " . print_r($ingresso_data, true));
+    // error_log("Evento ID: $evento_id");
+    // error_log("Dados do ingresso: " . print_r($ingresso_data, true));
     
     // Verificar se evento pertence ao usuário
     $sql = "SELECT id FROM eventos WHERE id = ? AND usuario_id = ?";
@@ -1322,10 +1327,10 @@ function salvarIngressoIndividual($con, $usuario_id) {
         );
         
         if (mysqli_stmt_execute($stmt)) {
-            error_log("✅ Ingresso $ingresso_id atualizado com sucesso");
+            // error_log("✅ Ingresso $ingresso_id atualizado com sucesso");
             echo json_encode(['sucesso' => true, 'ingresso_id' => $ingresso_id]);
         } else {
-            error_log("❌ Erro ao atualizar ingresso: " . mysqli_error($con));
+            // error_log("❌ Erro ao atualizar ingresso: " . mysqli_error($con));
             echo json_encode(['erro' => 'Erro ao atualizar ingresso']);
         }
     } else {
@@ -1346,10 +1351,10 @@ function salvarIngressoIndividual($con, $usuario_id) {
         
         if (mysqli_stmt_execute($stmt)) {
             $ingresso_id = mysqli_insert_id($con);
-            error_log("✅ Ingresso $ingresso_id criado com sucesso");
+            // error_log("✅ Ingresso $ingresso_id criado com sucesso");
             echo json_encode(['sucesso' => true, 'ingresso_id' => $ingresso_id]);
         } else {
-            error_log("❌ Erro ao criar ingresso: " . mysqli_error($con));
+            // error_log("❌ Erro ao criar ingresso: " . mysqli_error($con));
             echo json_encode(['erro' => 'Erro ao criar ingresso']);
         }
     }
@@ -1359,12 +1364,12 @@ function salvarIngressoIndividual($con, $usuario_id) {
  * Excluir ingresso individual
  */
 function excluirIngresso($con, $usuario_id) {
-    error_log("=== EXCLUINDO INGRESSO ===");
+    // error_log("=== EXCLUINDO INGRESSO ===");
     
     $evento_id = intval($_POST['evento_id']);
     $ingresso_id = intval($_POST['ingresso_id']);
     
-    error_log("Evento ID: $evento_id, Ingresso ID: $ingresso_id");
+    // error_log("Evento ID: $evento_id, Ingresso ID: $ingresso_id");
     
     // Verificar se evento pertence ao usuário
     $sql = "SELECT id FROM eventos WHERE id = ? AND usuario_id = ?";
@@ -1384,10 +1389,10 @@ function excluirIngresso($con, $usuario_id) {
     mysqli_stmt_bind_param($stmt, "ii", $ingresso_id, $evento_id);
     
     if (mysqli_stmt_execute($stmt)) {
-        error_log("✅ Ingresso $ingresso_id excluído com sucesso");
+        // error_log("✅ Ingresso $ingresso_id excluído com sucesso");
         echo json_encode(['sucesso' => true]);
     } else {
-        error_log("❌ Erro ao excluir ingresso: " . mysqli_error($con));
+        // error_log("❌ Erro ao excluir ingresso: " . mysqli_error($con));
         echo json_encode(['erro' => 'Erro ao excluir ingresso']);
     }
 }
@@ -1651,9 +1656,10 @@ function listarIngressosParaCombo($con, $usuario_id) {
 function recuperarDadosCompletos($con, $usuario_id) {
     $evento_id = intval($_POST['evento_id']);
     
-    error_log("=== RECUPERANDO DADOS COMPLETOS DO EVENTO ===");
-    error_log("Evento ID: $evento_id");
-    error_log("Usuario ID: $usuario_id");
+    // Remover error_log que contamina o JSON
+    // error_log("=== RECUPERANDO DADOS COMPLETOS DO EVENTO ===");
+    // error_log("Evento ID: $evento_id");
+    // error_log("Usuario ID: $usuario_id");
     
     // Verificar se evento pertence ao usuário
     $sql = "SELECT * FROM eventos WHERE id = ? AND usuario_id = ?";
@@ -1683,8 +1689,9 @@ function recuperarDadosCompletos($con, $usuario_id) {
     mysqli_stmt_execute($stmt_ingressos);
     $ingressos = mysqli_fetch_all(mysqli_stmt_get_result($stmt_ingressos), MYSQLI_ASSOC);
     
-    error_log("Lotes encontrados: " . count($lotes));
-    error_log("Ingressos encontrados: " . count($ingressos));
+    // Remover error_log que contamina o JSON
+    // error_log("Lotes encontrados: " . count($lotes));
+    // error_log("Ingressos encontrados: " . count($ingressos));
     
     echo json_encode([
         'sucesso' => true,
@@ -3255,4 +3262,7 @@ function renomearLotesSequencial($con, $usuario_id) {
 }
 
 mysqli_close($con);
+
+// CORREÇÃO: Limpar buffer e garantir JSON limpo
+ob_end_clean();
 ?>

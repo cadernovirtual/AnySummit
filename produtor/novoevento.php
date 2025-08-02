@@ -2678,6 +2678,12 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- CORREÇÃO RADICAL E IMEDIATA DOS PROBLEMAS REPORTADOS - DEVE SER CARREGADO PRIMEIRO -->
 <script src="js/correcao-radical-problemas.js?v=<?php echo time(); ?>"></script>
 
+<!-- CORREÇÃO DO JSON MAL FORMADO - INTERCEPTA E LIMPA RESPOSTAS -->
+<script src="js/correcao-json-mal-formado.js?v=<?php echo time(); ?>"></script>
+
+<!-- DEBUG RESPOSTA DO SERVIDOR - CORRIGE JSON CORROMPIDO -->
+<script src="js/debug-resposta-servidor.js?v=<?php echo time(); ?>"></script>
+
 <script src="js/ticket-functions-fix.js"></script>
 <script src="js/lote-ticket-functions.js"></script>
     <script src="js/edit-combo-fixes.js"></script>
@@ -2906,6 +2912,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 
 <!-- TESTE DA CORREÇÃO RADICAL -->
 <script src="js/teste-correcao-radical.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO FINAL PARA JSON MALFORMADO - DEVE SER O ÚLTIMO SCRIPT -->
+<script src="js/correcao-json-malformado.js?v=<?php echo time(); ?>"></script>
 
 <!-- CORREÇÃO FINAL DOS PROBLEMAS DE LOTES POR PERCENTUAL - DESABILITADO: CONFLITA COM MYSQL -->
 <!-- <script src="js/correcao-lotes-percentual-final.js?v=<?php echo time(); ?>"></script> -->
