@@ -30,14 +30,21 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Verificar se usuário está logado
-if (!isset($_SESSION['usuarioid'])) {
+// Verificar se usuário está logado - CORRIGIR NOME DA SESSÃO
+if (!isset($_SESSION['usuario_id']) && !isset($_SESSION['usuarioid'])) {
     http_response_code(401);
     echo json_encode(['erro' => 'Usuário não autenticado']);
     exit;
 }
 
-$usuario_id = $_SESSION['usuarioid'];
+// Usar usuario_id como padrão, fallback para usuarioid
+$usuario_id = $_SESSION['usuario_id'] ?? $_SESSION['usuarioid'] ?? null;
+
+if (!$usuario_id) {
+    http_response_code(401);
+    echo json_encode(['erro' => 'ID de usuário não encontrado na sessão']);
+    exit;
+}
 $contratante_id = $_SESSION['contratanteid'] ?? null;
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 

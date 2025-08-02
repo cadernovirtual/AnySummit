@@ -1318,5 +1318,8 @@ try {
     <!-- TESTE DIRETO DA API DE RASCUNHO -->
     <script src="/produtor/js/teste-api-rascunho.js?v=<?php echo time(); ?>"></script>
     
+    <!-- TESTE DA CORREÇÃO DA SESSÃO -->
+    <script src="/produtor/js/teste-correcao-sessao.js?v=<?php echo time(); ?>"></script>
+    
 </body>
 </html>
