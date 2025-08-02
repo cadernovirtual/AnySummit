@@ -21,8 +21,10 @@ async function popularSelectLotesUnificado(selectId) {
         return;
     }
     
-    // Limpar opções existentes
-    select.innerHTML = '<option value="">Selecione um lote</option>';
+    // CORREÇÃO 1: Sempre limpar completamente antes de popular para evitar duplicação
+    console.log(`🧹 [CORREÇÃO] Limpando select ${selectId} para evitar duplicação...`);
+    select.innerHTML = '';
+    select.appendChild(new Option('Selecione um lote', ''));
     
     try {
         // Usar a função da Etapa 5 que funciona

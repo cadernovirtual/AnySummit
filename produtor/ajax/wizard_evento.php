@@ -1288,8 +1288,8 @@ function salvarIngressoIndividual($con, $usuario_id) {
     $descricao = $ingresso_data['descricao'] ?? '';
     $quantidade = intval($ingresso_data['quantidade_total']);
     $preco = floatval($ingresso_data['preco']);
-    $taxa_plataforma = floatval($ingresso_data['taxa_plataforma']);
-    $valor_receber = floatval($ingresso_data['valor_receber']);
+    $taxa_plataforma = floatval($ingresso_data['taxa_plataforma'] ?? 0);
+    $valor_receber = floatval($ingresso_data['valor_receber'] ?? 0);
     $inicio_venda = $ingresso_data['inicio_venda'] ?? null;
     $fim_venda = $ingresso_data['fim_venda'] ?? null;
     $limite_min = intval($ingresso_data['limite_min']);

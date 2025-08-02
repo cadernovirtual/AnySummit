@@ -2870,6 +2870,12 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- CORREÇÃO ESPECÍFICA: SELECTS DE LOTES VAZIOS NA ETAPA 6 -->
 <script src="js/correcao-selects-lotes-etapa6.js?v=<?php echo time(); ?>"></script>
 
+<!-- CORREÇÃO DOS PROBLEMAS ESPECÍFICOS DA ETAPA 6 -->
+<script src="js/correcao-problemas-especificos-etapa6.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE DA CORREÇÃO DE SELECTS (TEMPORÁRIO) -->
+<script src="js/teste-correcao-selects.js?v=<?php echo time(); ?>"></script>
+
 <!-- DEBUG RECUPERAÇÃO ESPECÍFICO - INTERCEPTADOR -->
 <script src="js/debug-recuperacao-especifico.js?v=<?php echo time(); ?>"></script>
 
