@@ -2867,6 +2867,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- TESTE RECUPERAÇÃO LOTES - PARA DEBUG -->
 <script src="js/teste-recuperacao-lotes.js?v=<?php echo time(); ?>"></script>
 
+<!-- CORREÇÃO ESPECÍFICA: SELECTS DE LOTES VAZIOS NA ETAPA 6 -->
+<script src="js/correcao-selects-lotes-etapa6.js?v=<?php echo time(); ?>"></script>
+
 <!-- DEBUG RECUPERAÇÃO ESPECÍFICO - INTERCEPTADOR -->
 <script src="js/debug-recuperacao-especifico.js?v=<?php echo time(); ?>"></script>
 
