@@ -39,46 +39,59 @@ function limparJSONContaminado(textoResposta) {
 }
 
 /**
- * Interceptar fetch para wizard_evento.php e limpar respostas
+ * Interceptar fetch APENAS para ações específicas que estavam com problema
  */
 const fetchOriginal = window.fetch;
 window.fetch = function(url, options) {
-    const isWizardEvento = url.includes('wizard_evento.php') || url.includes('/produtor/ajax/');
+    const isWizardEvento = url.includes('wizard_evento.php');
     
-    if (isWizardEvento) {
-        console.log(`🔧 Interceptando requisição para ${url}`);
+    // INTERCEPTAR APENAS ações específicas que estavam com problema de JSON contaminado
+    if (isWizardEvento && options && options.body) {
+        const body = options.body.toString();
+        const acoesProblematicas = [
+            'action=recuperar_evento',
+            'action=salvar_ingresso_individual', 
+            'action=excluir_ingresso'
+        ];
         
-        return fetchOriginal.apply(this, arguments).then(response => {
-            // Clonar response para poder ler o texto
-            const responseClone = response.clone();
+        const precisaLimpeza = acoesProblematicas.some(acao => body.includes(acao));
+        
+        if (precisaLimpeza) {
+            console.log(`🔧 Interceptando requisição problemática para ${url}`);
             
-            // Criar um response personalizado com JSON limpo
-            const responsePersonalizado = {
-                ...response,
-                json: async function() {
-                    const texto = await responseClone.text();
-                    console.log(`📥 Resposta bruta (${texto.length} chars):`, texto.substring(0, 200) + '...');
-                    
-                    try {
-                        const jsonLimpo = limparJSONContaminado(texto);
-                        console.log('✅ JSON parseado com sucesso:', jsonLimpo);
-                        return jsonLimpo;
-                    } catch (error) {
-                        console.error('❌ Erro ao limpar JSON:', error);
-                        console.error('📄 Texto completo da resposta:', texto);
-                        throw error;
+            return fetchOriginal.apply(this, arguments).then(response => {
+                // Clonar response para poder ler o texto
+                const responseClone = response.clone();
+                
+                // Criar um response personalizado com JSON limpo
+                const responsePersonalizado = {
+                    ...response,
+                    json: async function() {
+                        const texto = await responseClone.text();
+                        console.log(`📥 Limpando resposta (${texto.length} chars)`);
+                        
+                        try {
+                            const jsonLimpo = limparJSONContaminado(texto);
+                            console.log('✅ JSON limpo com sucesso:', jsonLimpo);
+                            return jsonLimpo;
+                        } catch (error) {
+                            console.error('❌ Erro ao limpar JSON:', error);
+                            console.error('📄 Texto completo da resposta:', texto);
+                            throw error;
+                        }
+                    },
+                    text: async function() {
+                        return responseClone.text();
                     }
-                },
-                text: async function() {
-                    return responseClone.text();
-                }
-            };
-            
-            return responsePersonalizado;
-        });
-    } else {
-        return fetchOriginal.apply(this, arguments);
+                };
+                
+                return responsePersonalizado;
+            });
+        }
     }
+    
+    // Para todas as outras requisições, usar fetch original
+    return fetchOriginal.apply(this, arguments);
 };
 
 /**
