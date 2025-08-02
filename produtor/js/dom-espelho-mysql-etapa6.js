@@ -13,9 +13,9 @@
 
 console.log('🔄 Carregando DOM ESPELHO MYSQL - Etapa 6...');
 
-// Variáveis globais
-let eventoId = null;
-let dadosAtivos = {
+// Variáveis globais - DEFINIR IMEDIATAMENTE
+window.eventoId = null;
+window.dadosAtivos = {
     ingressos: [],
     lotes: []
 };
@@ -26,10 +26,10 @@ let dadosAtivos = {
 document.addEventListener('DOMContentLoaded', function() {
     // Detectar evento_id da URL
     const urlParams = new URLSearchParams(window.location.search);
-    eventoId = urlParams.get('evento_id');
+    window.eventoId = urlParams.get('evento_id');
     
-    if (eventoId) {
-        console.log(`🔄 Evento detectado: ${eventoId} - Carregando dados do MySQL...`);
+    if (window.eventoId) {
+        console.log(`🔄 Evento detectado: ${window.eventoId} - Carregando dados do MySQL...`);
         setTimeout(() => {
             recarregarIngressosDoMySQL();
         }, 1000); // Aguardar carregamento completo da página
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.recarregarIngressosDoMySQL = async function() {
     console.log('🔄 Recarregando ingressos do MySQL...');
     
-    if (!eventoId) {
+    if (!window.eventoId) {
         console.log('📝 Evento novo - sem dados para carregar');
         return;
     }
@@ -55,7 +55,7 @@ window.recarregarIngressosDoMySQL = async function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `action=recuperar_evento&evento_id=${eventoId}`
+            body: `action=recuperar_evento&evento_id=${window.eventoId}`
         });
         
         const data = await response.json();
@@ -66,10 +66,10 @@ window.recarregarIngressosDoMySQL = async function() {
         }
         
         // 2. Atualizar cache local
-        dadosAtivos.ingressos = data.ingressos || [];
-        dadosAtivos.lotes = data.lotes || [];
+        window.dadosAtivos.ingressos = data.ingressos || [];
+        window.dadosAtivos.lotes = data.lotes || [];
         
-        console.log(`✅ Carregados: ${dadosAtivos.ingressos.length} ingressos, ${dadosAtivos.lotes.length} lotes`);
+        console.log(`✅ Carregados: ${window.dadosAtivos.ingressos.length} ingressos, ${window.dadosAtivos.lotes.length} lotes`);
         
         // 3. Recriar DOM baseado nos dados reais do MySQL
         renderizarIngressosDoMySQL();
@@ -94,7 +94,7 @@ function renderizarIngressosDoMySQL() {
     // Limpar DOM completamente
     ticketList.innerHTML = '';
     
-    if (dadosAtivos.ingressos.length === 0) {
+    if (window.dadosAtivos.ingressos.length === 0) {
         ticketList.innerHTML = `
             <div class="empty-state" style="background: transparent !important; background-color: transparent !important;">
                 <p>Nenhum tipo de ingresso cadastrado ainda.</p>
@@ -105,11 +105,11 @@ function renderizarIngressosDoMySQL() {
     }
     
     // Renderizar cada ingresso usando addTicketToList() com dados REAIS
-    dadosAtivos.ingressos.forEach(ingresso => {
+    window.dadosAtivos.ingressos.forEach(ingresso => {
         criarElementoComDadosReais(ingresso);
     });
     
-    console.log(`✅ ${dadosAtivos.ingressos.length} ingressos renderizados no DOM com IDs reais`);
+    console.log(`✅ ${window.dadosAtivos.ingressos.length} ingressos renderizados no DOM com IDs reais`);
 }
 
 /**
@@ -271,7 +271,7 @@ window.createPaidTicketMySQL = async function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `action=salvar_ingresso_individual&evento_id=${eventoId}&ingresso=${encodeURIComponent(JSON.stringify(ingressoData))}`
+            body: `action=salvar_ingresso_individual&evento_id=${window.eventoId}&ingresso=${encodeURIComponent(JSON.stringify(ingressoData))}`
         });
         
         const data = await response.json();
@@ -377,7 +377,7 @@ window.createFreeTicketMySQL = async function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `action=salvar_ingresso_individual&evento_id=${eventoId}&ingresso=${encodeURIComponent(JSON.stringify(ingressoData))}`
+            body: `action=salvar_ingresso_individual&evento_id=${window.eventoId}&ingresso=${encodeURIComponent(JSON.stringify(ingressoData))}`
         });
         
         const data = await response.json();
@@ -425,7 +425,7 @@ window.excluirIngressoDoMySQL = async function(ingressoId) {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `action=excluir_ingresso&evento_id=${eventoId}&ingresso_id=${ingressoId}`
+            body: `action=excluir_ingresso&evento_id=${window.eventoId}&ingresso_id=${ingressoId}`
         });
         
         const data = await response.json();
@@ -458,7 +458,7 @@ window.editarIngressoDoMySQL = async function(ingressoId) {
     console.log(`✏️ Editando ingresso ${ingressoId} (dados do MySQL)...`);
     
     // Buscar dados atuais do MySQL
-    const ingresso = dadosAtivos.ingressos.find(i => i.id == ingressoId);
+    const ingresso = window.dadosAtivos.ingressos.find(i => i.id == ingressoId);
     if (!ingresso) {
         alert('Ingresso não encontrado');
         return;
@@ -539,22 +539,75 @@ function limparFormularioGratuito() {
 }
 
 /**
- * SOBRESCREVER FUNÇÕES ORIGINAIS para usar as novas versões MySQL
+ * SOBRESCREVER FUNÇÕES ORIGINAIS para usar as novas versões MySQL - IMEDIATAMENTE
+ */
+console.log('🔄 Sobrescrevendo funções originais com versões MySQL...');
+
+// Sobrescrever imediatamente (não esperar o load)
+window.createPaidTicket = function() {
+    console.log('💰 Redirecionando createPaidTicket para versão MySQL...');
+    if (typeof window.createPaidTicketMySQL === 'function') {
+        return window.createPaidTicketMySQL();
+    } else {
+        console.error('❌ createPaidTicketMySQL não carregada ainda');
+        alert('Sistema carregando, tente novamente em alguns segundos.');
+    }
+};
+
+window.createFreeTicket = function() {
+    console.log('🆓 Redirecionando createFreeTicket para versão MySQL...');
+    if (typeof window.createFreeTicketMySQL === 'function') {
+        return window.createFreeTicketMySQL();
+    } else {
+        console.error('❌ createFreeTicketMySQL não carregada ainda');
+        alert('Sistema carregando, tente novamente em alguns segundos.');
+    }
+};
+
+window.removeTicket = function(ticketId) {
+    console.log(`🗑️ Redirecionando removeTicket(${ticketId}) para versão MySQL...`);
+    if (typeof window.excluirIngressoDoMySQL === 'function') {
+        return window.excluirIngressoDoMySQL(ticketId);
+    } else {
+        console.error('❌ excluirIngressoDoMySQL não carregada ainda');
+        alert('Sistema carregando, tente novamente em alguns segundos.');
+    }
+};
+
+window.editTicket = function(ticketId) {
+    console.log(`✏️ Redirecionando editTicket(${ticketId}) para versão MySQL...`);
+    if (typeof window.editarIngressoDoMySQL === 'function') {
+        return window.editarIngressoDoMySQL(ticketId);
+    } else {
+        console.error('❌ editarIngressoDoMySQL não carregada ainda');
+        alert('Sistema carregando, tente novamente em alguns segundos.');
+    }
+};
+
+console.log('✅ Funções redirecionadas imediatamente');
+
+/**
+ * Aplicação após carregamento para garantir que as funções MySQL estão disponíveis
  */
 window.addEventListener('load', function() {
-    // Aguardar carregamento e sobrescrever
     setTimeout(() => {
-        console.log('🔄 Sobrescrevendo funções originais com versões MySQL...');
+        console.log('🔄 Verificando e reforçando redirecionamentos após carregamento...');
         
-        // Sobrescrever funções de criação
-        window.createPaidTicket = window.createPaidTicketMySQL;
-        window.createFreeTicket = window.createFreeTicketMySQL;
+        // Reforçar sobrescrita se as funções MySQL estão disponíveis
+        if (typeof window.createPaidTicketMySQL === 'function') {
+            window.createPaidTicket = window.createPaidTicketMySQL;
+        }
+        if (typeof window.createFreeTicketMySQL === 'function') {
+            window.createFreeTicket = window.createFreeTicketMySQL;
+        }
+        if (typeof window.excluirIngressoDoMySQL === 'function') {
+            window.removeTicket = window.excluirIngressoDoMySQL;
+        }
+        if (typeof window.editarIngressoDoMySQL === 'function') {
+            window.editTicket = window.editarIngressoDoMySQL;
+        }
         
-        // Sobrescrever funções de operação
-        window.removeTicket = window.excluirIngressoDoMySQL;
-        window.editTicket = window.editarIngressoDoMySQL;
-        
-        console.log('✅ Funções sobrescritas com sucesso - DOM agora é espelho do MySQL');
+        console.log('✅ Redirecionamentos reforçados - DOM agora é espelho do MySQL');
     }, 2000);
 });
 

@@ -2894,6 +2894,12 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- TESTADOR DOM ESPELHO MYSQL - ETAPA 6: Funções de teste e debug -->
 <script src="js/testador-dom-espelho-mysql.js?v=<?php echo time(); ?>"></script>
 
+<!-- DEBUG E CORREÇÃO DOS PROBLEMAS IDENTIFICADOS -->
+<script src="js/debug-correcoes-problemas.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE ESPECÍFICO DOS PROBLEMAS REPORTADOS -->
+<script src="js/teste-problemas-reportados.js?v=<?php echo time(); ?>"></script>
+
 <!-- CORREÇÃO FINAL DOS PROBLEMAS DE LOTES POR PERCENTUAL - DESABILITADO: CONFLITA COM MYSQL -->
 <!-- <script src="js/correcao-lotes-percentual-final.js?v=<?php echo time(); ?>"></script> -->
 
