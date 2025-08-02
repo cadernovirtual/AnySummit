@@ -1,0 +1,50 @@
+/* CSS BRUTAL PARA COMBO - FORÇA TRANSPARÊNCIA */
+#comboTicketModal * {
+    background-color: transparent !important;
+}
+
+#comboTicketModal input,
+#comboTicketModal select,
+#comboTicketModal textarea {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* Exceções para elementos que DEVEM ter fundo */
+#comboTicketModal .btn,
+#comboTicketModal button {
+    background-color: #007bff !important;
+    background: #007bff !important;
+}
+
+#comboTicketModal .form-control {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* FORÇA TRANSPARÊNCIA EM TUDO */
+.modal input {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+.modal select {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+.modal textarea {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* Apenas campos readonly devem ter fundo cinza */
+.modal input[readonly] {
+    background-color: #f0f0f0 !important;
+    background: #f0f0f0 !important;
+}
+
+.modal select[disabled] {
+    background-color: #f0f0f0 !important;
+    background: #f0f0f0 !important;
+}

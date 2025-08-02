@@ -125,7 +125,8 @@
         console.log('📌 Função excluirLote:', typeof window.excluirLote);
         console.log('📌 customDialog disponível:', !!window.customDialog);
         
-        // Testar se confirm retorna Promise
+        // Testar se confirm retorna Promise - COMENTADO PARA EVITAR DIALOG DESNECESSÁRIO
+        /*
         if (window.customDialog && window.customDialog.confirm) {
             const testResult = window.customDialog.confirm('test');
             console.log('📌 customDialog.confirm retorna:', testResult);
@@ -140,6 +141,7 @@
                 }, 100);
             }
         }
+        */
     }
     
     // Aplicar correção quando tudo estiver pronto

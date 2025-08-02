@@ -75,40 +75,62 @@
                 alert('Por favor, informe um percentual entre 1 e 100.');
                 return;
             }
-            
-            // ID NUMÉRICO SIMPLES
-            const lote = {
-                id: Date.now(), // Apenas número, sem prefixo
+
+            // CORREÇÃO: Chamar função que faz INSERT no MySQL
+            const loteConfig = {
                 nome: `Lote ${window.lotesData.porPercentual.length + 1}`,
                 percentual: percentual,
-                divulgar: divulgar,
-                tipo: 'POR PERCENTUAL DE VENDA'
+                divulgar: divulgar
             };
             
-            console.log('✅ Lote criado com ID correto:', lote);
+            console.log('🚀 Chamando criarLotesPercentual() para INSERT no MySQL...');
             
-            window.lotesData.porPercentual.push(lote);
-            
-            if (window.renomearLotesAutomaticamente) {
-                window.renomearLotesAutomaticamente();
-            }
-            
-            // CHAMAR ATUALIZAÇÃO
-            console.log('🔄 CHAMANDO atualizarTelaLotes()...');
-            if (window.atualizarTelaLotes) {
-                window.atualizarTelaLotes();
-            } else if (window.atualizarInterfaceLotes) {
-                window.atualizarInterfaceLotes();
-            } else if (window.renderizarLotesPorPercentual) {
-                window.renderizarLotesPorPercentual();
-            }
-            
-            if (window.salvarLotesNoCookie) {
-                window.salvarLotesNoCookie();
-            }
-            
-            if (window.closeModal) {
-                window.closeModal('lotePercentualModal');
+            if (window.criarLotesPercentual) {
+                window.criarLotesPercentual([loteConfig])
+                    .then(lotesConfirmados => {
+                        console.log('✅ Lote inserido no MySQL:', lotesConfirmados);
+                        
+                        // Adicionar à interface local também
+                        const lote = {
+                            id: lotesConfirmados[0].id, // Usar ID real do banco
+                            nome: loteConfig.nome,
+                            percentual: percentual,
+                            divulgar: divulgar,
+                            tipo: 'POR PERCENTUAL DE VENDA'
+                        };
+                        
+                        window.lotesData.porPercentual.push(lote);
+                        
+                        // Atualizar interface
+                        if (window.renomearLotesAutomaticamente) {
+                            window.renomearLotesAutomaticamente();
+                        }
+                        
+                        if (window.atualizarTelaLotes) {
+                            window.atualizarTelaLotes();
+                        } else if (window.atualizarInterfaceLotes) {
+                            window.atualizarInterfaceLotes();
+                        } else if (window.renderizarLotesPorPercentual) {
+                            window.renderizarLotesPorPercentual();
+                        }
+                        
+                        if (window.salvarLotesNoCookie) {
+                            window.salvarLotesNoCookie();
+                        }
+                        
+                        if (window.closeModal) {
+                            window.closeModal('lotePercentualModal');
+                        }
+                        
+                        alert('Lote criado e inserido no banco com sucesso!');
+                    })
+                    .catch(error => {
+                        console.error('❌ Erro ao inserir lote no MySQL:', error);
+                        alert('Erro ao criar lote: ' + error.message);
+                    });
+            } else {
+                console.error('❌ Função criarLotesPercentual não encontrada!');
+                alert('Erro: Função de inserção no banco não está disponível');
             }
         };
         

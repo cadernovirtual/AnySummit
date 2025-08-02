@@ -1,21 +1,21 @@
-﻿console.log('🚀 criaevento.js iniciando carregamento...');
-    // Variáveis globais
-// Escopo global para funçÃµes
+console.log('🎯 criaevento.js iniciando carregamento...');
+// Variáveis globais
+// Escopo global para funções
 (function() {
     'use strict';
-    console.log('✅ IIFE iniciada');
     
     let currentStep = 1;
-        const totalSteps = 8;
-        let map;
-        let geocoder;
-        let marker;
-        let autocompleteService;
-        let placesService;
-        let ticketCount = 1;
-        let ticketCodes = {};
+    const totalSteps = 8;
+    let map;
+    let geocoder;
+    let marker;
+    let autocompleteService;
+    let placesService;
+    let ticketCount = 1;
+    let ticketCodes = {};
+    let uploadedImages = { logo: '', capa: '', fundo: '' }; // Adicionar esta linha
 
-        // Função auxiliar para retornar o SVG do ícone de lixeira
+        // Fun��o auxiliar para retornar o SVG do �cone de lixeira
         function getTrashIcon() {
             return `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
@@ -23,14 +23,371 @@
             </svg>`;
         }
 
+        // Função para carregar configuração de limite de vendas na etapa 5
+        function carregarConfiguracaoLimiteVendas() {
+            const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+            
+            if (!eventoId) {
+                console.log('⚠️ Não há evento_id na URL - provavelmente evento novo');
+                return;
+            }
+            
+            console.log('📊 Carregando configuração de limite de vendas do evento:', eventoId);
+            
+            fetch('/produtor/ajax/wizard_evento.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=carregar_limite_vendas&evento_id=${eventoId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso && data.dados) {
+                    console.log('✅ Dados carregados do banco:', data.dados);
+                    
+                    const checkbox = document.getElementById('controlarLimiteVendas');
+                    const inputLimite = document.getElementById('limiteVendas');
+                    const campoLimite = document.getElementById('campoLimiteVendas');
+                    const botaoConfirmar = document.getElementById('btnConfirmarLimite');
+                    const botaoCriarLote = document.getElementById('btnCriarLoteQuantidade');
+                    
+                    // 1. Configurar checkbox com valor do banco
+                    if (checkbox) {
+                        checkbox.checked = Boolean(data.dados.controlar_limite_vendas);
+                        console.log('📋 Checkbox configurado:', checkbox.checked);
+                    }
+                    
+                    // 2. Se controle está ativo, mostrar campo e configurar valores
+                    if (data.dados.controlar_limite_vendas) {
+                        console.log('✅ Controle de limite está ATIVO - configurando interface...');
+                        
+                        // Mostrar campo de limite
+                        if (campoLimite) {
+                            campoLimite.style.display = 'block';
+                            console.log('✅ Campo de limite exibido');
+                        }
+                        
+                        // Carregar valor do limite no campo
+                        if (inputLimite) {
+                            const valorLimite = data.dados.limite_vendas || '';
+                            inputLimite.value = valorLimite;
+                            console.log(`📊 Valor do limite carregado: "${valorLimite}"`);
+                        }
+                        
+                        // Configurar botões baseado no valor do limite
+                        if (data.dados.limite_vendas > 0) {
+                            // Se há limite confirmado, habilitar botão de criar lotes
+                            if (botaoCriarLote) {
+                                botaoCriarLote.disabled = false;
+                                botaoCriarLote.style.opacity = '1';
+                                botaoCriarLote.style.cursor = 'pointer';
+                                console.log('✅ Botão de criar lotes habilitado (limite confirmado)');
+                            }
+                            
+                            // Configurar botão confirmar para "alteração"
+                            if (botaoConfirmar) {
+                                botaoConfirmar.innerHTML = '✅ Confirmar Alteração';
+                                botaoConfirmar.style.display = 'inline-block';
+                                botaoConfirmar.onclick = function() { 
+                                    // Tentar encontrar a função em vários locais
+                                    const confirmarFunc = window.confirmarLimiteVendas || 
+                                                         window.confirmarLimiteVendasCorrigido ||
+                                                         (window.controle && window.controle.confirmarLimiteVendas);
+                                    
+                                    if (confirmarFunc) {
+                                        console.log('✅ Executando confirmação de limite...');
+                                        confirmarFunc();
+                                    } else {
+                                        console.error('❌ Função confirmarLimiteVendas não encontrada');
+                                        // Fallback: tentar novamente após delay
+                                        setTimeout(() => {
+                                            if (window.confirmarLimiteVendas) {
+                                                window.confirmarLimiteVendas();
+                                            } else {
+                                                console.log('🔄 Usando função de fallback...');
+                                                confirmarLimiteVendasFallback();
+                                            }
+                                        }, 1000);
+                                    }
+                                };
+                            }
+                        } else {
+                            // Se não há limite, manter botão de criar lotes desabilitado
+                            if (botaoCriarLote) {
+                                botaoCriarLote.disabled = true;
+                                botaoCriarLote.style.opacity = '0.5';
+                                botaoCriarLote.style.cursor = 'not-allowed';
+                                console.log('⚠️ Botão de criar lotes desabilitado (sem limite confirmado)');
+                            }
+                            
+                            // Configurar botão confirmar para "primeira confirmação"
+                            if (botaoConfirmar) {
+                                botaoConfirmar.innerHTML = '✅ Confirmar';
+                                botaoConfirmar.style.display = 'inline-block';
+                                botaoConfirmar.onclick = function() { 
+                                    // Tentar encontrar a função em vários locais
+                                    const confirmarFunc = window.confirmarLimiteVendas || 
+                                                         window.confirmarLimiteVendasCorrigido ||
+                                                         (window.controle && window.controle.confirmarLimiteVendas);
+                                    
+                                    if (confirmarFunc) {
+                                        console.log('✅ Executando confirmação de limite...');
+                                        confirmarFunc();
+                                    } else {
+                                        console.error('❌ Função confirmarLimiteVendas não encontrada');
+                                        // Fallback: tentar novamente após delay
+                                        setTimeout(() => {
+                                            if (window.confirmarLimiteVendas) {
+                                                window.confirmarLimiteVendas();
+                                            } else {
+                                                console.log('🔄 Usando função de fallback...');
+                                                confirmarLimiteVendasFallback();
+                                            }
+                                        }, 1000);
+                                    }
+                                };
+                            }
+                        }
+                        
+                    } else {
+                        console.log('📋 Controle de limite está INATIVO - escondendo campo...');
+                        
+                        // Esconder campo de limite
+                        if (campoLimite) {
+                            campoLimite.style.display = 'none';
+                        }
+                        
+                        // Desabilitar botão de criar lotes
+                        if (botaoCriarLote) {
+                            botaoCriarLote.disabled = true;
+                            botaoCriarLote.style.opacity = '0.5';
+                            botaoCriarLote.style.cursor = 'not-allowed';
+                        }
+                    }
+                    
+                    console.log('🎉 Interface da etapa 5 configurada com sucesso!');
+                    
+                    // NOVO: Carregar lotes por quantidade existentes
+                    if (data.dados.controlar_limite_vendas) {
+                        carregarLotesQuantidadeExistentes(eventoId);
+                    }
+                    
+                } else {
+                    console.warn('⚠️ Erro ao carregar configuração:', data.erro || 'Dados não encontrados');
+                    // Em caso de erro, manter interface no estado padrão (desabilitada)
+                    inicializarInterfacePadrao();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição de carregamento:', error);
+                // Em caso de erro, manter interface no estado padrão
+                inicializarInterfacePadrao();
+            });
+        }
+        
+        // Função auxiliar para inicializar interface no estado padrão
+        function inicializarInterfacePadrao() {
+            console.log('🔧 Inicializando interface no estado padrão...');
+            
+            const checkbox = document.getElementById('controlarLimiteVendas');
+            const campoLimite = document.getElementById('campoLimiteVendas');
+            const botaoCriarLote = document.getElementById('btnCriarLoteQuantidade');
+            
+            if (checkbox) checkbox.checked = false;
+            if (campoLimite) campoLimite.style.display = 'none';
+            if (botaoCriarLote) {
+                botaoCriarLote.disabled = true;
+                botaoCriarLote.style.opacity = '0.5';
+                botaoCriarLote.style.cursor = 'not-allowed';
+            }
+        }
+        
+        // Função de fallback para confirmar limite de vendas
+        function confirmarLimiteVendasFallback() {
+            console.log('💾 Executando fallback de confirmação de limite...');
+            
+            const inputLimite = document.getElementById('limiteVendas');
+            const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+            
+            if (!inputLimite || !eventoId) {
+                alert('Erro: Elementos necessários não encontrados.');
+                return;
+            }
+            
+            const limite = parseInt(inputLimite.value);
+            
+            if (!limite || limite < 1) {
+                alert('⚠️ Por favor, informe uma lotação máxima válida (maior que 0).');
+                inputLimite.focus();
+                return;
+            }
+            
+            // Fazer requisição direta
+            fetch('/produtor/ajax/wizard_evento.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=salvar_limite_vendas&evento_id=${eventoId}&controlar_limite_vendas=1&limite_vendas=${limite}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    console.log('✅ Limite salvo via fallback');
+                    alert(`Lotação máxima de ${limite} pessoas confirmada!`);
+                    
+                    // Habilitar botão de criar lotes
+                    const botaoCriar = document.getElementById('btnCriarLoteQuantidade');
+                    if (botaoCriar) {
+                        botaoCriar.disabled = false;
+                        botaoCriar.style.opacity = '1';
+                        botaoCriar.style.cursor = 'pointer';
+                    }
+                } else {
+                    console.error('❌ Erro ao salvar via fallback:', data.erro);
+                    alert('Erro ao salvar: ' + data.erro);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição fallback:', error);
+                alert('Erro de conexão.');
+            });
+        }
+        
+        // Expor função de fallback globalmente
+        window.confirmarLimiteVendasFallback = confirmarLimiteVendasFallback;
+        
+        // Função para carregar lotes por quantidade existentes
+        function carregarLotesQuantidadeExistentes(eventoId) {
+            console.log('📦 Carregando lotes por quantidade existentes...');
+            
+            fetch('/produtor/ajax/wizard_evento.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=carregar_lotes_quantidade&evento_id=${eventoId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso && data.lotes) {
+                    console.log(`✅ Carregados ${data.lotes.length} lotes por quantidade:`, data.lotes);
+                    
+                    if (data.lotes.length > 0) {
+                        exibirLotesQuantidadeNaInterface(data.lotes);
+                    } else {
+                        console.log('📭 Nenhum lote por quantidade encontrado');
+                    }
+                } else {
+                    console.warn('⚠️ Erro ao carregar lotes:', data.erro || 'Nenhum lote encontrado');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição de lotes:', error);
+            });
+        }
+        
+        // Função para exibir lotes na interface
+        function exibirLotesQuantidadeNaInterface(lotes) {
+            console.log('🎨 Exibindo lotes na interface...');
+            
+            const container = document.getElementById('lotesPorPercentualList');
+            const emptyState = document.getElementById('lotePercentualEmpty');
+            
+            if (!container) {
+                console.error('❌ Container de lotes não encontrado');
+                return;
+            }
+            
+            // Ocultar empty state
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
+            // Adicionar cada lote
+            lotes.forEach((lote, index) => {
+                const loteElement = criarElementoLoteQuantidade(lote);
+                container.appendChild(loteElement);
+                console.log(`✅ Lote "${lote.nome}" adicionado à interface`);
+            });
+            
+            // Atualizar summary se existir
+            atualizarSummaryPercentual(lotes);
+            
+            console.log(`🎉 ${lotes.length} lotes exibidos com sucesso!`);
+        }
+        
+        // Função para criar elemento HTML de um lote
+        function criarElementoLoteQuantidade(lote) {
+            const div = document.createElement('div');
+            div.className = 'lote-item';
+            div.dataset.loteId = lote.id;
+            div.dataset.loteNome = lote.nome;
+            div.dataset.tipo = 'quantidade';
+            
+            // Criar conteúdo do lote
+            div.innerHTML = `
+                <div class="lote-item-info">
+                    <div class="lote-item-name">${lote.nome}</div>
+                    <div class="lote-item-details">
+                        <strong>Percentual:</strong> ${lote.percentual_venda}%
+                        ${lote.divulgar_criterio ? ' | <span style="color: #28a745;">✓ Critério divulgado</span>' : ''}
+                    </div>
+                </div>
+                <div class="lote-item-actions">
+                    <button type="button" class="btn-icon" onclick="editarLoteQuantidade(${lote.id})" title="Editar lote">
+                        ✏️
+                    </button>
+                    <button type="button" class="btn-icon delete" onclick="excluirLoteQuantidadeEspecifico(${lote.id})" title="Excluir lote">
+                        🗑️
+                    </button>
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        // Função para atualizar summary de percentuais
+        function atualizarSummaryPercentual(lotes) {
+            const summary = document.getElementById('percentualSummary');
+            const totalSpan = document.getElementById('totalPercentual');
+            const restanteSpan = document.getElementById('restantePercentual');
+            
+            if (!summary || !totalSpan || !restanteSpan) return;
+            
+            // Calcular total de percentuais
+            const totalPercentual = lotes.reduce((total, lote) => total + lote.percentual_venda, 0);
+            const restante = Math.max(0, 100 - totalPercentual);
+            
+            // Atualizar interface
+            totalSpan.textContent = totalPercentual + '%';
+            restanteSpan.textContent = restante + '%';
+            
+            // Mostrar summary se há lotes
+            if (lotes.length > 0) {
+                summary.style.display = 'block';
+            }
+        }
+
         // Função para navegar entre steps
         function updateStepDisplay() {
+            
             // Atualizar cards de conteúdo
             document.querySelectorAll('.section-card').forEach(card => {
                 const stepNumber = parseInt(card.dataset.stepContent);
                 if (stepNumber === currentStep) {
                     card.classList.add('active');
                     card.classList.remove('prev');
+                    
+                    // CORREÇÃO: Carregar dados quando entra na etapa 5
+                    if (stepNumber === 5) {
+                        setTimeout(() => {
+                            console.log('📦 Entrando na etapa 5 - Carregando configurações de limite...');
+                            carregarConfiguracaoLimiteVendas();
+                        }, 500);
+                    }
+                    
                 } else if (stepNumber < currentStep) {
                     card.classList.add('prev');
                     card.classList.remove('active');
@@ -63,7 +420,7 @@
         }
 
         function validateStep(stepNumber) {
-            console.log('🔍 ValidateStep chamado para step:', stepNumber);
+            console.log('?? ValidateStep chamado para step:', stepNumber);
             const validationMessage = document.getElementById(`validation-step-${stepNumber}`);
             let isValid = true;
             let camposInvalidos = [];
@@ -103,19 +460,19 @@
                     break;
                     
                 case 2:
-                    // Data e hora de início
+                    // Data e hora de in�cio
                     const startDateTime = document.getElementById('startDateTime');
                     if (!startDateTime || startDateTime.value === '') {
                         if (startDateTime) startDateTime.classList.add('error-field');
-                        camposInvalidos.push('Data e hora de início');
+                        camposInvalidos.push('Data e hora de in�cio');
                         isValid = false;
                     }
                     
-                    // Classificação
+                    // Classifica��o
                     const classification = document.getElementById('classification');
                     if (!classification || classification.value === '') {
                         if (classification) classification.classList.add('error-field');
-                        camposInvalidos.push('Classificação');
+                        camposInvalidos.push('Classifica��o');
                         isValid = false;
                     }
                     
@@ -129,30 +486,30 @@
                     break;
                     
                 case 3:
-                    // Descrição do evento
+                    // Descri��o do evento
                     const eventDescription = document.getElementById('eventDescription');
                     const descriptionText = eventDescription ? 
                         (eventDescription.innerText || eventDescription.textContent || '').trim() : '';
                     
-                    if (descriptionText === '' || descriptionText === 'Digite a descrição do seu evento aqui...') {
+                    if (descriptionText === '' || descriptionText === 'Digite a descri��o do seu evento aqui...') {
                         if (eventDescription) eventDescription.classList.add('error-field');
-                        camposInvalidos.push('Descrição do evento');
+                        camposInvalidos.push('Descri��o do evento');
                         isValid = false;
                     }
                     break;
                     
                 case 4:
-                    // Verificar se é presencial ou online
+                    // Verificar se � presencial ou online
                     const isPresential = document.getElementById('locationTypeSwitch')?.classList.contains('active');
                     
                     if (isPresential) {
-                        // Validar endereço para evento presencial
+                        // Validar endere�o para evento presencial
                         const addressSearch = document.getElementById('addressSearch');
                         const venueName = document.getElementById('venueName');
                         
                         if (!addressSearch || addressSearch.value.trim() === '') {
                             if (addressSearch) addressSearch.classList.add('error-field');
-                            camposInvalidos.push('Endereço do evento');
+                            camposInvalidos.push('Endere�o do evento');
                             isValid = false;
                         }
                         
@@ -173,16 +530,39 @@
                     break;
                     
                 case 5:
-                    // Validar se há pelo menos um lote cadastrado
-                    const loteCards = document.querySelectorAll('.lote-card');
-                    if (!loteCards || loteCards.length === 0) {
-                        camposInvalidos.push('Pelo menos 1 lote');
-                        isValid = false;
+                    // CORREÇÃO PROBLEMA 2: Usar validação via banco de dados
+                    console.log('🔍 [CRIAEVENTO] Validação etapa 5 - redirecionando para validação moderna...');
+                    
+                    // Usar a função moderna de validação de lotes
+                    if (typeof window.validarLotesComRegrasEspecificas === 'function') {
+                        console.log('✅ Usando validação moderna de lotes');
+                        
+                        // A validação moderna é assíncrona, mas aqui precisa ser síncrona
+                        // Marcar como válido temporariamente e deixar a validação definitiva
+                        // ser feita pela função nextStep moderna
+                        console.log('⚠️ Validação legacy - deixando passar para validação moderna');
+                        // isValid permanece true aqui
+                    } else {
+                        console.log('❌ Validação moderna não disponível - usando fallback');
+                        // Fallback: pelo menos verificar se há algum lote visível na interface
+                        const lotesPorDataList = document.getElementById('lotesPorDataList');
+                        const lotesPorQuantidadeList = document.getElementById('lotesPorQuantidadeList');
+                        
+                        const temLotesData = lotesPorDataList && lotesPorDataList.children.length > 0;
+                        const temLotesQtd = lotesPorQuantidadeList && lotesPorQuantidadeList.children.length > 0;
+                        
+                        if (!temLotesData && !temLotesQtd) {
+                            console.log('❌ Nenhum lote visível na interface');
+                            camposInvalidos.push('Pelo menos 1 lote');
+                            isValid = false;
+                        } else {
+                            console.log('✅ Lotes encontrados na interface');
+                        }
                     }
                     break;
                     
                 case 6:
-                    // Verificar se há pelo menos um ingresso cadastrado
+                    // Verificar se h� pelo menos um ingresso cadastrado
                     const ticketList = document.getElementById('ticketList');
                     const hasTickets = ticketList && ticketList.children.length > 0;
                     
@@ -193,7 +573,7 @@
                     break;
                     
                 case 7:
-                    // Produtor - geralmente sempre válido pois usa o produtor atual por padrão
+                    // Produtor - geralmente sempre v�lido pois usa o produtor atual por padr�o
                     isValid = true;
                     break;
                     
@@ -209,24 +589,24 @@
                     break;
             }
 
-            // Mostrar ou esconder mensagem de validação
+            // Mostrar ou esconder mensagem de valida��o
             if (!isValid && validationMessage) {
-                validationMessage.textContent = 'Todos os campos obrigatórios precisam ser preenchidos!';
+                validationMessage.textContent = 'Todos os campos obrigat�rios precisam ser preenchidos!';
                 validationMessage.style.display = 'block';
                 validationMessage.classList.add('show');
                 
-                // Log dos campos inválidos
-                console.log('❌ Campos inválidos:', camposInvalidos);
+                // Log dos campos inv�lidos
+                console.log('? Campos inv�lidos:', camposInvalidos);
             } else if (validationMessage) {
                 validationMessage.style.display = 'none';
                 validationMessage.classList.remove('show');
             }
 
-            console.log('✅ Resultado da validação do step', stepNumber, ':', isValid);
+            console.log('? Resultado da valida��o do step', stepNumber, ':', isValid);
             return isValid;
         }
 
-        // Funções antigas comentadas - agora definidas diretamente no window
+        // Fun��es antigas comentadas - agora definidas diretamente no window
         /*
         function nextStep() {
             if (validateStep(currentStep)) {
@@ -258,17 +638,17 @@
                 publishBtn.textContent = 'Publicando evento...';
                 publishBtn.disabled = true;
                 
-                // Chamar a função de envio para API
+                // Chamar a fun��o de envio para API
                 const sucesso = await enviarEventoParaAPI();
                 
                 if (!sucesso) {
-                    publishBtn.textContent = 'âœ“ Publicar evento';
+                    publishBtn.textContent = '✓ Publicar evento';
                     publishBtn.disabled = false;
                 }
             }
         }
         
-        // Expor função publishEvent globalmente
+        // Expor fun��o publishEvent globalmente
         window.publishEvent = publishEvent;
 
         // Modal functionality
@@ -308,13 +688,13 @@
             }
         }
 
-        // Inicialização do Google Maps
+        // Inicializa��o do Google Maps
         function initMap() {
-            console.log('ðŸ—ºï¸ Inicializando Google Maps...');
+            console.log('🗺️ Inicializando Google Maps...');
             
             const mapElement = document.getElementById('map');
             if (!mapElement) {
-                console.log('âŒ Elemento do mapa não encontrado');
+                console.log('❌ Elemento do mapa n�o encontrado');
                 return;
             }
 
@@ -348,21 +728,21 @@
                 autocompleteService = new google.maps.places.AutocompleteService();
                 placesService = new google.maps.places.PlacesService(map);
 
-                console.log('âœ… Google Maps inicializado com sucesso');
-                mapElement.innerHTML = '<div class="map-loading">Mapa carregado - Pesquise um endereço acima</div>';
+                console.log('✅ Google Maps inicializado com sucesso');
+                mapElement.innerHTML = '<div class="map-loading">Mapa carregado - Pesquise um endere�o acima</div>';
                 
             } catch (error) {
-                console.error('âŒ Erro ao inicializar Google Maps:', error);
+                console.error('❌ Erro ao inicializar Google Maps:', error);
                 mapElement.innerHTML = '<div class="map-loading">Erro ao carregar o mapa</div>';
             }
         }
 
-        // Todas as outras funçÃµes do arquivo original...
-        // [Incluir todas as funçÃµes JavaScript do arquivo original aqui]
+        // Todas as outras fun�ões do arquivo original...
+        // [Incluir todas as fun�ões JavaScript do arquivo original aqui]
 
-        // Inicialização quando DOM estiver pronto
+        // Inicializa��o quando DOM estiver pronto
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Inicializando Anysummit...');
+            console.log('?? Inicializando Anysummit...');
             
             try {
                 initImageUpload();
@@ -373,7 +753,7 @@
                 initCheckboxes();
                 initRadioButtons();
                 initTicketManagement();
-                initAddressSearch();
+                // initAddressSearch(); // Comentado - nova implementação será criada
                 initPreviewListeners();
                 initFormSubmission();
                 initPriceInput();
@@ -382,30 +762,32 @@
                 updatePreview();
                 updateStepDisplay();
                 
-                console.log('✅ Anysummit inicializado com sucesso');
+                console.log('? Anysummit inicializado com sucesso');
                 
-                // Verificar dados salvos APÓS tudo estar carregado
-                // DESABILITADO - Usando wizard-recovery-confirm-v2.js
-                // setTimeout(() => {
-                //     checkAndRestoreWizardData();
-                // }, 100);
+                // Verificar dados salvos AP�S tudo estar carregado
+                // DESABILITADO - Agora usando unified-recovery.js
+                /*
+                setTimeout(() => {
+                    // checkAndRestoreWizardData() removido
+                }, 100);
+                */
                 
                 // Debug para combo
                 const comboBtn = document.getElementById('addComboTicket');
-                console.log('ðŸ” Botão combo encontrado:', comboBtn);
+                console.log('🔍 Bot�o combo encontrado:', comboBtn);
                 if (comboBtn) {
-                    console.log('âœ… Event listener adicionado ao botão combo');
+                    console.log('✅ Event listener adicionado ao bot�o combo');
                 } else {
-                    console.error('âŒ Botão combo NÃƒO encontrado!');
+                    console.error('❌ Bot�o combo NÃO encontrado!');
                 }
                 
             } catch (error) {
-                console.error('âŒ Erro na inicialização:', error);
+                console.error('❌ Erro na inicializa��o:', error);
             }
         });
 
-        // [Incluir todas as demais funçÃµes JavaScript do arquivo original aqui]
-        // Copie todas as funçÃµes do arquivo original, incluindo:
+        // [Incluir todas as demais fun�ões JavaScript do arquivo original aqui]
+        // Copie todas as fun�ões do arquivo original, incluindo:
         // - initAddressSearch()
         // - searchAddresses()
         // - selectAddress()
@@ -415,12 +797,12 @@
         // - createPaidTicket()
         // - createFreeTicket()
         // - createCodeTicket()
-        // - FunçÃµes da API
+        // - Fun�ões da API
         // etc...
 
-        // Função initImageUpload - DESATIVADA (substituída por fundoUpload)
+        // Fun��o initImageUpload - DESATIVADA (substitu�da por fundoUpload)
         function initImageUpload() {
-            // Mantida por compatibilidade mas não faz nada
+            // Mantida por compatibilidade mas n�o faz nada
             return;
         }
 
@@ -446,7 +828,7 @@
             const fundoUpload = document.getElementById('fundoUpload');
             if (fundoUpload) {
                 fundoUpload.addEventListener('change', function() {
-                    // Verificar se é o preview principal ou o container pequeno
+                    // Verificar se � o preview principal ou o container pequeno
                     const mainPreview = document.getElementById('fundoPreviewMain');
                     if (mainPreview) {
                         handleMainImageUpload(this, 'fundoPreviewMain', 'fundo');
@@ -469,7 +851,7 @@
                 corFundo.addEventListener('change', function() {
                     corFundoHex.value = this.value;
                     colorPreview.style.backgroundColor = this.value;
-                    saveWizardData();
+                    // saveWizardData() removido
                     updatePreview();
                 });
 
@@ -477,7 +859,7 @@
                     if (/^#[0-9A-F]{6}$/i.test(this.value)) {
                         corFundo.value = this.value;
                         colorPreview.style.backgroundColor = this.value;
-                        saveWizardData();
+                        // saveWizardData() removido
                         updatePreview();
                     }
                 });
@@ -489,7 +871,7 @@
             }
         }
 
-        // Função para processar upload de imagens adicionais
+        // Fun��o para processar upload de imagens adicionais
         async function handleImageUpload(input, containerId, type) {
             const file = input.files[0];
             if (!file) return;
@@ -502,7 +884,7 @@
 
             // Validar tamanho (5MB)
             if (file.size > 5 * 1024 * 1024) {
-                alert('A imagem deve ter no máximo 5MB.');
+                alert('A imagem deve ter no m�ximo 5MB.');
                 return;
             }
 
@@ -530,7 +912,7 @@
                         <div class="upload-hint">${dimensions}</div>
                     `;
 
-                    // Mostrar botão de limpar
+                    // Mostrar bot�o de limpar
                     const clearButton = document.getElementById('clear' + type.charAt(0).toUpperCase() + type.slice(1));
                     if (clearButton) {
                         clearButton.style.display = 'flex';
@@ -558,10 +940,10 @@
                             window.uploadedImages = {};
                         }
                         window.uploadedImages[type] = data.image_url;
-                        console.log(`✅ ${type} enviado:`, data.image_url);
+                        console.log(`? ${type} enviado:`, data.image_url);
                         
                         // Salvar no wizard
-                        saveWizardData();
+                        // saveWizardData() removido
                         updatePreview();
                     } else {
                         console.error('Erro no upload:', data.message);
@@ -574,7 +956,7 @@
             }
         }
 
-        // Função para processar upload da imagem principal de fundo
+        // Fun��o para processar upload da imagem principal de fundo
         async function handleMainImageUpload(input, containerId, type) {
             const file = input.files[0];
             if (!file) return;
@@ -587,7 +969,7 @@
 
             // Validar tamanho (5MB)
             if (file.size > 5 * 1024 * 1024) {
-                alert('A imagem deve ter no máximo 5MB.');
+                alert('A imagem deve ter no m�ximo 5MB.');
                 return;
             }
 
@@ -600,13 +982,13 @@
                         <img src="${e.target.result}" alt="Imagem de fundo">
                     `;
 
-                    // Mostrar botão de limpar
+                    // Mostrar bot�o de limpar
                     const clearFundo = document.getElementById('clearFundo');
                     if (clearFundo) {
                         clearFundo.style.display = 'flex';
                     }
 
-                    // Atualizar também o imagePreview para compatibilidade
+                    // Atualizar tamb�m o imagePreview para compatibilidade
                     const imagePreview = document.getElementById('imagePreview');
                     if (imagePreview) {
                         imagePreview.src = e.target.result;
@@ -635,10 +1017,10 @@
                             window.uploadedImages = {};
                         }
                         window.uploadedImages[type] = data.image_url;
-                        console.log(`✅ ${type} enviado:`, data.image_url);
+                        console.log(`? ${type} enviado:`, data.image_url);
                         
                         // Salvar no wizard
-                        saveWizardData();
+                        // saveWizardData() removido
                         updatePreview();
                     } else {
                         console.error('Erro no upload:', data.message);
@@ -651,18 +1033,9 @@
             }
         }
 
-                    // Salvar na sessão
-                    saveWizardData();
-                    // Atualizar preview
-                    updatePreview();
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Função para limpar imagem e remover arquivo
+        // Fun��o para limpar imagem e remover arquivo
         function clearImage(type, event) {
-            // Prevenir propagação do clique
+            // Prevenir propaga��o do clique
             if (event) {
                 event.stopPropagation();
             }
@@ -678,9 +1051,9 @@
                     inputId = 'logoUpload';
                     clearButtonId = 'clearLogo';
                     defaultContent = `
-                        <div class="upload-icon">🎨</div>
+                        <div class="upload-icon">??</div>
                         <div class="upload-text">Adicionar logo</div>
-                        <div class="upload-hint">800x200px • Fundo transparente</div>
+                        <div class="upload-hint">800x200px � Fundo transparente</div>
                     `;
                     break;
                 case 'capa':
@@ -688,9 +1061,9 @@
                     inputId = 'capaUpload';
                     clearButtonId = 'clearCapa';
                     defaultContent = `
-                        <div class="upload-icon">🖼️</div>
+                        <div class="upload-icon">???</div>
                         <div class="upload-text">Adicionar capa</div>
-                        <div class="upload-hint">450x450px • Fundo transparente</div>
+                        <div class="upload-hint">450x450px � Fundo transparente</div>
                     `;
                     break;
                 case 'fundo':
@@ -698,14 +1071,14 @@
                     inputId = 'fundoUpload';
                     clearButtonId = 'clearFundo';
                     defaultContent = `
-                        <div class="upload-icon">🌄</div>
+                        <div class="upload-icon">??</div>
                         <div class="upload-text">Clique para adicionar imagem de fundo</div>
-                        <div class="upload-hint">PNG, JPG até 5MB • Tamanho ideal: 1920x640px</div>
+                        <div class="upload-hint">PNG, JPG at� 5MB � Tamanho ideal: 1920x640px</div>
                     `;
                     break;
             }
 
-            // Restaurar conteúdo padrão
+            // Restaurar conte�do padr�o
             const container = document.getElementById(containerId);
             if (container) {
                 container.innerHTML = defaultContent;
@@ -717,18 +1090,18 @@
                 input.value = '';
             }
 
-            // Esconder botão de limpar
+            // Esconder bot�o de limpar
             const clearButton = document.getElementById(clearButtonId);
             if (clearButton) {
                 clearButton.style.display = 'none';
             }
 
-            // Salvar alterações
-            saveWizardData();
+            // Salvar altera��es
+            // saveWizardData() removido
             updatePreview();
         }
 
-        // Tornar a função global
+        // Tornar a fun��o global
         window.clearImage = clearImage;
 
         function initSwitch(switchId, callback) {
@@ -904,7 +1277,7 @@
             if (addPaidBtn) {
                 addPaidBtn.addEventListener('click', function() {
                     openModal('paidTicketModal');
-                    // Carregar lotes após abrir o modal
+                    // Carregar lotes ap�s abrir o modal
                     setTimeout(function() {
                         if (typeof carregarLotesIngressoPago === 'function') {
                             carregarLotesIngressoPago();
@@ -913,12 +1286,12 @@
                             carregarLotesNoModal();
                             console.log('Lotes carregados via carregarLotesNoModal');
                         } else {
-                            console.error('Função para carregar lotes não encontrada');
+                            console.error('Fun��o para carregar lotes n�o encontrada');
                         }
                         
                         // Calcular valores do ingresso
                         if (typeof calcularValoresIngresso === 'function') {
-                            // Limpar campo de preço
+                            // Limpar campo de pre�o
                             const precoInput = document.getElementById('paidTicketPrice');
                             if (precoInput) {
                                 precoInput.value = '';
@@ -931,20 +1304,20 @@
 
             if (addFreeBtn) {
                 addFreeBtn.addEventListener('click', function() {
-                    console.log('Botão ingresso gratuito clicado');
+                    console.log('Bot�o ingresso gratuito clicado');
                     openModal('freeTicketModal');
-                    // Carregar lotes após abrir o modal
+                    // Carregar lotes ap�s abrir o modal
                     setTimeout(function() {
                         console.log('Tentando carregar lotes para modal gratuito...');
                         if (typeof carregarLotesNoModalFree === 'function') {
                             carregarLotesNoModalFree();
-                            console.log('Função carregarLotesNoModalFree executada');
+                            console.log('Fun��o carregarLotesNoModalFree executada');
                         } else {
-                            console.error('Função carregarLotesNoModalFree não encontrada');
+                            console.error('Fun��o carregarLotesNoModalFree n�o encontrada');
                             // Tentar alternativa
                             if (typeof window.carregarLotesNoModalFree === 'function') {
                                 window.carregarLotesNoModalFree();
-                                console.log('Função window.carregarLotesNoModalFree executada');
+                                console.log('Fun��o window.carregarLotesNoModalFree executada');
                             }
                         }
                     }, 300);
@@ -977,7 +1350,7 @@
             const taxaValor = document.getElementById('paidTicketTaxaValor')?.value || 'R$ 0,00';
             const valorReceber = document.getElementById('paidTicketValorReceber')?.value || 'R$ 0,00';
 
-            // Validação com destaque de campos
+            // Valida��o com destaque de campos
             let hasError = false;
             
             if (!title) {
@@ -998,13 +1371,13 @@
             }
             
             if (hasError) {
-                alert('Por favor, preencha todos os campos obrigatórios marcados em vermelho.');
+                alert('Por favor, preencha todos os campos obrigat�rios marcados em vermelho.');
                 return;
             }
 
-            // Verificar se estamos em modo de edição (existe API) ou criação
+            // Verificar se estamos em modo de edi��o (existe API) ou cria��o
             if (window.location.pathname.includes('editar-evento.php')) {
-                // Modo edição - usar API
+                // Modo edi��o - usar API
                 const cleanPrice = parseFloat(price.replace(/[R$\s\.]/g, '').replace(',', '.'));
                 const cleanTaxa = parseFloat(taxaValor.replace(/[R$\s\.]/g, '').replace(',', '.'));
                 const cleanValorReceber = parseFloat(valorReceber.replace(/[R$\s\.]/g, '').replace(',', '.'));
@@ -1041,17 +1414,17 @@
                             addTicketToEditList(result.ingresso);
                         }
                         closeModal('paidTicketModal');
-                        console.log('âœ… Ingresso pago criado com sucesso via API');
+                        console.log('✅ Ingresso pago criado com sucesso via API');
                     } else {
-                        console.error('âŒ Erro ao criar ingresso:', result.message);
+                        console.error('❌ Erro ao criar ingresso:', result.message);
                     }
                 })
                 .catch(error => {
-                    console.error('âŒ Erro na requisição:', error);
+                    console.error('❌ Erro na requisi��o:', error);
                     alert('Erro ao criar ingresso. Tente novamente.');
                 });
             } else {
-                // Modo criação - usar sistema de ingressos temporários
+                // Modo cria��o - usar sistema de ingressos tempor�rios
                 const cleanPrice = parseFloat(price.replace(/[R$\s\.]/g, '').replace(',', '.'));
                 const cleanTaxa = parseFloat(taxaValor.replace(/[R$\s\.]/g, '').replace(',', '.'));
                 const cleanValorReceber = parseFloat(valorReceber.replace(/[R$\s\.]/g, '').replace(',', '.'));
@@ -1073,7 +1446,7 @@
                         loteId
                     );
                 } else {
-                    // Fallback para função antiga
+                    // Fallback para fun��o antiga
                     addTicketToList('paid', title, quantity, price, loteId);
                 }
                 
@@ -1105,13 +1478,13 @@
             const loteId = document.getElementById('freeTicketLote')?.value;
 
             if (!title || !quantity) {
-                alert('Por favor, preencha todos os campos obrigatórios.');
+                alert('Por favor, preencha todos os campos obrigat�rios.');
                 return;
             }
 
-            // Verificar se estamos em modo de edição (existe API)
+            // Verificar se estamos em modo de edi��o (existe API)
             if (window.location.pathname.includes('editar-evento.php') && typeof fetch !== 'undefined') {
-                // Modo edição - usar API
+                // Modo edi��o - usar API
                 const eventoId = new URLSearchParams(window.location.search).get('eventoid');
                 const data = {
                     evento_id: parseInt(eventoId),
@@ -1142,17 +1515,17 @@
                             addTicketToEditList(result.ingresso);
                         }
                         closeModal('freeTicketModal');
-                        console.log('âœ… Ingresso gratuito criado com sucesso via API');
+                        console.log('✅ Ingresso gratuito criado com sucesso via API');
                     } else {
-                        console.error('âŒ Erro ao criar ingresso:', result.message);
+                        console.error('❌ Erro ao criar ingresso:', result.message);
                     }
                 })
                 .catch(error => {
-                    console.error('âŒ Erro na requisição:', error);
+                    console.error('❌ Erro na requisi��o:', error);
                     alert('Erro ao criar ingresso. Tente novamente.');
                 });
             } else {
-                // Modo criação - usar sistema de ingressos temporários
+                // Modo cria��o - usar sistema de ingressos tempor�rios
                 if (typeof addTicketToCreationList === 'function') {
                     addTicketToCreationList(
                         'gratuito', 
@@ -1166,7 +1539,7 @@
                         parseInt(maxQuantity)
                     );
                 } else {
-                    // Fallback para função antiga com parâmetros adicionais
+                    // Fallback para fun��o antiga com par�metros adicionais
                     addTicketToList('free', title, quantity, 'Gratuito', loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
                 }
                 
@@ -1203,12 +1576,12 @@
             const description = document.getElementById('eventDescription')?.textContent || '';
             
             previewTitle.textContent = eventName;
-            // Mostrar descrição apenas se existir, caso contrário deixar vazio
+            // Mostrar descri��o apenas se existir, caso contr�rio deixar vazio
             if (previewDescription) {
                 previewDescription.textContent = description ? description.substring(0, 120) : '';
             }
             
-            // Mostrar data de início e fim
+            // Mostrar data de in�cio e fim
             if (startDateTime && previewDate) {
                 const startDateObj = new Date(startDateTime);
                 let dateText = startDateObj.toLocaleDateString('pt-BR', {
@@ -1222,7 +1595,7 @@
                 // Adicionar data de fim se existir
                 if (endDateTime) {
                     const endDateObj = new Date(endDateTime);
-                    dateText += ' até ' + endDateObj.toLocaleDateString('pt-BR', {
+                    dateText += ' at� ' + endDateObj.toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: '2-digit',
                         year: 'numeric',
@@ -1233,7 +1606,7 @@
                 
                 previewDate.textContent = dateText;
             } else if (previewDate) {
-                previewDate.textContent = 'Data não definida';
+                previewDate.textContent = 'Data n�o definida';
             }
             
             if (previewLocation) {
@@ -1250,7 +1623,7 @@
             
             if (previewCategory) {
                 const categoryEl = document.querySelector(`#category option[value="${category}"]`);
-                const categoryText = categoryEl ? categoryEl.textContent : 'Categoria não definida';
+                const categoryText = categoryEl ? categoryEl.textContent : 'Categoria n�o definida';
                 previewCategory.textContent = categoryText;
             }
             
@@ -1258,7 +1631,7 @@
             updateHeroPreview(eventName, startDateTime, venueName, eventLink, isPresential);
         }
 
-        // Função para atualizar o preview hero
+        // Fun��o para atualizar o preview hero
         function updateHeroPreview(eventName, startDateTime, venueName, eventLink, isPresential) {
             // Atualizar imagem de fundo
             const heroBackground = document.getElementById('heroBackground');
@@ -1274,7 +1647,7 @@
                     heroBackground.style.opacity = '1'; // Opacidade total
                     heroSection.classList.remove('solid-bg');
                 } else {
-                    // Usar cor sólida
+                    // Usar cor s�lida
                     heroBackground.style.backgroundImage = '';
                     heroBackground.style.backgroundColor = corFundo;
                     heroBackground.style.opacity = '1';
@@ -1305,7 +1678,7 @@
             }
         }
 
-        // Funções de Cookie
+        // Fun��es de Cookie
         function setCookie(name, value, days) {
             const expires = new Date();
             expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -1320,7 +1693,7 @@
                 while (c.charAt(0) === ' ') c = c.substring(1, c.length);
                 if (c.indexOf(nameEQ) === 0) {
                     let value = c.substring(nameEQ.length, c.length);
-                    // Tentar decodificar se necessário
+                    // Tentar decodificar se necess�rio
                     try {
                         return decodeURIComponent(value);
                     } catch(e) {
@@ -1336,7 +1709,7 @@
         }
         
         function clearAllWizardData() {
-            console.log('🧹 Limpando todos os dados do wizard...');
+            
             
             // Limpar cookies
             deleteCookie('eventoWizard');
@@ -1344,12 +1717,12 @@
             deleteCookie('ingressosData');
             deleteCookie('ingressosSalvos');
             
-            // Limpar lotes usando a função global
+            // Limpar lotes usando a fun��o global
             if (window.limparTodosLotes) {
                 window.limparTodosLotes();
             }
             
-            // Limpar também ingressos temporários
+            // Limpar tamb�m ingressos tempor�rios
             if (window.temporaryTickets) {
                 window.temporaryTickets.clear();
             }
@@ -1368,16 +1741,10 @@
                 localStorage.removeItem('temporaryTickets');
             }
             
-            console.log('✅ Wizard limpo completamente');
-        }
-            if (typeof(Storage) !== "undefined") {
-                localStorage.removeItem('temporaryTickets');
-            }
-            
-            console.log('Todos os dados do wizard foram limpos');
+            console.log('? Wizard limpo completamente');
         }
 
-        // Função para coletar ingressos da lista visual
+        // Fun��o para coletar ingressos da lista visual
         function getTicketsFromList() {
             const tickets = [];
             const ticketElements = document.querySelectorAll('.ticket-item');
@@ -1406,206 +1773,12 @@
             return tickets;
         }
 
-        // Função para salvar dados do wizard
-        function saveWizardData() {
-            // Debug - verificar qual elemento está sendo capturado
-            const eventNameElement = document.getElementById('eventName');
-            console.log('Salvando dados do wizard...');
-            
-            // Coletar dados de endereço completo
-            const addressSearch = document.getElementById('addressSearch')?.value || '';
-            
-            // Coletar dados de lotes
-            const lotesData = window.lotesManager ? window.lotesManager.getLotes() : {
-                porData: [],
-                porPercentual: []
-            };
-            
-            // Se não tiver dados de lotes mas tiver no cookie
-            const savedLotes = getCookie('lotesData');
-            if (savedLotes && (!lotesData.porData.length && !lotesData.porPercentual.length)) {
-                try {
-                    const parsedLotes = JSON.parse(savedLotes);
-                    lotesData.porData = parsedLotes.porData || [];
-                    lotesData.porPercentual = parsedLotes.porPercentual || [];
-                } catch (e) {
-                    console.error('Erro ao parsear lotes:', e);
-                }
-            }
-            
-            // Coletar dados completos dos lotes do DOM
-            const loteCards = document.querySelectorAll('.lote-card');
-            const lotes = [];
-            
-            loteCards.forEach((card, index) => {
-                const loteData = {
-                    id: card.getAttribute('data-lote-id') || `lote_${index}`,
-                    nome: card.querySelector('.lote-nome')?.textContent || `Lote ${index + 1}`,
-                    tipo: card.classList.contains('por-data') ? 'data' : 'percentual',
-                    dataInicio: card.querySelector('.lote-info span:nth-child(1)')?.textContent?.replace('Início: ', '') || '',
-                    dataFim: card.querySelector('.lote-info span:nth-child(2)')?.textContent?.replace('Fim: ', '') || '',
-                    percentualVendido: card.querySelector('.percentual-value')?.textContent || '',
-                    ativo: true
-                };
-                lotes.push(loteData);
-            });
-            
-            // Coletar informações de imagens
-            const logoImg = document.querySelector('#logoPreviewContainer img');
-            const capaImg = document.querySelector('#capaPreviewContainer img');
-            const fundoImg = document.querySelector('#fundoPreviewMain img') || document.querySelector('#fundoPreviewContainer img');
-            
-            // Coletar dados de ingressos temporários
-            const ticketItems = document.querySelectorAll('.ticket-item');
-            const tickets = [];
-            
-            ticketItems.forEach((item, index) => {
-                // Primeiro tentar pegar dados do ticketData se existir
-                const savedTicketData = item.ticketData || {};
-                
-                const ticketData = {
-                    id: item.dataset.ticketId || `ticket_${index}`,
-                    tipo: savedTicketData.type || item.dataset.ticketType || 'pago',
-                    titulo: savedTicketData.title || item.querySelector('.ticket-name')?.textContent?.trim() || '',
-                    preco: savedTicketData.price || parseFloat(item.querySelector('.ticket-buyer-price')?.textContent?.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
-                    quantidade: parseInt(savedTicketData.quantity) || parseInt(item.querySelector('.ticket-detail-value')?.textContent) || 1,
-                    loteId: savedTicketData.loteId || item.dataset.loteId || '',
-                    descricao: savedTicketData.description || item.dataset.description || '',
-                    minQuantity: parseInt(savedTicketData.minQuantity) || parseInt(item.dataset.minQuantity) || 1,
-                    maxQuantity: parseInt(savedTicketData.maxQuantity) || parseInt(item.dataset.maxQuantity) || 5,
-                    saleStart: savedTicketData.saleStart || item.dataset.saleStart || '',
-                    saleEnd: savedTicketData.saleEnd || item.dataset.saleEnd || '',
-                    taxaServico: savedTicketData.taxaServico !== undefined ? savedTicketData.taxaServico : (item.dataset.taxaServico === '1'),
-                    valorReceber: savedTicketData.valorReceber || parseFloat(item.querySelector('.ticket-receive-amount')?.textContent?.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
-                    taxaPlataforma: savedTicketData.taxaPlataforma || 0,
-                    comboData: savedTicketData.items || (item.dataset.comboData ? JSON.parse(item.dataset.comboData) : null)
-                };
-                tickets.push(ticketData);
-            });
-            
-            const wizardData = {
-                currentStep: currentStep,
-                eventName: document.getElementById('eventName')?.value || '',
-                eventDescription: document.getElementById('eventDescription')?.innerHTML || '',
-                classification: document.getElementById('classification')?.value || '',
-                startDateTime: document.getElementById('startDateTime')?.value || '',
-                endDateTime: document.getElementById('endDateTime')?.value || '',
-                category: document.getElementById('category')?.value || '',
-                venueName: document.getElementById('venueName')?.value || '',
-                eventLink: document.getElementById('eventLink')?.value || '',
-                isPresential: document.getElementById('locationTypeSwitch')?.classList.contains('active'),
-                // Campos de endereço completos
-                addressSearch: addressSearch,
-                street: document.getElementById('street')?.value || '',
-                number: document.getElementById('number')?.value || '',
-                complement: document.getElementById('complement')?.value || '',
-                neighborhood: document.getElementById('neighborhood')?.value || '',
-                city: document.getElementById('city')?.value || '',
-                state: document.getElementById('state')?.value || '',
-                cep: document.getElementById('cep')?.value || '',
-                // Dados de imagens - incluir as URLs completas
-                logoPath: logoImg?.src || '',
-                capaPath: capaImg?.src || '',
-                fundoPath: fundoImg?.src || '',
-                logoUrl: window.uploadedImages?.logo || logoImg?.src || '',
-                capaUrl: window.uploadedImages?.capa || capaImg?.src || '',
-                fundoUrl: window.uploadedImages?.fundo || fundoImg?.src || '',
-                hasLogoEvento: !!(logoImg && logoImg.src && !logoImg.src.includes('blob:')),
-                hasCapaQuadrada: !!(capaImg && capaImg.src && !capaImg.src.includes('blob:')),
-                hasImagemFundo: !!(fundoImg && fundoImg.src && !fundoImg.src.includes('blob:')),
-                corFundo: document.getElementById('corFundo')?.value || '#000000',
-                // URLs das imagens uploadadas
-                uploadedImages: window.uploadedImages || {},
-                // Dados completos de lotes
-                lotes: lotes,
-                lotesData: lotesData, // Manter compatibilidade
-                // Dados do produtor
-                producer: document.getElementById('producer')?.value || 'current',
-                producerName: document.getElementById('producerName')?.value || '',
-                displayName: document.getElementById('displayName')?.value || '',
-                producerDescription: document.getElementById('producerDescription')?.value || '',
-                // Dados finais
-                termsAccepted: document.getElementById('termsCheckbox')?.classList.contains('checked') || false,
-                visibility: document.querySelector('.radio.checked[data-value]')?.dataset.value || 'public',
-                // Salvar ingressos com todos os dados incluindo lote_id
-                ingressos: tickets,
-                tickets: tickets, // Manter compatibilidade
-                timestamp: new Date().getTime()
-            };
-            
-            setCookie('eventoWizard', JSON.stringify(wizardData), 7);
-            console.log('Dados do wizard salvos:', wizardData);
-            
-            // Salvar lotes separadamente também
-            if (lotesData.porData.length > 0 || lotesData.porPercentual.length > 0) {
-                setCookie('lotesData', JSON.stringify(lotesData), 7);
-            }
-            
-            // Salvar ingressos separadamente
-            if (tickets.length > 0) {
-                setCookie('ingressosData', JSON.stringify(tickets), 7);
-            }
-        }
+        // Funções de persistência removidas - serão substituídas por salvamento direto no banco
+        // saveWizardData() - removida
+        // checkAndRestoreWizardData() - removida
+        // clearAllWizardData() - removida
+        // Funções de cookie - removidas
 
-        // Função para verificar e restaurar dados do wizard
-        function checkAndRestoreWizardData() {
-            console.log('=== INICIANDO checkAndRestoreWizardData ===');
-            console.log('Cookies disponíveis:', document.cookie);
-            
-            const savedData = getCookie('eventoWizard');
-            console.log('Dados obtidos do cookie:', savedData);
-            
-            if (savedData) {
-                console.log('Dados encontrados! Tentando fazer parse...');
-                try {
-                    const data = JSON.parse(savedData);
-                    let eventName = data.eventName || 'Evento não nomeado';
-                    
-                    // Verificar se o nome do evento parece ser um nome de pessoa
-                    const nomesPessoa = ['GUSTAVO', 'CIBIM', 'KALLAJIAN'];
-                    const ehNomePessoa = nomesPessoa.some(nome => eventName.toUpperCase().includes(nome));
-                    
-                    if (ehNomePessoa) {
-                        console.warn('Nome de evento suspeito detectado:', eventName);
-                        console.log('Dados salvos completos:', data);
-                        // Limpar dados corrompidos
-                        clearAllWizardData();
-                        return;
-                    }
-                    
-                    // Usar dialog customizado
-                    if (window.customDialog && window.customDialog.wizardRestore) {
-                        console.log('Usando customDialog para perguntar ao usuário...');
-                        window.customDialog.wizardRestore(eventName).then(action => {
-                            console.log('Resposta do usuário:', action);
-                            if (action === 'continue') {
-                                restoreWizardData(data);
-                            } else {
-                                // Limpar dados se usuário não quiser restaurar
-                                clearAllWizardData();
-                            }
-                        });
-                    } else {
-                        console.log('customDialog não disponível, usando confirm nativo');
-                        // Fallback para confirm nativo se dialog não estiver disponível
-                        const shouldRestore = confirm(`Você deseja continuar a configuração do evento "${eventName}" do ponto onde parou?`);
-                        
-                        if (shouldRestore) {
-                            restoreWizardData(data);
-                        } else {
-                            clearAllWizardData();
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao recuperar dados salvos:', error);
-                    clearAllWizardData();
-                }
-            } else {
-                console.log('Nenhum dado de wizard salvo encontrado');
-            }
-        }
-
-        // Função para restaurar dados do wizard
         function restoreWizardData(data) {
             // Restaurar uploadedImages se existir
             if (data.uploadedImages) {
@@ -1627,7 +1800,7 @@
                         <div class="upload-text" style="margin-top: 10px;">Clique para alterar</div>
                         <div class="upload-hint">800x200px</div>
                     `;
-                    // Mostrar botão de limpar
+                    // Mostrar bot�o de limpar
                     const clearButton = document.getElementById('clearLogo');
                     if (clearButton) clearButton.style.display = 'flex';
                 }
@@ -1643,7 +1816,7 @@
                         <div class="upload-text" style="margin-top: 10px;">Clique para alterar</div>
                         <div class="upload-hint">450x450px</div>
                     `;
-                    // Mostrar botão de limpar
+                    // Mostrar bot�o de limpar
                     const clearButton = document.getElementById('clearCapa');
                     if (clearButton) clearButton.style.display = 'flex';
                 }
@@ -1657,13 +1830,13 @@
                     fundoContainer.innerHTML = `
                         <img src="${data.fundoPath}" alt="fundo">
                     `;
-                    // Mostrar botão de limpar
+                    // Mostrar bot�o de limpar
                     const clearButton = document.getElementById('clearFundo');
                     if (clearButton) clearButton.style.display = 'flex';
                 }
             }
             
-            // Restaurar campos básicos
+            // Restaurar campos b�sicos
             if (data.eventName && document.getElementById('eventName')) {
                 document.getElementById('eventName').value = data.eventName;
             }
@@ -1699,7 +1872,7 @@
                 if (colorPreview) colorPreview.style.backgroundColor = data.corFundo;
             }
             
-            // Restaurar campos de endereço
+            // Restaurar campos de endere�o
             if (data.addressSearch) {
                 const addressSearchField = document.getElementById('addressSearch');
                 if (addressSearchField) addressSearchField.value = data.addressSearch;
@@ -1711,7 +1884,7 @@
                 }
             });
             
-            // Restaurar switch de localização
+            // Restaurar switch de localiza��o
             if (data.isPresential !== undefined) {
                 const locationSwitch = document.getElementById('locationTypeSwitch');
                 const presential = document.getElementById('presentialLocation');
@@ -1767,9 +1940,9 @@
             
             // Restaurar lotes
             if (data.lotes) {
-                // Salvar lotes no cookie para que o módulo de lotes possa carregar
+                // Salvar lotes no cookie para que o m�dulo de lotes possa carregar
                 setCookie('lotesData', JSON.stringify(data.lotes), 7);
-                // Chamar função para carregar lotes
+                // Chamar fun��o para carregar lotes
                 if (typeof carregarLotesDoCookie === 'function') {
                     setTimeout(() => carregarLotesDoCookie(), 100);
                 }
@@ -1787,7 +1960,7 @@
                 const ticketList = document.getElementById('ticketList');
                 if (ticketList) ticketList.innerHTML = '';
                 
-                // Restaurar cada ingresso usando as funções de criação
+                // Restaurar cada ingresso usando as fun��es de cria��o
                 data.tickets.forEach((ticket, index) => {
                     // Recriar o elemento do ingresso
                     const ticketId = ticket.id || `ticket_${Date.now()}_${index}`;
@@ -1824,8 +1997,8 @@
                                     </div>
                                 </div>
                                 <div class="ticket-actions">
-                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">✏️</button>
-                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">🗑️</button>
+                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">??</button>
+                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">???</button>
                                 </div>
                             </div>
                         `;
@@ -1841,7 +2014,7 @@
                                         </span>
                                         <span class="ticket-detail-item">
                                             <span class="ticket-detail-label">Lote:</span>
-                                            <span class="ticket-detail-value">Lote ${ticket.loteId ? 'definido' : 'não definido'}</span>
+                                            <span class="ticket-detail-value">Lote ${ticket.loteId ? 'definido' : 'n�o definido'}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -1852,8 +2025,8 @@
                                     </div>
                                 </div>
                                 <div class="ticket-actions">
-                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">✏️</button>
-                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">🗑️</button>
+                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">??</button>
+                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">???</button>
                                 </div>
                             </div>
                         `;
@@ -1874,7 +2047,7 @@
                                         </span>
                                         <span class="ticket-detail-item">
                                             <span class="ticket-detail-label">Lote:</span>
-                                            <span class="ticket-detail-value">Lote ${ticket.loteId ? 'definido' : 'não definido'}</span>
+                                            <span class="ticket-detail-value">Lote ${ticket.loteId ? 'definido' : 'n�o definido'}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -1884,13 +2057,13 @@
                                         <span class="ticket-buyer-price">R$ ${valorComprador.toFixed(2).replace('.', ',')}</span>
                                     </div>
                                     <div class="ticket-price-item">
-                                        <span class="ticket-price-label">Você recebe:</span>
+                                        <span class="ticket-price-label">Voc� recebe:</span>
                                         <span class="ticket-receive-amount">R$ ${valorReceber.toFixed(2).replace('.', ',')}</span>
                                     </div>
                                 </div>
                                 <div class="ticket-actions">
-                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">✏️</button>
-                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">🗑️</button>
+                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">??</button>
+                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">???</button>
                                 </div>
                             </div>
                         `;
@@ -1939,7 +2112,7 @@
                                 lastTicket.dataset.ticketType = ticket.tipo;
                                 lastTicket.dataset.loteId = ticket.loteId || '';
                                 
-                                // Atualizar visualização
+                                // Atualizar visualiza��o
                                 const nameElement = lastTicket.querySelector('.ticket-name');
                                 if (nameElement) nameElement.textContent = ticket.titulo;
                                 
@@ -1972,14 +2145,14 @@
             // Atualizar preview
             setTimeout(() => updatePreview(), 300);
             
-            console.log('Dados do wizard restaurados com sucesso');
+            
         }
 
-        // Adicionar salvamento automático ao mudar de step - MOVIDO PARA O FINAL DO ARQUIVO
+        // Adicionar salvamento autom�tico ao mudar de step - MOVIDO PARA O FINAL DO ARQUIVO
         
         // Tornar validateStep global para debug
         window.validateStep = validateStep;
-        console.log('✅ validateStep exposta globalmente:', typeof window.validateStep);
+        console.log('? validateStep exposta globalmente:', typeof window.validateStep);
 
         function initPreviewListeners() {
             const fields = ['eventName', 'startDateTime', 'endDateTime', 'category', 'venueName', 'eventLink'];
@@ -1990,31 +2163,31 @@
                     field.addEventListener('input', updatePreview);
                     field.addEventListener('change', () => {
                         updatePreview();
-                        saveWizardData(); // Salvar ao mudar qualquer campo
+                        // saveWizardData() removido // Salvar ao mudar qualquer campo
                     });
                 }
             });
             
-            // Adicionar listener para descrição também
+            // Adicionar listener para descri��o tamb�m
             const eventDescription = document.getElementById('eventDescription');
             if (eventDescription) {
                 eventDescription.addEventListener('input', () => {
                     updatePreview();
-                    saveWizardData();
+                    // saveWizardData() removido
                 });
-                // Também salvar ao perder o foco
+                // Tamb�m salvar ao perder o foco
                 eventDescription.addEventListener('blur', () => {
-                    saveWizardData();
+                    // saveWizardData() removido
                 });
             }
         }
 
-        // [Incluir todas as demais funçÃµes necessárias do arquivo original]
+        // [Incluir todas as demais fun�ões necess�rias do arquivo original]
 
         window.initMap = initMap;
 
         // =====================================================
-        // CONFIGURAÃ‡ÃƒO PARA API PHP - ANYSUMMIT
+        // CONFIGURAÇÃO PARA API PHP - ANYSUMMIT
         // =====================================================
 
         const API_CONFIG = {
@@ -2028,7 +2201,7 @@
             }
         };
 
-        // [Incluir todas as funçÃµes da API do arquivo original]
+        // [Incluir todas as fun�ões da API do arquivo original]
 
         function obterValorRadioSelecionado() {
             const radios = document.querySelectorAll('.radio.checked');
@@ -2065,11 +2238,11 @@
             return notification;
         }
 
-        // [Incluir todas as demais funçÃµes necessárias...]
+        // [Incluir todas as demais fun�ões necess�rias...]
 
         async function enviarEventoParaAPI() {
             try {
-                console.log('ðŸš€ Enviando evento para PHP...');
+                console.log('🚀 Enviando evento para PHP...');
                 
                 // DEBUG - verificar ingressos antes de coletar
                 debugarDadosIngressos();
@@ -2080,15 +2253,15 @@
                 // 2. Validar
                 const validacao = validarDadosObrigatorios(dados);
                 if (!validacao.valido) {
-                    alert('Erro de validação:\n' + validacao.erros.join('\n'));
+                    alert('Erro de valida��o:\n' + validacao.erros.join('\n'));
                     return false;
                 }
                 
-                // 3. Debug - ver dados que serão enviados
-                console.log('ðŸ“‹ Dados completos:', dados);
-                console.log('ðŸ“‹ Ingressos específicos:', dados.ingressos);
+                // 3. Debug - ver dados que ser�o enviados
+                console.log('📋 Dados completos:', dados);
+                console.log('📋 Ingressos espec�ficos:', dados.ingressos);
                 
-                // 4. Enviar TUDO para o PHP com configuração correta
+                // 4. Enviar TUDO para o PHP com configura��o correta
                 const response = await fetch(API_CONFIG.baseUrl, {
                     method: 'POST',
                     headers: {
@@ -2099,14 +2272,14 @@
                     mode: 'cors'
                 });
                 
-                // 5. Verificar se a resposta é JSON válida
+                // 5. Verificar se a resposta � JSON v�lida
                 let resultado;
                 try {
                     resultado = await response.json();
                 } catch (jsonError) {
                     const textResponse = await response.text();
-                    console.error('âŒ Resposta não é JSON válida:', textResponse);
-                    throw new Error('Resposta inválida do servidor: ' + textResponse);
+                    console.error('❌ Resposta n�o � JSON v�lida:', textResponse);
+                    throw new Error('Resposta inv�lida do servidor: ' + textResponse);
                 }
                 
                 // 6. Processar resposta
@@ -2114,19 +2287,19 @@
                     throw new Error(resultado.message || `Erro HTTP: ${response.status}`);
                 }
                 
-                console.log('âœ… Sucesso:', resultado);
+                console.log('✅ Sucesso:', resultado);
                 mostrarSucesso(resultado.data);
                 return true;
                 
             } catch (error) {
-                console.error('âŒ Erro completo:', error);
+                console.error('❌ Erro completo:', error);
                 mostrarErro(error.message);
                 return false;
             }
         }
 
         // =====================================================
-        // VALIDAÃ‡ÃƒO DE DADOS
+        // VALIDAÇÃO DE DADOS
         // =====================================================
 
         function validarDadosObrigatorios(dados) {
@@ -2134,28 +2307,28 @@
             
             // Validar nome do evento
             if (!dados.evento.nome || dados.evento.nome.trim() === '') {
-                erros.push('Nome do evento é obrigatório');
+                erros.push('Nome do evento � obrigat�rio');
             }
             
-            // Validar data de início
+            // Validar data de in�cio
             if (!dados.evento.data_inicio) {
-                erros.push('Data e hora de início são obrigatórias');
+                erros.push('Data e hora de in�cio s�o obrigat�rias');
             }
             
-            // Validar localização
+            // Validar localiza��o
             if (dados.evento.tipo_local === 'presencial') {
                 if (!dados.evento.busca_endereco || dados.evento.busca_endereco.trim() === '') {
-                    erros.push('Endereço é obrigatório para eventos presenciais');
+                    erros.push('Endere�o � obrigat�rio para eventos presenciais');
                 }
             } else if (dados.evento.tipo_local === 'online') {
                 if (!dados.evento.link_online || dados.evento.link_online.trim() === '') {
-                    erros.push('Link do evento é obrigatório para eventos online');
+                    erros.push('Link do evento � obrigat�rio para eventos online');
                 }
             }
             
             // Validar termos
             if (!dados.evento.termos_aceitos) {
-                erros.push('Ã‰ necessário aceitar os termos de uso');
+                erros.push('É necess�rio aceitar os termos de uso');
             }
             
             return {
@@ -2165,7 +2338,7 @@
         }
 
         // =====================================================
-        // COLETA DE DADOS DO FORMULÃRIO
+        // COLETA DE DADOS DO FORMULÁRIO
         // =====================================================
 
         function obterImagemBase64(elementId) {
@@ -2188,18 +2361,18 @@
                         inputFile = document.getElementById('fundoUpload');
                         break;
                     default:
-                        // Para compatibilidade com código antigo
+                        // Para compatibilidade com c�digo antigo
                         imagePreview = document.getElementById('imagePreview');
                         inputFile = document.getElementById('imageUpload');
                 }
                 
-                // Se já tem preview, usar essa imagem
+                // Se j� tem preview, usar essa imagem
                 if (imagePreview && imagePreview.src && !imagePreview.src.includes('placeholder')) {
                     resolve(imagePreview.src);
                     return;
                 }
                 
-                // Senão, tentar do input file
+                // Sen�o, tentar do input file
                 const imageFile = inputFile?.files[0];
                 
                 if (!imageFile) {
@@ -2219,47 +2392,47 @@
         }
 
         function coletarDadosFormulario() {
-            console.log('ðŸ“‹ Coletando dados do formulário...');
+            console.log('📋 Coletando dados do formul�rio...');
             
-            // 1. INFORMAÃ‡Ã•ES BÃSICAS (incluindo imagem)
+            // 1. INFORMAÇÕES BÁSICAS (incluindo imagem)
             const informacoesBasicas = {
                 nome: document.getElementById('eventName')?.value || '',
                 classificacao: document.getElementById('classification')?.value || '',
                 categoria: document.getElementById('category')?.value || ''
             };
             
-            // 2. DATA E HORÃRIO
+            // 2. DATA E HORÁRIO
             const dataHorario = {
                 data_inicio: document.getElementById('startDateTime')?.value || '',
                 data_fim: document.getElementById('endDateTime')?.value || '',
                 evento_multiplos_dias: document.getElementById('multiDaySwitch')?.classList.contains('active') || false
             };
             
-            // 3. DESCRIÃ‡ÃƒO
+            // 3. DESCRIÇÃO
             const descricao = {
                 descricao_completa: document.getElementById('eventDescription')?.innerHTML || '',
                 descricao_texto: document.getElementById('eventDescription')?.textContent || ''
             };
             
-            // 4. LOCALIZAÃ‡ÃƒO
+            // 4. LOCALIZAÇÃO
             const isPresencial = document.getElementById('locationTypeSwitch')?.classList.contains('active');
             const localizacao = {
                 tipo_local: isPresencial ? 'presencial' : 'online',
                 // Dados presenciais
                 busca_endereco: (function() {
-                    // Construir endereço completo a partir dos campos
+                    // Construir endere�o completo a partir dos campos
                     const rua = document.getElementById('street')?.value || '';
                     const numero = document.getElementById('number')?.value || '';
                     const bairro = document.getElementById('neighborhood')?.value || '';
                     const cidade = document.getElementById('city')?.value || '';
                     const estado = document.getElementById('state')?.value || '';
                     
-                    // Se não tiver pelo menos rua e cidade, pegar do campo de busca se existir
+                    // Se n�o tiver pelo menos rua e cidade, pegar do campo de busca se existir
                     if (!rua && !cidade) {
                         return document.getElementById('addressSearch')?.value || '';
                     }
                     
-                    // Montar endereço completo
+                    // Montar endere�o completo
                     let endereco = rua;
                     if (numero) endereco += `, ${numero}`;
                     if (bairro) endereco += ` - ${bairro}`;
@@ -2276,6 +2449,8 @@
                 bairro: document.getElementById('neighborhood')?.value || '',
                 cidade: document.getElementById('city')?.value || '',
                 estado: document.getElementById('state')?.value || '',
+                latitude: document.getElementById('latitude')?.value || null,
+                longitude: document.getElementById('longitude')?.value || null,
                 // Dados online
                 link_online: document.getElementById('eventLink')?.value || ''
             };
@@ -2289,7 +2464,7 @@
                 descricao_produtor: isNovoProdutor ? document.getElementById('producerDescription')?.value || '' : ''
             };
             
-            // 6. CONFIGURAÃ‡Ã•ES FINAIS
+            // 6. CONFIGURAÇÕES FINAIS
             const configuracoes = {
                 visibilidade: obterValorRadioSelecionado() || 'public',
                 termos_aceitos: document.getElementById('termsCheckbox')?.classList.contains('checked') || false
@@ -2311,7 +2486,7 @@
                 ingressos: ingressos
             };
             
-            console.log('âœ… Dados coletados para PHP:', dadosCompletos);
+            console.log('✅ Dados coletados para PHP:', dadosCompletos);
             return dadosCompletos;
         }
 
@@ -2319,7 +2494,7 @@
             const ingressos = [];
             const ticketItems = document.querySelectorAll('.ticket-item');
             
-            console.log('ðŸŽŸï¸ Coletando', ticketItems.length, 'ingressos...');
+            console.log('🎟️ Coletando', ticketItems.length, 'ingressos...');
             
             ticketItems.forEach((item, index) => {
                 // Coletar dados do header
@@ -2340,8 +2515,8 @@
                 let taxaPlataforma = 0;
                 let conteudoCombo = null;
                 
-                // Verificar se é combo
-                if (ticketName.includes('ðŸ“¦') || item.dataset.comboData) {
+                // Verificar se � combo
+                if (ticketName.includes('📦') || item.dataset.comboData) {
                     tipo = 'combo';
                     
                     // Extrair valor do combo
@@ -2368,27 +2543,27 @@
                         valorReceber = valorComprador - taxaPlataforma;
                     }
                     
-                    // Extrair valor a receber (se já estiver calculado)
+                    // Extrair valor a receber (se j� estiver calculado)
                     const receiveMatch = receivePriceText.match(/R\$\s*([\d,.]+)/);
                     if (receiveMatch) {
                         valorReceber = parseFloat(receiveMatch[1].replace(/\./g, '').replace(',', '.'));
                     }
-                } else if (buyerPriceText.includes('código') || ticketName.toLowerCase().includes('código')) {
+                } else if (buyerPriceText.includes('c�digo') || ticketName.toLowerCase().includes('c�digo')) {
                     tipo = 'codigo';
                 }
                 
-                // Verificar se está ativo
+                // Verificar se est� ativo
                 const switchElement = item.querySelector('.switch-mini');
                 const ativo = switchElement ? switchElement.classList.contains('active') : true;
                 
-                // Datas padrão (vocÃª pode melhorar isso coletando as datas reais dos modais)
+                // Datas padr�o (você pode melhorar isso coletando as datas reais dos modais)
                 const agora = new Date();
                 const inicioVenda = agora.toISOString().slice(0, 16);
                 const fimVenda = new Date(agora.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString().slice(0, 16);
                 
                 const ingresso = {
                     tipo: tipo,
-                    titulo: ticketName.replace(' 📦', ''), // Remover emoji do combo
+                    titulo: ticketName.replace(' ??', ''), // Remover emoji do combo
                     descricao: '',
                     quantidade_total: parseInt(quantidade) || 1,
                     preco: valorComprador,
@@ -2407,18 +2582,18 @@
                     ingresso.conteudo_combo = conteudoCombo;
                 }
                 
-                console.log(`📦 Ingresso ${index + 1}:`, ingresso);
+                console.log(`??� Ingresso ${index + 1}:`, ingresso);
                 ingressos.push(ingresso);
             });
             
-            console.log('âœ… Total de ingressos coletados:', ingressos.length);
+            console.log('✅ Total de ingressos coletados:', ingressos.length);
             return ingressos;
         }
 
         function debugarDadosIngressos() {
             const ticketItems = document.querySelectorAll('.ticket-item');
             
-            console.log('ðŸ” DEBUG - Elementos encontrados:', ticketItems.length);
+            console.log('🔍 DEBUG - Elementos encontrados:', ticketItems.length);
             
             ticketItems.forEach((item, index) => {
                 console.log(`--- Ingresso ${index + 1} ---`);
@@ -2443,7 +2618,7 @@
         function mostrarSucesso(dados) {
             const publishBtn = document.querySelector('.btn-publish');
             if (publishBtn) {
-                publishBtn.textContent = 'âœ… Evento Criado!';
+                publishBtn.textContent = '✅ Evento Criado!';
                 publishBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
             }
 
@@ -2451,13 +2626,13 @@
             const mensagem = dados?.message || 'Evento registrado.';
 
             criarNotificacao(
-                'ðŸŽ‰ Evento criado com sucesso!',
+                '🎉 Evento criado com sucesso!',
                 `ID do evento: ${eventoId}<br>${mensagem}`,
                 'success'
             );
 
             setTimeout(() => {
-                // Redirecionar para página de evento publicado
+                // Redirecionar para p�gina de evento publicado
                 if (eventoId && eventoId !== 'N/A') {
                     window.location = `/produtor/evento-publicado.php?eventoid=${eventoId}&novo=1`;
                 } else {
@@ -2469,13 +2644,13 @@
         function mostrarErro(mensagem) {
             const publishBtn = document.querySelector('.btn-publish');
             if (publishBtn) {
-                publishBtn.textContent = 'âœ“ Publicar evento';
+                publishBtn.textContent = '✓ Publicar evento';
                 publishBtn.disabled = false;
                 publishBtn.style.background = '';
             }
             
             criarNotificacao(
-                'âŒ Erro ao criar evento',
+                '❌ Erro ao criar evento',
                 mensagem,
                 'error'
             );
@@ -2484,15 +2659,15 @@
         }
 
         // =====================================================
-        // INICIALIZAÃ‡ÃƒO DO FORMULÃRIO
+        // INICIALIZAÇÃO DO FORMULÁRIO
         // =====================================================
 
         function initFormSubmission() {
-            // Já está implementada no código acima, não precisa duplicar
+            // J� est� implementada no c�digo acima, n�o precisa duplicar
         }
 
         // =====================================================
-        // FUNÃ‡Ã•ES DE BUSCA DE ENDEREÃ‡O
+        // FUNÇÕES DE BUSCA DE ENDEREÇO
         // =====================================================
 
         function initAddressSearch() {
@@ -2500,11 +2675,11 @@
             const addressSuggestions = document.getElementById('addressSuggestions');
             
             if (!addressSearch || !addressSuggestions) {
-                console.log('âŒ Elementos de busca não encontrados');
+                console.log('❌ Elementos de busca n�o encontrados');
                 return;
             }
             
-            console.log('ðŸ” Inicializando busca de endereços...');
+            console.log('🔍 Inicializando busca de endere�os...');
             
             let searchTimeout;
 
@@ -2529,16 +2704,16 @@
                 }
             });
 
-            console.log('âœ… Busca de endereços inicializada');
+            console.log('✅ Busca de endere�os inicializada');
         }
 
         function searchAddresses(query) {
-            console.log('ðŸ” Buscando endereços para:', query);
+            console.log('🔍 Buscando endere�os para:', query);
             
             const addressSuggestions = document.getElementById('addressSuggestions');
             
             if (typeof google !== 'undefined' && google.maps && google.maps.places && autocompleteService) {
-                console.log('ðŸŒ Usando Google Places API...');
+                console.log('🌐 Usando Google Places API...');
                 
                 const request = {
                     input: query,
@@ -2547,59 +2722,28 @@
                 };
 
                 autocompleteService.getPlacePredictions(request, function(predictions, status) {
-                    console.log('ðŸ“¡ Resposta da API:', status, predictions?.length || 0, 'resultados');
+                    console.log('📡 Resposta da API:', status, predictions?.length || 0, 'resultados');
                     
                     if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
                         displayAddressSuggestions(predictions);
                     } else {
-                        console.log('âš ï¸ Sem resultados da API, usando simulação');
-                        simulateAddressSearch(query);
+                        console.log('⚠️ Sem resultados da API');
+                        addressSuggestions.innerHTML = '<div class="no-results">Nenhum endereço encontrado</div>';
+                        addressSuggestions.style.display = 'block';
                     }
                 });
             } else {
-                console.log('âš ï¸ Google Places API não disponível, usando simulação');
-                simulateAddressSearch(query);
+                console.log('⚠️ Google Places API não disponível');
+                addressSuggestions.innerHTML = '<div class="no-results">Serviço de busca indisponível</div>';
+                addressSuggestions.style.display = 'block';
             }
-        }
-
-        function simulateAddressSearch(query) {
-            console.log('ðŸŽ­ Simulando busca para:', query);
-            
-            const mockResults = [
-                {
-                    description: `${query} - São Paulo, SP, Brasil`,
-                    place_id: 'mock_sp_' + Date.now(),
-                    structured_formatting: {
-                        main_text: query,
-                        secondary_text: 'São Paulo, SP, Brasil'
-                    }
-                },
-                {
-                    description: `${query} - Rio de Janeiro, RJ, Brasil`, 
-                    place_id: 'mock_rj_' + Date.now(),
-                    structured_formatting: {
-                        main_text: query,
-                        secondary_text: 'Rio de Janeiro, RJ, Brasil'
-                    }
-                },
-                {
-                    description: `${query} - Belo Horizonte, MG, Brasil`,
-                    place_id: 'mock_mg_' + Date.now(),
-                    structured_formatting: {
-                        main_text: query,
-                        secondary_text: 'Belo Horizonte, MG, Brasil'
-                    }
-                }
-            ];
-
-            displayAddressSuggestions(mockResults);
         }
 
         function displayAddressSuggestions(results) {
             const addressSuggestions = document.getElementById('addressSuggestions');
             if (!addressSuggestions) return;
             
-            console.log('ðŸ“‹ Exibindo', results.length, 'sugestÃµes');
+            console.log('📋 Exibindo', results.length, 'sugestões');
             
             addressSuggestions.innerHTML = '';
             
@@ -2625,7 +2769,7 @@
         }
 
         function selectAddress(address) {
-            console.log('📦 Endereço selecionado:', address.description);
+            console.log('??� Endere�o selecionado:', address.description);
             
             const addressSearch = document.getElementById('addressSearch');
             const addressSuggestions = document.getElementById('addressSuggestions');
@@ -2638,13 +2782,13 @@
             }
             
             if (address.place_id.startsWith('mock_')) {
-                console.log('ðŸŽ­ Usando dados simulados');
+                console.log('🎭 Usando dados simulados');
                 fillMockAddressData(address.place_id);
             } else if (typeof google !== 'undefined' && google.maps && placesService) {
-                console.log('ðŸŒ Buscando detalhes na API...');
+                console.log('🌐 Buscando detalhes na API...');
                 getPlaceDetails(address.place_id);
             } else {
-                console.log('âš ï¸ API não disponível, usando simulação');
+                console.log('⚠️ API n�o dispon�vel, usando simula��o');
                 fillMockAddressData('mock_default');
             }
         }
@@ -2656,20 +2800,20 @@
             };
 
             placesService.getDetails(request, function(place, status) {
-                console.log('ðŸ“¡ Detalhes do local:', status, place);
+                console.log('📡 Detalhes do local:', status, place);
                 
                 if (status === google.maps.places.PlacesServiceStatus.OK && place) {
                     fillAddressFields(place);
                     updateMapLocation(place.geometry.location);
                 } else {
-                    console.log('âŒ Erro ao obter detalhes, usando simulação');
+                    console.log('❌ Erro ao obter detalhes, usando simula��o');
                     fillMockAddressData('api_error');
                 }
             });
         }
 
         function fillAddressFields(place) {
-            console.log('📦 Preenchendo campos com dados da API');
+            console.log('??� Preenchendo campos com dados da API');
             
             const components = place.address_components || [];
             const fields = {
@@ -2703,21 +2847,21 @@
         }
 
         function fillMockAddressData(mockType) {
-            console.log('ðŸŽ­ Preenchendo com dados simulados:', mockType);
+            console.log('🎭 Preenchendo com dados simulados:', mockType);
             
             let fields = {
                 cep: '01310-100',
                 street: 'Avenida Paulista',
                 number: '1000',
                 neighborhood: 'Bela Vista',
-                city: 'São Paulo',
+                city: 'S�o Paulo',
                 state: 'SP'
             };
 
             if (mockType.includes('rj')) {
                 fields = {
                     cep: '22071-900',
-                    street: 'Avenida AtlÃ¢ntica',
+                    street: 'Avenida Atlântica',
                     number: '500',
                     neighborhood: 'Copacabana',
                     city: 'Rio de Janeiro',
@@ -2743,13 +2887,13 @@
         }
 
         function updateFormFields(fields) {
-            console.log('âœï¸ Atualizando campos:', fields);
+            console.log('✏️ Atualizando campos:', fields);
             
             Object.keys(fields).forEach(key => {
                 const field = document.getElementById(key);
                 if (field && fields[key]) {
                     field.value = fields[key];
-                    console.log(`  âœ… ${key}: ${fields[key]}`);
+                    console.log(`  ✅ ${key}: ${fields[key]}`);
                 }
             });
 
@@ -2758,12 +2902,12 @@
 
         function updateMapLocation(location) {
             if (!map || !location) {
-                console.log('âš ï¸ Mapa ou localização não disponível');
+                console.log('⚠️ Mapa ou localiza��o n�o dispon�vel');
                 return;
             }
 
 
-            console.log('ðŸ—ºï¸ Atualizando mapa:', location);
+            console.log('🗺️ Atualizando mapa:', location);
 
             map.setCenter(location);
             map.setZoom(16);
@@ -2786,11 +2930,11 @@
                 }
             });
 
-            console.log('âœ… Mapa atualizado com sucesso');
+            console.log('✅ Mapa atualizado com sucesso');
         }
 
         // =====================================================
-        // FUNÃ‡Ã•ES DE INGRESSOS
+        // FUNÇÕES DE INGRESSOS
         // =====================================================
 
         function formatCurrency(input) {
@@ -2910,23 +3054,23 @@
                         </span>
                     </div>
                     <div class="ticket-actions">
-                        <button class="btn-icon" onClick="editTicket(${ticketCount})" title="Editar">✏️</button>
-                        <button class="btn-icon" onClick="removeTicket(${ticketCount})" title="Remover">🗑️</button>
+                        <button class="btn-icon" onClick="editTicket(${ticketCount})" title="Editar">??</button>
+                        <button class="btn-icon" onClick="removeTicket(${ticketCount})" title="Remover">???</button>
                     </div>
                 </div>
                 <div class="ticket-details">
                     <div class="ticket-info">
                         <span>Quantidade: <strong>${quantity}</strong></span>
-                        ${type === 'paid' ? `<span>Preço: <strong>${buyerPrice}</strong></span>` : ''}
+                        ${type === 'paid' ? `<span>Pre�o: <strong>${buyerPrice}</strong></span>` : ''}
                         <span>Taxa: <strong>${taxFormatted}</strong></span>
-                        <span>VocÃª recebe: <strong>${receiveFormatted}</strong></span>
+                        <span>Você recebe: <strong>${receiveFormatted}</strong></span>
                     </div>
                 </div>
             `;
             
             ticketList.appendChild(ticketItem);
             
-            // Armazenar dados do ingresso para edição
+            // Armazenar dados do ingresso para edi��o
             ticketItem.ticketData = {
                 type: type,
                 title: title,
@@ -2940,14 +3084,14 @@
                 loteId: loteId
             };
             
-            // Salvar na sessão
-            saveWizardData();
+            // Salvar na sess�o
+            // saveWizardData() removido
         }
 
         function removeTicket(ticketId) {
-            // Verificar se o ingresso está em algum combo
+            // Verificar se o ingresso est� em algum combo
             if (verificarIngressoEmCombo(ticketId)) {
-                alert('Não é possível excluir este ingresso pois ele está sendo usado em um combo. Remova-o do combo primeiro.');
+                alert('N�o � poss�vel excluir este ingresso pois ele est� sendo usado em um combo. Remova-o do combo primeiro.');
                 return;
             }
             
@@ -2956,20 +3100,20 @@
                 if (ticketElement) {
                     ticketElement.remove();
                     
-                    // Remover também de temporaryTickets se existir
+                    // Remover tamb�m de temporaryTickets se existir
                     if (window.temporaryTickets && window.temporaryTickets.tickets) {
                         window.temporaryTickets.tickets = window.temporaryTickets.tickets.filter(
                             ticket => ticket.id !== ticketId
                         );
                     }
                     
-                    // Salvar após remover
-                    saveWizardData();
+                    // Salvar ap�s remover
+                    // saveWizardData() removido
                 }
             }
         }
         
-        // Função para verificar se ingresso está em combo
+        // Fun��o para verificar se ingresso est� em combo
         function verificarIngressoEmCombo(ticketId) {
             // Verificar em temporaryTickets
             if (window.temporaryTickets && window.temporaryTickets.tickets) {
@@ -2996,7 +3140,7 @@
         }
 
         // =====================================================
-        // FUNÃ‡Ã•ES DE CÃ“DIGO
+        // FUNÇÕES DE CÓDIGO
         // =====================================================
 
         function generateRandomCode(length = 8) {
@@ -3015,12 +3159,12 @@
             const endDate = document.getElementById('codeSaleEnd')?.value;
 
             if (!title || !quantity || !startDate || !endDate) {
-                alert('Por favor, preencha todos os campos obrigatórios.');
+                alert('Por favor, preencha todos os campos obrigat�rios.');
                 return;
             }
 
             if (quantity > 1000) {
-                alert('Máximo de 1000 códigos permitidos.');
+                alert('M�ximo de 1000 c�digos permitidos.');
                 return;
             }
 
@@ -3071,28 +3215,28 @@
                 <div class="ticket-header">
                     <div class="ticket-info">
                         <div class="ticket-name">${title}</div>
-                        <div class="ticket-buyer-price">Valor do comprador: <strong>Acesso via código</strong></div>
-                        <div class="ticket-receive-amount">Tipo: <strong>Códigos de acesso</strong></div>
+                        <div class="ticket-buyer-price">Valor do comprador: <strong>Acesso via c�digo</strong></div>
+                        <div class="ticket-receive-amount">Tipo: <strong>C�digos de acesso</strong></div>
                     </div>
                     <div class="ticket-actions-inline">
                         <div class="switch-mini active" title="Ativar/Desativar">
                             <div class="switch-mini-handle"></div>
                         </div>
-                        <button class="btn-icon btn-codes" title="Listar Códigos" onclick="openCodesModal('${ticketId}')">
-                            ✏️
+                        <button class="btn-icon btn-codes" title="Listar C�digos" onclick="openCodesModal('${ticketId}')">
+                            ??
                         </button>                       
                         <button class="btn-icon btn-delete" title="Excluir" onclick="removeTicket(this)">
-                            🗑️
+                            ???
                         </button>
                     </div>
                 </div>
                 <div class="ticket-details-list">
                     <div class="ticket-detail-item">
-                        <div class="ticket-detail-label">Códigos Gerados</div>
+                        <div class="ticket-detail-label">C�digos Gerados</div>
                         <div class="ticket-detail-value">${quantity}</div>
                     </div>
                     <div class="ticket-detail-item">
-                        <div class="ticket-detail-label">Códigos Usados</div>
+                        <div class="ticket-detail-label">C�digos Usados</div>
                         <div class="ticket-detail-value">0</div>
                     </div>
                     <div class="ticket-detail-item">
@@ -3125,8 +3269,8 @@
                 row.innerHTML = `
                     <td>
                         <span class="code-value">${codeData.code}</span>
-                        <button class="btn btn-outline btn-small" onclick="copyIndividualCode('${codeData.code}')" title="Copiar código" style="margin-left: 8px; padding: 2px 6px; font-size: 0.7rem;">
-                            📋
+                        <button class="btn btn-outline btn-small" onclick="copyIndividualCode('${codeData.code}')" title="Copiar c�digo" style="margin-left: 8px; padding: 2px 6px; font-size: 0.7rem;">
+                            ??
                         </button>
                     </td>
                     <td>
@@ -3138,15 +3282,15 @@
                     <td>
                         ${codeData.used ? 
                             `<span class="status-used">${new Date(codeData.usedAt).toLocaleString('pt-BR')}</span>` : 
-                            `<span class="status-unused">Não utilizado</span>`
+                            `<span class="status-unused">N�o utilizado</span>`
                         }
                     </td>
                     <td>
                         <button class="btn btn-whatsapp btn-small" onclick="shareCodeWhatsApp('${codeData.code}', ${index})" title="Compartilhar via WhatsApp">
-                            📱
+                            ??
                         </button>
                         <button class="btn btn-secondary btn-small" onclick="deleteCode(${index})" title="Apagar">
-                            🗑️
+                            ???
                         </button>
                     </td>
                 `;
@@ -3170,13 +3314,13 @@
             let dateText = '';
             if (eventDate) {
                 const date = new Date(eventDate);
-                dateText = `\nðŸ“… Data: ${date.toLocaleDateString('pt-BR')} Ã s ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
+                dateText = `\n📅 Data: ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
             }
             
-            const message = `ðŸŽŸï¸ *Seu código de acesso*\n\n` +
+            const message = `🎟️ *Seu c�digo de acesso*\n\n` +
                            `*Evento:* ${eventName}${dateText}\n\n` +
-                           `*Código:* \`${code}\`\n\n` +
-                           `📦 Apresente este código no evento para ter acesso.\n\n` +
+                           `*C�digo:* \`${code}\`\n\n` +
+                           `??� Apresente este c�digo no evento para ter acesso.\n\n` +
                            `_Generated by Anysummit_`;
             
             const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -3192,13 +3336,13 @@
         }
 
         function updateCodeRecipient(index, description) {
-            console.log(`Código ${index} foi encaminhado para: ${description}`);
+            console.log(`C�digo ${index} foi encaminhado para: ${description}`);
         }
 
         function copyIndividualCode(code) {
             navigator.clipboard.writeText(code).then(() => {
                 const notification = document.createElement('div');
-                notification.textContent = 'Código copiado!';
+                notification.textContent = 'C�digo copiado!';
                 notification.style.cssText = `
                     position: fixed;
                     top: 20px;
@@ -3221,7 +3365,7 @@
         }
 
         function deleteCode(index) {
-            if (confirm('Tem certeza que deseja apagar este código?')) {
+            if (confirm('Tem certeza que deseja apagar este c�digo?')) {
                 const row = document.querySelector(`#codesTableBody tr:nth-child(${index + 1})`);
                 row.remove();
             }
@@ -3238,7 +3382,7 @@
             });
             
             const csvContent = "data:text/csv;charset=utf-8," 
-                + "Código,Email,Status\n"
+                + "C�digo,Email,Status\n"
                 + codes.map(c => `${c.codigo},${c.email},${c.utilizado}`).join("\n");
             
             const link = document.createElement("a");
@@ -3250,7 +3394,7 @@
         function copyAllCodes() {
             const codes = Array.from(document.querySelectorAll('.code-value')).map(el => el.textContent).join('\n');
             navigator.clipboard.writeText(codes).then(() => {
-                alert('Todos os códigos foram copiados para a área de transferÃªncia!');
+                alert('Todos os c�digos foram copiados para a �rea de transferência!');
             });
         }
 
@@ -3264,7 +3408,7 @@
         }
 
         // =====================================================
-        // TESTE DE CONEXÃƒO
+        // TESTE DE CONEXÃO
         // =====================================================
 
         function testarConexaoAPI() {
@@ -3303,25 +3447,25 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('ðŸ§ª Teste de conexão:', data);
-                alert('Conexão OK: ' + JSON.stringify(data));
+                console.log('🧪 Teste de conex�o:', data);
+                alert('Conex�o OK: ' + JSON.stringify(data));
             })
             .catch(error => {
-                console.error('ðŸ§ª Erro no teste:', error);
-                alert('Erro na conexão: ' + error.message);
+                console.error('🧪 Erro no teste:', error);
+                alert('Erro na conex�o: ' + error.message);
             });
         }
 
         // =====================================================
-        // FUNÃ‡Ã•ES DO COMBO DE TIPOS DE INGRESSO
+        // FUNÇÕES DO COMBO DE TIPOS DE INGRESSO
         // =====================================================
 
         let comboItems = [];
 
-        // FUNÇÃO ANTIGA - SUBSTITUÍDA POR populateComboTicketSelectByLote
+        // FUN��O ANTIGA - SUBSTITU�DA POR populateComboTicketSelectByLote
         function populateComboTicketSelect() {
-            // Não fazer nada - usar populateComboTicketSelectByLote
-            console.log('populateComboTicketSelect chamada - redirecionando para nova função');
+            // N�o fazer nada - usar populateComboTicketSelectByLote
+            console.log('populateComboTicketSelect chamada - redirecionando para nova fun��o');
         }
 
         function addItemToCombo() {
@@ -3337,10 +3481,10 @@
             const ticketData = JSON.parse(selectedOption.dataset.ticketData);
             const quantity = parseInt(quantityInput.value);
             
-            // Verificar se já não foi adicionado
+            // Verificar se j� n�o foi adicionado
             const existingItem = comboItems.find(item => item.index === ticketData.index);
             if (existingItem) {
-                alert('Este tipo de ingresso já foi adicionado ao combo.');
+                alert('Este tipo de ingresso j� foi adicionado ao combo.');
                 return;
             }
             
@@ -3370,9 +3514,9 @@
             if (comboItems.length === 0) {
                 container.innerHTML = `
                     <div class="combo-empty-state">
-                        <div style="font-size: 2rem; margin-bottom: 10px;">📦</div>
+                        <div style="font-size: 2rem; margin-bottom: 10px;">??</div>
                         <div style="color: #8B95A7;">Adicione tipos de ingresso ao combo</div>
-                        <div style="color: #8B95A7; font-size: 0.85rem;">Selecione os tipos já criados e defina quantidades</div>
+                        <div style="color: #8B95A7; font-size: 0.85rem;">Selecione os tipos j� criados e defina quantidades</div>
                     </div>
                 `;
                 return;
@@ -3389,7 +3533,7 @@
                    
 						
 						<button class="btn-icon btn-delete" onclick="removeComboItem(${index})" title="Remover">
-    🗑️
+    ???
 </button>
                     </div>
                 </div>
@@ -3404,7 +3548,7 @@
 
         function updateComboSummary() {
             const totalItems = comboItems.reduce((sum, item) => sum + item.quantity, 0);
-            console.log(`📦 Combo atualizado: ${comboItems.length} tipos, ${totalItems} itens totais`);
+            console.log(`?? Combo atualizado: ${comboItems.length} tipos, ${totalItems} itens totais`);
         }
 
         function createComboTicket() {
@@ -3420,7 +3564,7 @@
             const description = document.getElementById('comboTicketDescription')?.value;
             const taxaServico = document.getElementById('comboTicketTaxaServico')?.checked;
 
-            // Validação com destaque de campos
+            // Valida��o com destaque de campos
             let hasError = false;
             
             if (!title) {
@@ -3449,13 +3593,13 @@
             }
 
             if (hasError) {
-                alert('Por favor, preencha todos os campos obrigatórios marcados em vermelho.');
+                alert('Por favor, preencha todos os campos obrigat�rios marcados em vermelho.');
                 return;
             }
 
             if (comboItems.length === 0) {
                 alert('Adicione pelo menos um tipo de ingresso ao combo.');
-                // Destacar a área de composição do combo
+                // Destacar a �rea de composi��o do combo
                 const comboList = document.getElementById('comboItemsList');
                 if (comboList) {
                     comboList.style.border = '2px solid #ef4444';
@@ -3466,7 +3610,7 @@
                 return;
             }
 
-            // Obter informações do lote selecionado
+            // Obter informa��es do lote selecionado
             const selectLote = document.getElementById('comboTicketLote');
             const selectedOption = selectLote.options[selectLote.selectedIndex];
             const loteNome = selectedOption.dataset.nomeSimples || selectedOption.textContent.split(' - ')[0];
@@ -3524,20 +3668,20 @@
                         <span class="ticket-name">${title}</span>
                         <span class="ticket-type-badge combo">(Combo)</span>
                         <span class="ticket-lote-info" style="font-size: 11px; color: #666; margin-left: 10px;">
-                            ${loteNome} - Por Data (${formatDate(startDate)} até ${formatDate(endDate)})
+                            ${loteNome} - Por Data (${formatDate(startDate)} at� ${formatDate(endDate)})
                         </span>
                     </div>
                     <div class="ticket-actions">
-                        <button class="btn-icon" onClick="editCombo(${ticketCount})" title="Editar Combo">✏️</button>
-                        <button class="btn-icon" onClick="removeTicket(${ticketCount})" title="Remover">  🗑️</button>
+                        <button class="btn-icon" onClick="editCombo(${ticketCount})" title="Editar Combo">??</button>
+                        <button class="btn-icon" onClick="removeTicket(${ticketCount})" title="Remover">  ???</button>
                     </div>
                 </div>
                 <div class="ticket-details">
                     <div class="ticket-info">
                         <span>Quantidade: <strong>${quantity}</strong></span>
-                        <span>Preço: <strong>${price}</strong></span>
+                        <span>Pre�o: <strong>${price}</strong></span>
                         <span>Taxa: <strong>${taxFormatted}</strong></span>
-                        <span>Você recebe: <strong>${receiveFormatted}</strong></span>
+                        <span>Voc� recebe: <strong>${receiveFormatted}</strong></span>
                     </div>
                     <div class="combo-items" style="margin-top: 10px; padding: 8px 12px; background: #f0f4ff; border-radius: 6px;">
                         <strong style="color: #9C27B0;">Inclui:</strong>
@@ -3550,7 +3694,7 @@
             
             ticketList.appendChild(ticketItem);
             
-            // Armazenar dados do combo para edição
+            // Armazenar dados do combo para edi��o
             ticketItem.ticketData = {
                 type: 'combo',
                 title: title,
@@ -3560,12 +3704,12 @@
                 comboData: comboData
             };
             
-            // Salvar após adicionar combo
-            saveWizardData();
+            // Salvar ap�s adicionar combo
+            // saveWizardData() removido
         }
 
         function clearComboForm() {
-            // Limpar campos do formulário
+            // Limpar campos do formul�rio
             document.getElementById('comboTicketTitle').value = '';
             document.getElementById('comboTicketQuantity').value = '';
             document.getElementById('comboTicketPrice').value = 'R$ 0,00';
@@ -3592,7 +3736,7 @@
             }
         }
 
-        // Inicializar formatação de preço para combo
+        // Inicializar formata��o de pre�o para combo
         function initComboPriceInput() {
             const priceInput = document.getElementById('comboTicketPrice');
             const receiveInput = document.getElementById('comboTicketReceive');
@@ -3623,23 +3767,23 @@
             });
         }
 
-// ==================== FUNÃ‡Ã•ES DE EDIÃ‡ÃƒO DE INGRESSOS ====================
+// ==================== FUNÇÕES DE EDIÇÃO DE INGRESSOS ====================
 
-// Função para editar ingresso existente
+// Fun��o para editar ingresso existente
 function editTicket(ticketId) {
-    console.log('ðŸ”§ Editando ingresso:', ticketId);
+    console.log('🔧 Editando ingresso:', ticketId);
     
     // Buscar os dados do ingresso na lista atual
     const ticketElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
     if (!ticketElement) {
-        alert('Ingresso não encontrado');
+        alert('Ingresso n�o encontrado');
         return;
     }
     
     // Extrair dados do elemento
     const ticketData = extractTicketDataFromElement(ticketElement);
     
-    // Verificar se é pago ou gratuito
+    // Verificar se � pago ou gratuito
     if (ticketData.tipo === 'pago') {
         populateEditPaidTicketModal(ticketData);
         document.getElementById('editPaidTicketModal').style.display = 'flex';
@@ -3649,7 +3793,7 @@ function editTicket(ticketId) {
     }
 }
 
-// Função para extrair dados do ingresso do elemento HTML
+// Fun��o para extrair dados do ingresso do elemento HTML
 function extractTicketDataFromElement(element) {
     const titleElement = element.querySelector('.ticket-title');
     const title = titleElement ? titleElement.textContent.trim() : '';
@@ -3662,9 +3806,9 @@ function extractTicketDataFromElement(element) {
     
     return {
         id: element.dataset.ticketId,
-        titulo: title.replace(/\s+(Gratuito|Pago|Código)$/, ''),
+        titulo: title.replace(/\s+(Gratuito|Pago|C�digo)$/, ''),
         tipo: tipo,
-        // Estes dados virão do backend quando implementarmos a busca AJAX
+        // Estes dados vir�o do backend quando implementarmos a busca AJAX
         quantidade_total: 100,
         preco: 0,
         inicio_venda: new Date().toISOString().slice(0, 16),
@@ -3675,10 +3819,10 @@ function extractTicketDataFromElement(element) {
     };
 }
 
-// Função para popular modal de edição de ingresso pago
-// Função para popular modal de edição de ingresso pago
+// Fun��o para popular modal de edi��o de ingresso pago
+// Fun��o para popular modal de edi��o de ingresso pago
 function populateEditPaidTicketModal(ticketData) {
-    console.log('ðŸ”§ populateEditPaidTicketModal chamada - versão CORRIGIDA', ticketData);
+    console.log('🔧 populateEditPaidTicketModal chamada - vers�o CORRIGIDA', ticketData);
     
     const editTicketId = document.getElementById('editTicketId');
     const editPaidTicketTitle = document.getElementById('editPaidTicketTitle');
@@ -3693,78 +3837,78 @@ function populateEditPaidTicketModal(ticketData) {
 
     if (editTicketId) {
         editTicketId.value = ticketData.id;
-        console.log('âœ… editTicketId definido:', ticketData.id);
+        console.log('✅ editTicketId definido:', ticketData.id);
     } else {
-        console.error('âŒ editTicketId não encontrado');
+        console.error('❌ editTicketId n�o encontrado');
     }
     
     if (editPaidTicketTitle) {
         editPaidTicketTitle.value = ticketData.titulo;
-        console.log('âœ… editPaidTicketTitle definido:', ticketData.titulo);
+        console.log('✅ editPaidTicketTitle definido:', ticketData.titulo);
     } else {
-        console.error('âŒ editPaidTicketTitle não encontrado');
+        console.error('❌ editPaidTicketTitle n�o encontrado');
     }
     
     if (editPaidTicketQuantity) {
         editPaidTicketQuantity.value = ticketData.quantidade_total;
-        console.log('âœ… editPaidTicketQuantity definido:', ticketData.quantidade_total);
+        console.log('✅ editPaidTicketQuantity definido:', ticketData.quantidade_total);
     } else {
-        console.error('âŒ editPaidTicketQuantity não encontrado');
+        console.error('❌ editPaidTicketQuantity n�o encontrado');
     }
     
     if (editPaidTicketPrice) {
         editPaidTicketPrice.value = formatPrice(ticketData.preco);
-        console.log('âœ… editPaidTicketPrice definido:', ticketData.preco);
+        console.log('✅ editPaidTicketPrice definido:', ticketData.preco);
     } else {
-        console.error('âŒ editPaidTicketPrice não encontrado');
+        console.error('❌ editPaidTicketPrice n�o encontrado');
     }
     
     if (editPaidTicketReceive) {
         editPaidTicketReceive.value = formatPrice(ticketData.valor_receber || 0);
-        console.log('âœ… editPaidTicketReceive definido:', ticketData.valor_receber);
+        console.log('✅ editPaidTicketReceive definido:', ticketData.valor_receber);
     } else {
-        console.error('âŒ editPaidTicketReceive não encontrado');
+        console.error('❌ editPaidTicketReceive n�o encontrado');
     }
     
     if (editPaidSaleStart) {
         editPaidSaleStart.value = ticketData.inicio_venda ? ticketData.inicio_venda.slice(0, 16) : '';
-        console.log('âœ… editPaidSaleStart definido:', ticketData.inicio_venda);
+        console.log('✅ editPaidSaleStart definido:', ticketData.inicio_venda);
     } else {
-        console.error('âŒ editPaidSaleStart não encontrado');
+        console.error('❌ editPaidSaleStart n�o encontrado');
     }
     
     if (editPaidSaleEnd) {
         editPaidSaleEnd.value = ticketData.fim_venda ? ticketData.fim_venda.slice(0, 16) : '';
-        console.log('âœ… editPaidSaleEnd definido:', ticketData.fim_venda);
+        console.log('✅ editPaidSaleEnd definido:', ticketData.fim_venda);
     } else {
-        console.error('âŒ editPaidSaleEnd não encontrado');
+        console.error('❌ editPaidSaleEnd n�o encontrado');
     }
     
     if (editPaidMinQuantity) {
         editPaidMinQuantity.value = ticketData.limite_min || 1;
-        console.log('âœ… editPaidMinQuantity definido:', ticketData.limite_min);
+        console.log('✅ editPaidMinQuantity definido:', ticketData.limite_min);
     } else {
-        console.error('âŒ editPaidMinQuantity não encontrado');
+        console.error('❌ editPaidMinQuantity n�o encontrado');
     }
     
     if (editPaidMaxQuantity) {
         editPaidMaxQuantity.value = ticketData.limite_max || 5;
-        console.log('âœ… editPaidMaxQuantity definido:', ticketData.limite_max);
+        console.log('✅ editPaidMaxQuantity definido:', ticketData.limite_max);
     } else {
-        console.error('âŒ editPaidMaxQuantity não encontrado');
+        console.error('❌ editPaidMaxQuantity n�o encontrado');
     }
     
     if (editPaidTicketDescription) {
         editPaidTicketDescription.value = ticketData.descricao || '';
-        console.log('âœ… editPaidTicketDescription definido:', ticketData.descricao);
+        console.log('✅ editPaidTicketDescription definido:', ticketData.descricao);
     } else {
-        console.error('âŒ editPaidTicketDescription não encontrado');
+        console.error('❌ editPaidTicketDescription n�o encontrado');
     }
 }
 
-// Função para popular modal de edição de ingresso gratuito
+// Fun��o para popular modal de edi��o de ingresso gratuito
 function populateEditFreeTicketModal(ticketData) {
-    console.log('ðŸ”§ populateEditFreeTicketModal chamada - versão CORRIGIDA', ticketData);
+    console.log('🔧 populateEditFreeTicketModal chamada - vers�o CORRIGIDA', ticketData);
     
     const editFreeTicketId = document.getElementById('editFreeTicketId');
     const editFreeTicketTitle = document.getElementById('editFreeTicketTitle');
@@ -3777,62 +3921,62 @@ function populateEditFreeTicketModal(ticketData) {
 
     if (editFreeTicketId) {
         editFreeTicketId.value = ticketData.id;
-        console.log('âœ… editFreeTicketId definido:', ticketData.id);
+        console.log('✅ editFreeTicketId definido:', ticketData.id);
     } else {
-        console.error('âŒ editFreeTicketId não encontrado');
+        console.error('❌ editFreeTicketId n�o encontrado');
     }
     
     if (editFreeTicketTitle) {
         editFreeTicketTitle.value = ticketData.titulo;
-        console.log('âœ… editFreeTicketTitle definido:', ticketData.titulo);
+        console.log('✅ editFreeTicketTitle definido:', ticketData.titulo);
     } else {
-        console.error('âŒ editFreeTicketTitle não encontrado');
+        console.error('❌ editFreeTicketTitle n�o encontrado');
     }
     
     if (editFreeTicketQuantity) {
         editFreeTicketQuantity.value = ticketData.quantidade_total;
-        console.log('âœ… editFreeTicketQuantity definido:', ticketData.quantidade_total);
+        console.log('✅ editFreeTicketQuantity definido:', ticketData.quantidade_total);
     } else {
-        console.error('âŒ editFreeTicketQuantity não encontrado');
+        console.error('❌ editFreeTicketQuantity n�o encontrado');
     }
     
     if (editFreeSaleStart) {
         editFreeSaleStart.value = ticketData.inicio_venda ? ticketData.inicio_venda.slice(0, 16) : '';
-        console.log('âœ… editFreeSaleStart definido:', ticketData.inicio_venda);
+        console.log('✅ editFreeSaleStart definido:', ticketData.inicio_venda);
     } else {
-        console.error('âŒ editFreeSaleStart não encontrado');
+        console.error('❌ editFreeSaleStart n�o encontrado');
     }
     
     if (editFreeSaleEnd) {
         editFreeSaleEnd.value = ticketData.fim_venda ? ticketData.fim_venda.slice(0, 16) : '';
-        console.log('âœ… editFreeSaleEnd definido:', ticketData.fim_venda);
+        console.log('✅ editFreeSaleEnd definido:', ticketData.fim_venda);
     } else {
-        console.error('âŒ editFreeSaleEnd não encontrado');
+        console.error('❌ editFreeSaleEnd n�o encontrado');
     }
     
     if (editFreeMinLimit) {
         editFreeMinLimit.value = ticketData.limite_min || 1;
-        console.log('âœ… editFreeMinLimit definido:', ticketData.limite_min);
+        console.log('✅ editFreeMinLimit definido:', ticketData.limite_min);
     } else {
-        console.error('âŒ editFreeMinLimit não encontrado');
+        console.error('❌ editFreeMinLimit n�o encontrado');
     }
     
     if (editFreeMaxLimit) {
         editFreeMaxLimit.value = ticketData.limite_max || 5;
-        console.log('âœ… editFreeMaxLimit definido:', ticketData.limite_max);
+        console.log('✅ editFreeMaxLimit definido:', ticketData.limite_max);
     } else {
-        console.error('âŒ editFreeMaxLimit não encontrado');
+        console.error('❌ editFreeMaxLimit n�o encontrado');
     }
     
     if (editFreeTicketDescription) {
         editFreeTicketDescription.value = ticketData.descricao || '';
-        console.log('âœ… editFreeTicketDescription definido:', ticketData.descricao);
+        console.log('✅ editFreeTicketDescription definido:', ticketData.descricao);
     } else {
-        console.error('âŒ editFreeTicketDescription não encontrado');
+        console.error('❌ editFreeTicketDescription n�o encontrado');
     }
 }
 
-// Função para atualizar ingresso pago
+// Fun��o para atualizar ingresso pago
 function updatePaidTicket() {
     const ticketData = {
         id: document.getElementById('editTicketId').value,
@@ -3846,9 +3990,9 @@ function updatePaidTicket() {
         descricao: document.getElementById('editPaidTicketDescription').value
     };
     
-    // ValidaçÃµes
+    // Valida�ões
     if (!ticketData.titulo || !ticketData.quantidade_total || !ticketData.preco) {
-        alert('Por favor, preencha todos os campos obrigatórios');
+        alert('Por favor, preencha todos os campos obrigat�rios');
         return;
     }
     
@@ -3858,10 +4002,10 @@ function updatePaidTicket() {
     // Fechar modal
     closeModal('editPaidTicketModal');
     
-    console.log('âœ… Ingresso pago atualizado:', ticketData);
+    console.log('✅ Ingresso pago atualizado:', ticketData);
 }
 
-// Função para atualizar ingresso gratuito
+// Fun��o para atualizar ingresso gratuito
 function updateFreeTicket() {
     const ticketData = {
         id: document.getElementById('editFreeTicketId').value,
@@ -3875,9 +4019,9 @@ function updateFreeTicket() {
         descricao: document.getElementById('editFreeTicketDescription').value
     };
     
-    // ValidaçÃµes
+    // Valida�ões
     if (!ticketData.titulo || !ticketData.quantidade_total) {
-        alert('Por favor, preencha todos os campos obrigatórios');
+        alert('Por favor, preencha todos os campos obrigat�rios');
         return;
     }
     
@@ -3887,15 +4031,15 @@ function updateFreeTicket() {
     // Fechar modal
     closeModal('editFreeTicketModal');
     
-    console.log('âœ… Ingresso gratuito atualizado:', ticketData);
+    console.log('✅ Ingresso gratuito atualizado:', ticketData);
 }
 
-// Função para atualizar ingresso na lista
+// Fun��o para atualizar ingresso na lista
 function updateTicketInList(ticketData) {
     const ticketElement = document.querySelector(`[data-ticket-id="${ticketData.id}"]`);
     if (!ticketElement) return;
     
-    // Atualizar título
+    // Atualizar t�tulo
     const titleElement = ticketElement.querySelector('.ticket-title');
     if (titleElement) {
         const badgeText = ticketData.preco > 0 ? 'Pago' : 'Gratuito';
@@ -3915,7 +4059,7 @@ function updateTicketInList(ticketData) {
         `;
         
         if (ticketData.preco > 0) {
-            detailsHTML += `<span>Preço: <strong>R$ ${ticketData.preco.toFixed(2).replace('.', ',')}</strong></span>`;
+            detailsHTML += `<span>Pre�o: <strong>R$ ${ticketData.preco.toFixed(2).replace('.', ',')}</strong></span>`;
         }
         
         detailsHTML += `
@@ -3935,13 +4079,13 @@ function updateTicketInList(ticketData) {
     }
 }
 
-// Função para formatar data para exibição
+// Fun��o para formatar data para exibi��o
 function formatDateForDisplay(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
 }
 
-// Função para formatar preço
+// Fun��o para formatar pre�o
 function formatPrice(value) {
     if (typeof value === 'number') {
         return 'R$ ' + value.toFixed(2).replace('.', ',');
@@ -3949,23 +4093,23 @@ function formatPrice(value) {
     return value || 'R$ 0,00';
 }
 
-// ==================== FUNÃ‡Ã•ES DE EDIÃ‡ÃƒO DE COMBOS ====================
+// ==================== FUNÇÕES DE EDIÇÃO DE COMBOS ====================
 
-// Função para editar combo existente
+// Fun��o para editar combo existente
 function editCombo(comboId) {
-    console.log('ðŸ”§ Editando combo:', comboId);
+    console.log('🔧 Editando combo:', comboId);
     
     // Buscar os dados do combo na lista atual
     const comboElement = document.querySelector(`[data-ticket-id="${comboId}"]`);
     if (!comboElement) {
-        alert('Combo não encontrado');
+        alert('Combo n�o encontrado');
         return;
     }
     
     // Extrair dados do elemento
     const comboData = extractComboDataFromElement(comboElement);
     
-    // Popular modal de edição
+    // Popular modal de edi��o
     populateEditComboModal(comboData);
     
     // Abrir modal
@@ -3975,16 +4119,16 @@ function editCombo(comboId) {
     populateEditComboTicketSelect();
 }
 
-// Função para extrair dados do combo do elemento HTML
+// Fun��o para extrair dados do combo do elemento HTML
 function extractComboDataFromElement(element) {
     const titleElement = element.querySelector('.ticket-title');
     const title = titleElement ? titleElement.textContent.trim() : '';
     
     return {
         id: element.dataset.ticketId,
-        titulo: title.replace(/\s+ðŸ“¦/, '').replace(/\s+(Combo)$/, ''),
+        titulo: title.replace(/\s+📦/, '').replace(/\s+(Combo)$/, ''),
         tipo: 'combo',
-        // Estes dados virão do backend quando implementarmos a busca AJAX
+        // Estes dados vir�o do backend quando implementarmos a busca AJAX
         quantidade_total: 50,
         preco: 0,
         valor_receber: 0,
@@ -3995,7 +4139,7 @@ function extractComboDataFromElement(element) {
     };
 }
 
-// Função para popular modal de edição de combo
+// Fun��o para popular modal de edi��o de combo
 function populateEditComboModal(comboData) {
     document.getElementById('editComboId').value = comboData.id;
     document.getElementById('editComboTitle').value = comboData.titulo;
@@ -4006,19 +4150,34 @@ function populateEditComboModal(comboData) {
     document.getElementById('editComboSaleEnd').value = comboData.fim_venda;
     document.getElementById('editComboDescription').value = comboData.descricao || '';
     
-    // Carregar itens do combo
-    editComboItems = comboData.conteudo_combo || [];
+    // Carregar itens do combo - CORRIGIDO PARA PARSEAR JSON
+    try {
+        if (comboData.conteudo_combo && typeof comboData.conteudo_combo === 'string') {
+            editComboItems = JSON.parse(comboData.conteudo_combo);
+            console.log('✅ Conteúdo do combo parseado:', editComboItems);
+        } else if (Array.isArray(comboData.conteudo_combo)) {
+            editComboItems = comboData.conteudo_combo;
+            console.log('✅ Conteúdo do combo já é array:', editComboItems);
+        } else {
+            editComboItems = [];
+            console.log('⚠️ Conteúdo do combo vazio ou inválido');
+        }
+    } catch (e) {
+        console.error('❌ Erro ao parsear conteúdo do combo:', e);
+        console.error('❌ Conteúdo recebido:', comboData.conteudo_combo);
+        editComboItems = [];
+    }
     renderEditComboItems();
 }
 
-// Função para popular select de tipos de ingresso para edição de combo
+// Fun��o para popular select de tipos de ingresso para edi��o de combo
 function populateEditComboTicketSelect() {
     const select = document.getElementById('editComboTicketTypeSelect');
     if (!select) return;
     
     select.innerHTML = '<option value="">Escolha um tipo de ingresso</option>';
     
-    // Buscar tipos de ingresso já existentes na página
+    // Buscar tipos de ingresso j� existentes na p�gina
     const ticketItems = document.querySelectorAll('#ticketList .ticket-item');
     
     if (ticketItems.length === 0) {
@@ -4029,19 +4188,19 @@ function populateEditComboTicketSelect() {
     ticketItems.forEach((item, index) => {
         const ticketTitle = item.querySelector('.ticket-title')?.textContent?.trim();
         
-        if (ticketTitle && !ticketTitle.includes('📦')) {
+        if (ticketTitle && !ticketTitle.includes('??')) {
             const option = document.createElement('option');
             option.value = item.dataset.ticketId || index;
-            option.textContent = ticketTitle.replace(/\s+(Gratuito|Pago|Código)$/, '');
+            option.textContent = ticketTitle.replace(/\s+(Gratuito|Pago|C�digo)$/, '');
             select.appendChild(option);
         }
     });
 }
 
-// Variável para itens do combo em edição
+// Vari�vel para itens do combo em edi��o
 let editComboItems = [];
 
-// Função para adicionar item ao combo em edição
+// Fun��o para adicionar item ao combo em edi��o
 function addItemToEditCombo() {
     const select = document.getElementById('editComboTicketTypeSelect');
     const quantityInput = document.getElementById('editComboItemQuantity');
@@ -4054,7 +4213,7 @@ function addItemToEditCombo() {
     const ticketName = select.options[select.selectedIndex].textContent;
     const quantity = parseInt(quantityInput.value);
     
-    // Verificar se já existe
+    // Verificar se j� existe
     const existingIndex = editComboItems.findIndex(item => item.ticket_id === select.value);
     
     if (existingIndex !== -1) {
@@ -4072,12 +4231,12 @@ function addItemToEditCombo() {
     // Renderizar lista
     renderEditComboItems();
     
-    // Limpar formulário
+    // Limpar formul�rio
     select.value = '';
     quantityInput.value = '';
 }
 
-// Função para renderizar itens do combo em edição
+// Fun��o para renderizar itens do combo em edi��o
 function renderEditComboItems() {
     const container = document.getElementById('editComboItemsList');
     if (!container) return;
@@ -4103,13 +4262,13 @@ function renderEditComboItems() {
     `).join('');
 }
 
-// Função para remover item do combo em edição
+// Fun��o para remover item do combo em edi��o
 function removeEditComboItem(index) {
     editComboItems.splice(index, 1);
     renderEditComboItems();
 }
 
-// Função para atualizar combo
+// Fun��o para atualizar combo
 function updateComboTicket() {
     const comboData = {
         id: document.getElementById('editComboId').value,
@@ -4122,9 +4281,9 @@ function updateComboTicket() {
         conteudo_combo: editComboItems
     };
     
-    // ValidaçÃµes
+    // Valida�ões
     if (!comboData.titulo || !comboData.quantidade_total || !comboData.preco) {
-        alert('Por favor, preencha todos os campos obrigatórios');
+        alert('Por favor, preencha todos os campos obrigat�rios');
         return;
     }
     
@@ -4139,19 +4298,19 @@ function updateComboTicket() {
     // Fechar modal
     closeModal('editComboModal');
     
-    console.log('âœ… Combo atualizado:', comboData);
+    console.log('✅ Combo atualizado:', comboData);
 }
 
-// Função para atualizar combo na lista
+// Fun��o para atualizar combo na lista
 function updateComboInList(comboData) {
     const comboElement = document.querySelector(`[data-ticket-id="${comboData.id}"]`);
     if (!comboElement) return;
     
-    // Atualizar título
+    // Atualizar t�tulo
     const titleElement = comboElement.querySelector('.ticket-title');
     if (titleElement) {
         titleElement.innerHTML = `
-            ${comboData.titulo} 📦
+            ${comboData.titulo} ??
             <span class="ticket-type-badge combo">Combo</span>
         `;
     }
@@ -4162,7 +4321,7 @@ function updateComboInList(comboData) {
         let detailsHTML = `
             <div class="ticket-info">
                 <span>Quantidade: <strong>${comboData.quantidade_total}</strong></span>
-                <span>Preço: <strong>R$ ${comboData.preco.toFixed(2).replace('.', ',')}</strong></span>
+                <span>Pre�o: <strong>R$ ${comboData.preco.toFixed(2).replace('.', ',')}</strong></span>
                 <span>Vendas: ${formatDateForDisplay(comboData.inicio_venda)} - ${formatDateForDisplay(comboData.fim_venda)}</span>
             </div>
         `;
@@ -4189,7 +4348,7 @@ function updateComboInList(comboData) {
     }
 }
 
-// Função para fechar modal específico para edição
+// Fun��o para fechar modal espec�fico para edi��o
 function closeEditModal() {
     const modals = ['editPaidTicketModal', 'editFreeTicketModal', 'editComboModal'];
     modals.forEach(modalId => {
@@ -4198,35 +4357,37 @@ function closeEditModal() {
     });
 }
 
-console.log('✅ Funções de edição de ingressos carregadas');
+console.log('? Fun��es de edi��o de ingressos carregadas');
 
 // Inicializar quando o DOM estiver pronto
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         initTicketManagement();
-        console.log('✅ Gestão de ingressos inicializada via DOMContentLoaded');
+        console.log('? Gest�o de ingressos inicializada via DOMContentLoaded');
     });
 } else {
-    // DOM já está pronto
+    // DOM j� est� pronto
     initTicketManagement();
-    console.log('✅ Gestão de ingressos inicializada diretamente');
+    console.log('? Gest�o de ingressos inicializada diretamente');
 }
 
-// Expor funções e variáveis para escopo global
+// Expor fun��es e vari�veis para escopo global
 window.wizardState = {
     currentStep: currentStep,
     totalSteps: totalSteps
 };
 
-// Funções que precisam acessar currentStep
+// Fun��es que precisam acessar currentStep
 window.getCurrentStep = function() { return currentStep; };
+console.log('🟢 CRIAEVENTO.JS - CHEGANDO PERTO DO FINAL');
+
 window.setCurrentStep = function(step) { 
     currentStep = step; 
     window.wizardState.currentStep = step; 
 };
 
 window.nextStep = function() {
-    console.log('nextStep chamado - currentStep:', currentStep);
+    console.log('🚀 NEXTSTEP ORIGINAL EXECUTADO - currentStep:', currentStep);
     if (validateStep(currentStep)) {
         if (currentStep < totalSteps) {
             currentStep++;
@@ -4236,6 +4397,8 @@ window.nextStep = function() {
         }
     }
 };
+
+console.log('🎯 window.nextStep DEFINIDO NO CRIAEVENTO.JS!');
 
 window.prevStep = function() {
     if (currentStep > 1) {
@@ -4255,7 +4418,7 @@ window.goToStep = function(step) {
 
 window.updateStepDisplay = updateStepDisplay;
 window.validateStep = validateStep;
-console.log('✅ Funções expostas no escopo global - validateStep:', typeof window.validateStep);
+console.log('? Fun��es expostas no escopo global - validateStep:', typeof window.validateStep);
 window.initMap = initMap;
 window.createFreeTicket = createFreeTicket;
 window.createPaidTicket = createPaidTicket;
@@ -4284,68 +4447,222 @@ window.createComboTicket = createComboTicket;
 window.updateComboItemsList = updateComboItemsList;
 window.getTrashIcon = getTrashIcon;
 window.editCombo = editCombo;
-window.saveWizardData = saveWizardData;
-window.checkAndRestoreWizardData = checkAndRestoreWizardData;
-window.deleteCookie = deleteCookie;
-window.clearAllWizardData = clearAllWizardData;
+// window.saveWizardData = saveWizardData; // Removido - persistência
+// window.checkAndRestoreWizardData = checkAndRestoreWizardData; // Removido - persistência
+// window.deleteCookie = deleteCookie; // Removido - persistência
+// window.clearAllWizardData = clearAllWizardData; // Removido - persistência
 window.addTicketToList = addTicketToList;
 window.updatePreview = updatePreview;
 
 })(); // Fechar escopo IIFE
 
-// Verificar se as funções foram exportadas
+// Verificar se as fun��es foram exportadas
+        // Inicialização quando a página carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📱 Página carregada - verificando se precisa inicializar etapa 5...');
+            
+            // Verificar se está na etapa 5 ao carregar a página
+            setTimeout(() => {
+                const etapa5Ativa = document.querySelector('[data-step-content="5"].active');
+                if (etapa5Ativa) {
+                    console.log('🎯 Página carregou diretamente na etapa 5 - inicializando...');
+                    carregarConfiguracaoLimiteVendas();
+                }
+            }, 1000);
+        });
+        
+        // Funções globais para gerenciar lotes individuais
+        window.editarLoteQuantidade = function(loteId) {
+            console.log('✏️ Editando lote quantidade:', loteId);
+            
+            // Buscar dados do lote para edição
+            const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+            
+            if (!eventoId) {
+                console.error('❌ evento_id não encontrado para edição');
+                alert('Erro: ID do evento não encontrado');
+                return;
+            }
+            
+            console.log('📦 Carregando dados do lote para edição...');
+            
+            fetch('/produtor/ajax/wizard_evento.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=buscar_lote&lote_id=${loteId}&evento_id=${eventoId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso && data.lote) {
+                    console.log('✅ Dados do lote carregados:', data.lote);
+                    abrirModalEdicaoLote(data.lote);
+                } else {
+                    console.error('❌ Erro ao carregar lote:', data.erro);
+                    alert('Erro ao carregar dados do lote: ' + (data.erro || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição:', error);
+                alert('Erro ao buscar dados do lote. Tente novamente.');
+            });
+        };
+        
+        // Função para abrir modal de edição de lote
+        function abrirModalEdicaoLote(lote) {
+            // Verificar se já existe modal de edição
+            let modal = document.getElementById('editLotePercentualModal');
+            
+            if (!modal) {
+                console.error('❌ Modal de edição não encontrado');
+                alert('Erro: Modal de edição não encontrado');
+                return;
+            }
+            
+            console.log('📝 Carregando dados do lote no modal:', lote);
+            console.log('🔍 Valor bruto de divulgar_criterio:', lote.divulgar_criterio, typeof lote.divulgar_criterio);
+            
+            // Preencher ID e percentual
+            document.getElementById('editLotePercentualId').value = lote.id;
+            document.getElementById('editLotePercentualValor').value = lote.percentual_venda;
+            
+            // CORREÇÃO: Carregar divulgar_criterio com valor correto do backend
+            const divulgarCheckbox = document.getElementById('editLotePercentualDivulgar');
+            if (divulgarCheckbox) {
+                console.log(`🔍 Valor de divulgar_criterio recebido:`, lote.divulgar_criterio, typeof lote.divulgar_criterio);
+                
+                // Aplicar o valor diretamente (backend já converte para boolean)
+                divulgarCheckbox.checked = lote.divulgar_criterio;
+                
+                console.log(`✅ Checkbox definido como: ${divulgarCheckbox.checked}`);
+                
+                // Verificação adicional para garantir
+                setTimeout(() => {
+                    if (divulgarCheckbox.checked !== lote.divulgar_criterio) {
+                        console.warn('⚠️ Valor não aplicou corretamente, forçando...');
+                        divulgarCheckbox.checked = lote.divulgar_criterio;
+                    }
+                    console.log(`🔍 Estado final confirmado: ${divulgarCheckbox.checked}`);
+                }, 50);
+                
+            } else {
+                console.error('❌ Checkbox editLotePercentualDivulgar não encontrado!');
+            }
+            
+            // Mostrar modal
+            modal.style.display = 'flex';
+            console.log('📝 Modal de edição aberto para lote:', lote.nome || lote.id);
+        }
+        
+        // Função para salvar edição (RENOMEADA para evitar conflito com lotes.js)
+        window.salvarEdicaoLotePercentual = function() {
+            const loteId = document.getElementById('editLotePercentualId').value;
+            const percentual = document.getElementById('editLotePercentualValor').value;
+            const divulgar = document.getElementById('editLotePercentualDivulgar').checked;
+            const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+            
+            if (!loteId) {
+                console.log('ℹ️ Sem ID - pode ser criação de novo lote, redirecionando...');
+                // Se não há ID, pode ser criação (chamar função original se existir)
+                if (window.criarLotePercentual && typeof window.criarLotePercentual === 'function') {
+                    return window.criarLotePercentual();
+                }
+                return;
+            }
+            
+            if (!percentual || percentual < 1 || percentual > 100) {
+                alert('Por favor, informe um percentual válido (1 a 100%).');
+                return;
+            }
+            
+            console.log('💾 Salvando edição do lote via função específica:', loteId);
+            
+            fetch('/produtor/ajax/wizard_evento.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=atualizar_lote&lote_id=${loteId}&evento_id=${eventoId}&percentual_venda=${percentual}&divulgar_criterio=${divulgar ? 1 : 0}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    console.log('✅ Lote atualizado com sucesso via função específica');
+                    alert('Lote atualizado com sucesso!');
+                    
+                    // Fechar modal
+                    closeModal('editLotePercentualModal');
+                    
+                    // CORREÇÃO: Atualizar DOM diretamente SEM limpar ou recarregar nada
+                    const loteElement = document.querySelector(`[data-lote-id="${loteId}"]`);
+                    if (loteElement) {
+                        const detailsDiv = loteElement.querySelector('.lote-item-details');
+                        if (detailsDiv) {
+                            detailsDiv.innerHTML = `<strong>Percentual:</strong> ${percentual}%`;
+                            console.log('✅ DOM atualizado diretamente para lote:', loteId);
+                        }
+                    }
+                    
+                    console.log('✅ Edição concluída - NENHUM recarregamento ou limpeza executada');
+                    
+                } else {
+                    console.error('❌ Erro ao atualizar lote:', data.erro);
+                    alert('Erro ao atualizar lote: ' + (data.erro || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição:', error);
+                alert('Erro ao salvar alterações. Tente novamente.');
+            });
+        };
+        
+        window.excluirLoteQuantidadeEspecifico = function(loteId) {
+            console.log('🗑️ Excluindo lote específico:', loteId);
+            
+            const confirmacao = confirm('Confirma a exclusão deste lote? Esta ação não pode ser desfeita.');
+            
+            if (confirmacao) {
+                const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+                
+                // Fazer requisição para excluir lote específico
+                fetch('/produtor/ajax/wizard_evento.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=excluir_lote_especifico&evento_id=${eventoId}&lote_id=${loteId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        console.log('✅ Lote excluído com sucesso');
+                        
+                        // Remover elemento da interface
+                        const elemento = document.querySelector(`[data-lote-id="${loteId}"]`);
+                        if (elemento) {
+                            elemento.remove();
+                        }
+                        
+                        // Recarregar configuração para atualizar interface
+                        carregarConfiguracaoLimiteVendas();
+                        
+                    } else {
+                        console.error('❌ Erro ao excluir lote:', data.erro);
+                        alert('Erro ao excluir lote: ' + data.erro);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Erro na requisição:', error);
+                    alert('Erro de conexão ao excluir lote.');
+                });
+            }
+        };
+
 console.log('criaevento.js carregado. nextStep disponível:', typeof window.nextStep);
 
-// Função de debug para testar manualmente
-window.debugWizardCookie = function() {
-    console.log('=== DEBUG WIZARD COOKIE ===');
-    console.log('Todos os cookies:', document.cookie);
-    const wizardData = getCookie('eventoWizard');
-    console.log('Cookie eventoWizard:', wizardData);
-    if (wizardData) {
-        try {
-            const parsed = JSON.parse(wizardData);
-            console.log('Dados parseados:', parsed);
-        } catch(e) {
-            console.error('Erro ao fazer parse:', e);
-            console.log('Cookie corrompido! Use limparCookieCorrempido() para limpar.');
-        }
-    }
-    console.log('customDialog disponível?', window.customDialog ? 'SIM' : 'NÃO');
-    // DESABILITADO - Usando wizard-recovery-confirm-v2.js
-    // console.log('checkAndRestoreWizardData disponível?', window.checkAndRestoreWizardData ? 'SIM' : 'NÃO');
-};
+console.log('? criaevento.js carregado completamente! nextStep dispon�vel:', typeof window.nextStep);
 
-// Função para limpar cookie corrompido
-window.limparCookieCorrempido = function() {
-    console.log('Limpando cookie corrompido...');
-    deleteCookie('eventoWizard');
-    console.log('Cookie limpo! Recarregue a página e tente novamente.');
-};
+console.log('?? Teste final - window.nextStep:', window.nextStep);
 
-console.log('Para debugar, execute: debugWizardCookie()');
-console.log('Para limpar cookie corrompido, execute: limparCookieCorrempido()');
-
-// Adicionar salvamento automático ao mudar de step (APÓS funções serem expostas)
-if (window.nextStep && window.saveWizardData) {
-    const originalNextStep = window.nextStep;
-    window.nextStep = function() {
-        console.log('NextStep chamado - salvando dados do wizard');
-        if (window.saveWizardData) {
-            window.saveWizardData();
-        }
-        return originalNextStep.apply(this, arguments);
-    };
-    console.log('Override de nextStep configurado com sucesso');
-} else {
-    console.error('Não foi possível configurar override de nextStep - funções não encontradas');
-}
-    } else {
-        console.error('Não foi possível configurar override de nextStep - funções não encontradas');
-    }
-    
-    console.log('✅ criaevento.js carregado completamente! nextStep disponível:', typeof window.nextStep);
-
-})(); // Fechar escopo IIFE
-
-console.log('🎯 Teste final - window.nextStep:', window.nextStep);
+console.log('?? Teste final - window.nextStep:', window.nextStep);

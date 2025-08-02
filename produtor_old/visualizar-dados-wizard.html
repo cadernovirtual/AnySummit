@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Dados do Wizard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .data-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .data-key {
+            font-weight: bold;
+            color: #495057;
+            display: inline-block;
+            min-width: 200px;
+        }
+        .data-value {
+            color: #212529;
+        }
+        .empty {
+            color: #dc3545;
+            font-style: italic;
+        }
+        .array, .object {
+            margin-left: 20px;
+            border-left: 2px solid #007bff;
+            padding-left: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+        .image-preview {
+            max-width: 200px;
+            max-height: 150px;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Visualizador de Dados do Wizard</h1>
+        
+        <div class="button-group">
+            <button onclick="carregarDados()">🔄 Recarregar Dados</button>
+            <button onclick="exportarJSON()" class="btn-success">💾 Exportar JSON</button>
+            <button onclick="limparDados()" class="btn-danger">🗑️ Limpar Dados</button>
+        </div>
+
+        <div id="status-message"></div>
+
+        <h2>Dados do WizardDataCollector</h2>
+        <div id="wizard-data" class="data-section">
+            <p>Carregando...</p>
+        </div>
+
+        <h2>Dados do Cookie (eventoWizard)</h2>
+        <div id="cookie-data" class="data-section">
+            <p>Carregando...</p>
+        </div>
+
+        <h2>Dados Temporários (localStorage)</h2>
+        <div id="temp-data" class="data-section">
+            <p>Carregando...</p>
+        </div>
+
+        <h2>Dados Brutos (JSON)</h2>
+        <button onclick="toggleRawData()">Mostrar/Ocultar JSON</button>
+        <pre id="raw-data" style="display: none;"></pre>
+    </div>
+
+    <script>
+        function formatValue(value, key) {
+            if (value === null || value === undefined) {
+                return '<span class="empty">(vazio)</span>';
+            }
+            if (value === '') {
+                return '<span class="empty">(string vazia)</span>';
+            }
+            if (typeof value === 'boolean') {
+                return value ? '✅ Sim' : '❌ Não';
+            }
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return '<span class="empty">(array vazio)</span>';
+                }
+                let html = `<div class="array">Array com ${value.length} item(s):<br>`;
+                value.forEach((item, index) => {
+                    html += `[${index}]: ${formatValue(item, key)}<br>`;
+                });
+                html += '</div>';
+                return html;
+            }
+            if (typeof value === 'object') {
+                let html = '<div class="object">';
+                for (const [k, v] of Object.entries(value)) {
+                    html += `<span class="data-key">${k}:</span> ${formatValue(v, k)}<br>`;
+                }
+                html += '</div>';
+                return html;
+            }
+            
+            // Verificar se é uma URL de imagem
+            if (key && (key.includes('url') || key.includes('img') || key.includes('logo') || key.includes('capa') || key.includes('fundo'))) {
+                if (value.startsWith('data:image') || value.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                    return `<br><img src="${value}" class="image-preview" alt="${key}"><br><small>${value.substring(0, 50)}...</small>`;
+                }
+            }
+            
+            return value;
+        }
+
+        function renderData(data, containerId) {
+            const container = document.getElementById(containerId);
+            if (!data || Object.keys(data).length === 0) {
+                container.innerHTML = '<p class="empty">Nenhum dado encontrado</p>';
+                return;
+            }
+
+            let html = '';
+            for (const [key, value] of Object.entries(data)) {
+                html += `<div style="margin: 10px 0;">
+                    <span class="data-key">${key}:</span>
+                    <span class="data-value">${formatValue(value, key)}</span>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        function carregarDados() {
+            showStatus('Carregando dados...', 'info');
+            
+            // Dados do WizardDataCollector (localStorage)
+            const wizardData = localStorage.getItem('wizardCollectedData');
+            if (wizardData) {
+                try {
+                    const parsed = JSON.parse(wizardData);
+                    renderData(parsed, 'wizard-data');
+                    document.getElementById('raw-data').textContent = JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    document.getElementById('wizard-data').innerHTML = `<p class="error">Erro ao parsear dados: ${e.message}</p>`;
+                }
+            } else {
+                document.getElementById('wizard-data').innerHTML = '<p class="empty">Nenhum dado no WizardDataCollector</p>';
+            }
+
+            // Dados do Cookie
+            const cookieData = getCookie('eventoWizard');
+            if (cookieData) {
+                try {
+                    const parsed = JSON.parse(decodeURIComponent(cookieData));
+                    renderData(parsed, 'cookie-data');
+                } catch (e) {
+                    document.getElementById('cookie-data').innerHTML = `<p class="error">Erro ao parsear cookie: ${e.message}</p>`;
+                }
+            } else {
+                document.getElementById('cookie-data').innerHTML = '<p class="empty">Nenhum cookie encontrado</p>';
+            }
+
+            // Dados temporários
+            const tempData = {
+                temporaryTickets: localStorage.getItem('temporaryTickets'),
+                lotesData: localStorage.getItem('lotesData'),
+                imageUrls: localStorage.getItem('imageUrls')
+            };
+
+            let tempHtml = '';
+            for (const [key, value] of Object.entries(tempData)) {
+                if (value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        tempHtml += `<h3>${key}</h3>`;
+                        tempHtml += `<div>${formatValue(parsed, key)}</div>`;
+                    } catch (e) {
+                        tempHtml += `<h3>${key}</h3>`;
+                        tempHtml += `<div class="error">Erro ao parsear: ${e.message}</div>`;
+                    }
+                } else {
+                    tempHtml += `<h3>${key}</h3>`;
+                    tempHtml += `<div class="empty">Não encontrado</div>`;
+                }
+            }
+            document.getElementById('temp-data').innerHTML = tempHtml || '<p class="empty">Nenhum dado temporário</p>';
+            
+            showStatus('Dados carregados com sucesso!', 'success');
+        }
+
+        function exportarJSON() {
+            const wizardData = localStorage.getItem('wizardCollectedData');
+            if (!wizardData) {
+                showStatus('Nenhum dado para exportar!', 'error');
+                return;
+            }
+
+            const dataStr = JSON.stringify(JSON.parse(wizardData), null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `wizard-data-${new Date().toISOString().slice(0,10)}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showStatus('Dados exportados com sucesso!', 'success');
+        }
+
+        function limparDados() {
+            if (confirm('Tem certeza que deseja limpar todos os dados do wizard?')) {
+                // Limpar localStorage
+                localStorage.removeItem('wizardCollectedData');
+                localStorage.removeItem('temporaryTickets');
+                localStorage.removeItem('lotesData');
+                localStorage.removeItem('imageUrls');
+                localStorage.removeItem('eventoWizard');
+                
+                // Limpar cookie
+                document.cookie = 'eventoWizard=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                
+                showStatus('Todos os dados foram limpos!', 'success');
+                setTimeout(carregarDados, 1000);
+            }
+        }
+
+        function toggleRawData() {
+            const rawData = document.getElementById('raw-data');
+            rawData.style.display = rawData.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            if (type === 'success') {
+                setTimeout(() => statusDiv.innerHTML = '', 3000);
+            }
+        }
+
+        // Carregar dados ao abrir a página
+        window.addEventListener('load', carregarDados);
+        
+        // Atualizar a cada 5 segundos
+        setInterval(carregarDados, 5000);
+    </script>
+</body>
+</html>

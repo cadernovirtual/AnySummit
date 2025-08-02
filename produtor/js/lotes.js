@@ -9,6 +9,66 @@ window.lotesData = {
     porPercentual: []
 };
 
+// FUNÇÃO PRINCIPAL PARA RESTAURAR LOTES DO BANCO DE DADOS
+window.restaurarLotes = function(lotesDoBanco) {
+    console.log('🔄 Restaurando lotes do banco de dados:', lotesDoBanco);
+    
+    if (!lotesDoBanco || lotesDoBanco.length === 0) {
+        console.log('⚠️ Nenhum lote para restaurar');
+        return;
+    }
+    
+    // Limpar dados atuais
+    window.lotesData = {
+        porData: [],
+        porPercentual: []
+    };
+    
+    // Processar cada lote do banco
+    lotesDoBanco.forEach(lote => {
+        const loteData = {
+            id: lote.id,
+            nome: lote.nome,
+            divulgar: lote.divulgar_criterio == 1
+        };
+        
+        if (lote.tipo === 'data') {
+            // Lote por data
+            loteData.dataInicio = lote.data_inicio;
+            loteData.dataFim = lote.data_fim;
+            loteData.percentualAumento = lote.percentual_aumento_valor || 0;
+            
+            window.lotesData.porData.push(loteData);
+            console.log('📅 Lote por data restaurado:', loteData);
+            
+        } else if (lote.tipo === 'percentual') {
+            // Lote por percentual
+            loteData.percentual = lote.percentual_venda;
+            loteData.percentualAumento = lote.percentual_aumento_valor || 0;
+            
+            window.lotesData.porPercentual.push(loteData);
+            console.log('📊 Lote por percentual restaurado:', loteData);
+        }
+    });
+    
+    // Renderizar os lotes na interface
+    setTimeout(() => {
+        if (typeof renderizarLotesPorData === 'function') {
+            renderizarLotesPorData();
+        }
+        if (typeof renderizarLotesPorPercentual === 'function') {
+            renderizarLotesPorPercentual();
+        }
+        if (typeof atualizarSummaryPercentual === 'function') {
+            atualizarSummaryPercentual();
+        }
+        
+        console.log('✅ Lotes restaurados e renderizados:', window.lotesData);
+    }, 100);
+};
+
+console.log('✅ Função restaurarLotes definida:', typeof window.restaurarLotes);
+
 // Função para renomear lotes automaticamente
 function renomearLotesAutomaticamente() {
     // Renomear lotes por data (do mais antigo para o mais recente)
@@ -35,8 +95,29 @@ window.salvarLoteData = salvarLoteData;
 window.salvarLotePercentual = salvarLotePercentual;
 window.excluirLoteData = excluirLoteData;
 window.excluirLotePercentual = excluirLotePercentual;
+
+// CORREÇÃO: Função global para roteamento de exclusão
+window.excluirLote = function(loteId, tipo) {
+    console.log('🗑️ [GLOBAL] excluirLote chamada:', loteId, tipo);
+    console.trace('📍 Stack trace de quem chamou excluirLote:');
+    
+    if (tipo === 'data') {
+        console.log('📋 Redirecionando para excluirLoteData...');
+        excluirLoteData(loteId);
+    } else if (tipo === 'percentual' || tipo === 'quantidade') {
+        console.log('📋 Redirecionando para excluirLotePercentual...');
+        excluirLotePercentual(loteId);
+    } else {
+        console.error('❌ Tipo de lote desconhecido para exclusão:', tipo);
+        alert('Tipo de lote não reconhecido: ' + tipo);
+    }
+};
+
 window.validarLotes = validarLotes;
 window.carregarLotesDoCookie = carregarLotesDoCookie;
+window.renderizarLotesPorData = renderizarLotesPorData;
+window.renderizarLotesPorPercentual = renderizarLotesPorPercentual;
+window.renomearLotesAutomaticamente = renomearLotesAutomaticamente;
 
 // Funções para abrir modais
 function adicionarLotePorData() {
@@ -48,8 +129,7 @@ function adicionarLotePorData() {
         const modal = document.getElementById('loteDataModal');
         if (!modal) {
             console.error('Modal loteDataModal não encontrado no DOM!');
-            alert('Erro: Modal não encontrado. Verifique se o HTML do modal existe.');
-            return;
+            alert('Erro: Modal não encontrado. Verifique se o HTML do modal existe.');            return;
         }
         
         // Calcular defaults
@@ -126,8 +206,7 @@ function adicionarLotePorPercentual() {
         const modal = document.getElementById('lotePercentualModal');
         if (!modal) {
             console.error('Modal lotePercentualModal não encontrado no DOM!');
-            alert('Erro: Modal não encontrado. Verifique se o HTML do modal existe.');
-            return;
+            alert('Erro: Modal não encontrado. Verifique se o HTML do modal existe.');            return;
         }
         
         // Preencher nome automaticamente (campo não existe mais no HTML)
@@ -189,13 +268,11 @@ function criarLoteData() {
         
         // Validações
         if (!dataInicio || dataInicio === '' || dataInicio === null) {
-            alert('Por favor, informe a data de início.');
-            return;
+            alert('Por favor, informe a data de início.');            return;
         }
         
         if (!dataFim || dataFim === '' || dataFim === null) {
-            alert('Por favor, informe a data de fim.');
-            return;
+            alert('Por favor, informe a data de fim.');            return;
         }
         
         // Verificar se as datas são válidas
@@ -203,18 +280,15 @@ function criarLoteData() {
         const dataFimObj = new Date(dataFim);
         
         if (isNaN(dataInicioObj.getTime())) {
-            alert('Data de início inválida.');
-            return;
+            alert('Data de início inválida.');            return;
         }
         
         if (isNaN(dataFimObj.getTime())) {
-            alert('Data de fim inválida.');
-            return;
+            alert('Data de fim inválida.');            return;
         }
         
         if (dataInicioObj >= dataFimObj) {
-            alert('A data de início deve ser anterior à data de fim.');
-            return;
+            alert('A data de início deve ser anterior à data de fim.');            return;
         }
         
         // Verificar se não ultrapassa a data do evento
@@ -222,8 +296,7 @@ function criarLoteData() {
         if (eventoDataInicio) {
             const dataEvento = new Date(eventoDataInicio);
             if (dataFimObj >= dataEvento) {
-                alert('A data fim do lote não pode ser posterior ou igual à data do evento.');
-                return;
+                alert('A data fim do lote não pode ser posterior ou igual à data do evento.');            return;
             }
         }
         
@@ -236,8 +309,7 @@ function criarLoteData() {
             if ((dataInicioObj >= inicioExistente && dataInicioObj <= fimExistente) ||
                 (dataFimObj >= inicioExistente && dataFimObj <= fimExistente) ||
                 (dataInicioObj <= inicioExistente && dataFimObj >= fimExistente)) {
-                alert('As datas do lote não podem ter intersecção com outros lotes existentes.');
-                return;
+                alert('As datas do lote não podem ter intersecção com outros lotes existentes.');            return;
             }
         }
         
@@ -303,15 +375,13 @@ function criarLotePercentual() {
         
         // Validações
         if (!percentual || isNaN(percentual) || percentual < 1 || percentual > 100) {
-            alert('Por favor, informe um percentual válido entre 1 e 100.');
-            return;
+            alert('Por favor, informe um percentual válido entre 1 e 100.');            return;
         }
         
         // Verificar se já existe lote com o mesmo percentual
         const loteComMesmoPercentual = lotesData.porPercentual.find(l => l.percentual === percentual);
         if (loteComMesmoPercentual) {
-            alert('Já existe um lote com este percentual. Os percentuais não podem coincidir.');
-            return;
+            alert('Já existe um lote com este percentual. Os percentuais não podem coincidir.');            return;
         }
         
         // Criar objeto do lote
@@ -325,18 +395,68 @@ function criarLotePercentual() {
         
         console.log('Lote criado:', lote);
         
-        // Adicionar à lista
-        lotesData.porPercentual.push(lote);
+        // CORREÇÃO PROBLEMA 2: Criar lote no banco de dados imediatamente
+        console.log('📦 Criando lote no banco de dados...');
         
-        // Renomear todos os lotes para manter ordem
-        renomearLotesAutomaticamente();
+        const eventoId = new URLSearchParams(window.location.search).get('evento_id');
         
-        console.log('Lista atual de lotes:', lotesData.porPercentual);
-        
-        // Atualizar interface
-        renderizarLotesPorPercentual();
-        atualizarSummaryPercentual();
-        salvarLotesNoCookie();
+        if (eventoId) {
+            // CORREÇÃO PROBLEMA 3: Sinalizar que está criando lotes (não remover botões)
+            window.criandoLotesPercentual = true;
+            
+            fetch('/produtor/ajax/wizard_evento.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=criar_lote_percentual&evento_id=${eventoId}&nome=${encodeURIComponent(lote.nome)}&percentual_venda=${percentual}&divulgar_criterio=${divulgar ? 1 : 0}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    console.log('✅ Lote criado no banco com ID:', data.lote_id);
+                    
+                    // Atualizar o lote com o ID do banco
+                    lote.id = data.lote_id;
+                    
+                    // Adicionar à lista na memória
+                    lotesData.porPercentual.push(lote);
+                    
+                    // Renomear todos os lotes para manter ordem
+                    renomearLotesAutomaticamente();
+                    
+                    // Atualizar interface
+                    renderizarLotesPorPercentual();
+                    atualizarSummaryPercentual();
+                    salvarLotesNoCookie();
+                    
+                    console.log('✅ Lote por percentual criado com sucesso no banco e interface');
+                    
+                } else {
+                    console.error('❌ Erro ao criar lote no banco:', data.erro);
+                    alert('Erro ao criar lote: ' + data.erro);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição:', error);
+                alert('Erro ao criar lote. Verifique sua conexão.');
+            })
+            .finally(() => {
+                // CORREÇÃO PROBLEMA 3: Permitir remoção de botões novamente após delay
+                setTimeout(() => {
+                    window.criandoLotesPercentual = false;
+                }, 2000);
+            });
+        } else {
+            console.warn('⚠️ Sem evento_id - criando apenas na memória (modo novo evento)');
+            
+            // Adicionar apenas na memória se não há evento_id (novo evento)
+            lotesData.porPercentual.push(lote);
+            renomearLotesAutomaticamente();
+            renderizarLotesPorPercentual();
+            atualizarSummaryPercentual();
+            salvarLotesNoCookie();
+        }
         
         // Fechar modal
         if (typeof closeModal === 'function') {
@@ -364,26 +484,66 @@ function criarLotePercentual() {
 
 // Função para renderizar lotes por data
 function renderizarLotesPorData() {
+    console.log('🎨 renderizarLotesPorData chamada');
+    
     const container = document.getElementById('lotesPorDataList');
     const emptyState = document.getElementById('loteDataEmpty');
     
     // Verificar se os elementos existem
     if (!container) {
-        console.error('Elemento lotesPorDataList não encontrado');
-        return;
+        console.error('Elemento lotesPorDataList não encontrado');            return;
     }
     
     if (!emptyState) {
         console.warn('Elemento loteDataEmpty não encontrado, mas continuando renderização');
-        // Não retornar, continuar mesmo sem o empty state
+    }
+    
+    // RECUPERAR LOTES DO WIZARDDATACOLLECTOR SE NECESSÁRIO
+    if ((!window.lotesData || window.lotesData.porData.length === 0) && window.WizardDataCollector) {
+        console.log('🔄 Tentando recuperar lotes do WizardDataCollector...');
+        
+        const saved = localStorage.getItem('wizardDataCollector');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.dados && data.dados.lotes && data.dados.lotes.length > 0) {
+                    console.log('📦 Lotes encontrados no WizardDataCollector');
+                    
+                    // Garantir estrutura
+                    if (!window.lotesData) {
+                        window.lotesData = { porData: [], porPercentual: [] };
+                    }
+                    
+                    // Processar apenas lotes por data
+                    data.dados.lotes.forEach(lote => {
+                        if (lote.tipo === 'data') {
+                            // Verificar se já existe
+                            const existe = window.lotesData.porData.find(l => l.id === lote.id);
+                            if (!existe) {
+                                window.lotesData.porData.push({
+                                    id: lote.id,
+                                    nome: lote.nome,
+                                    dataInicio: lote.data_inicio,
+                                    dataFim: lote.data_fim,
+                                    divulgar: lote.divulgar || false
+                                });
+                            }
+                        }
+                    });
+                    
+                    console.log('✅ Lotes recuperados:', window.lotesData.porData);
+                }
+            } catch (e) {
+                console.error('Erro ao recuperar lotes:', e);
+            }
+        }
     }
     
     if (lotesData.porData.length === 0) {
         if (emptyState) {
             emptyState.style.display = 'block';
         }
-        container.innerHTML = '';
-        return;
+        container.innerHTML = '';            return;
     }
     
     if (emptyState) {
@@ -410,6 +570,7 @@ function renderizarLotesPorData() {
                     </div>
                 </div>
                 <div class="lote-item-actions">
+                    <button class="btn-icon" onclick="editarLote('${lote.id}', 'data')" title="Editar lote">✏️</button>
                     <button class="btn-icon delete" onclick="excluirLoteData(${lote.id})" title="Excluir">🗑️</button>
                 </div>
             </div>
@@ -422,26 +583,70 @@ function renderizarLotesPorData() {
 
 // Função para renderizar lotes por percentual
 function renderizarLotesPorPercentual() {
+    console.log('🎨 renderizarLotesPorPercentual chamada');
+    
     const container = document.getElementById('lotesPorPercentualList');
     const emptyState = document.getElementById('lotePercentualEmpty');
     
     // Verificar se os elementos existem
     if (!container) {
-        console.error('Elemento lotesPorPercentualList não encontrado');
-        return;
+        console.error('Elemento lotesPorPercentualList não encontrado');            return;
     }
     
     if (!emptyState) {
         console.warn('Elemento lotePercentualEmpty não encontrado, mas continuando renderização');
-        // Não retornar, continuar mesmo sem o empty state
+    }
+    
+    // RECUPERAR LOTES DO WIZARDDATACOLLECTOR SE NECESSÁRIO
+    if ((!window.lotesData || window.lotesData.porPercentual.length === 0) && window.WizardDataCollector) {
+        console.log('🔄 Tentando recuperar lotes percentuais do WizardDataCollector...');
+        
+        const saved = localStorage.getItem('wizardDataCollector');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.dados && data.dados.lotes && data.dados.lotes.length > 0) {
+                    console.log('📦 Lotes encontrados no WizardDataCollector');
+                    
+                    // Garantir estrutura
+                    if (!window.lotesData) {
+                        window.lotesData = { porData: [], porPercentual: [] };
+                    }
+                    
+                    // Processar apenas lotes por percentual
+                    data.dados.lotes.forEach(lote => {
+                        if (lote.tipo === 'percentual') {
+                            // Verificar se já existe
+                            const existe = window.lotesData.porPercentual.find(l => l.id === lote.id);
+                            if (!existe) {
+                                window.lotesData.porPercentual.push({
+                                    id: lote.id,
+                                    nome: lote.nome,
+                                    percentual: lote.percentual,
+                                    divulgar: lote.divulgar || false
+                                });
+                            }
+                        }
+                    });
+                    
+                    console.log('✅ Lotes percentuais recuperados:', window.lotesData.porPercentual);
+                }
+            } catch (e) {
+                console.error('Erro ao recuperar lotes percentuais:', e);
+            }
+        }
+    }
+    
+    // Verificar empty state warning
+    if (!emptyState) {
+        console.warn('Elemento lotePercentualEmpty não encontrado, mas continuando renderização');
     }
     
     if (lotesData.porPercentual.length === 0) {
         if (emptyState) {
             emptyState.style.display = 'block';
         }
-        container.innerHTML = '';
-        return;
+        container.innerHTML = '';            return;
     }
     
     if (emptyState) {
@@ -486,8 +691,7 @@ function atualizarSummaryPercentual() {
 function editarLoteData(id) {
     const lote = lotesData.porData.find(l => l.id === id);
     if (!lote) {
-        console.error('Lote não encontrado:', id);
-        return;
+        console.error('Lote não encontrado:', id);            return;
     }
     
     // Verificar se elementos existem antes de preencher
@@ -525,8 +729,7 @@ function editarLoteData(id) {
 function editarLotePercentual(id) {
     const lote = lotesData.porPercentual.find(l => l.id === id);
     if (!lote) {
-        console.error('Lote não encontrado:', id);
-        return;
+        console.error('Lote não encontrado:', id);            return;
     }
     
     // Verificar se elementos existem antes de preencher
@@ -564,7 +767,15 @@ function editarLotePercentual(id) {
 function salvarLoteData() {
     try {
         const id = parseInt(document.getElementById('editLoteDataId').value);
-        const nome = `Lote Temp`; // Nome será atualizado pela função de renomear
+        
+        // CORREÇÃO: Manter nome original do lote
+        let nome = document.getElementById('editLoteDataNome')?.value;
+        if (!nome || nome.trim() === '') {
+            // Se não há campo nome ou está vazio, buscar nome original
+            const loteOriginal = lotesData.porData.find(l => l.id === id);
+            nome = loteOriginal?.nome || `Lote por Data ${id}`;
+        }
+        
         const dataInicio = document.getElementById('editLoteDataInicio').value;
         const dataFim = document.getElementById('editLoteDataFim').value;
         const divulgar = document.getElementById('editLoteDataDivulgar').checked;
@@ -576,13 +787,11 @@ function salvarLoteData() {
         
         // Validações mais específicas
         if (!dataInicio || dataInicio === '' || dataInicio === null) {
-            alert('Por favor, informe a data de início.');
-            return;
+            alert('Por favor, informe a data de início.');            return;
         }
         
         if (!dataFim || dataFim === '' || dataFim === null) {
-            alert('Por favor, informe a data de fim.');
-            return;
+            alert('Por favor, informe a data de fim.');            return;
         }
         
         // Verificar se as datas são válidas
@@ -590,18 +799,15 @@ function salvarLoteData() {
         const dataFimObj = new Date(dataFim);
         
         if (isNaN(dataInicioObj.getTime())) {
-            alert('Data de início inválida.');
-            return;
+            alert('Data de início inválida.');            return;
         }
         
         if (isNaN(dataFimObj.getTime())) {
-            alert('Data de fim inválida.');
-            return;
+            alert('Data de fim inválida.');            return;
         }
         
         if (dataInicioObj >= dataFimObj) {
-            alert('A data de início deve ser anterior à data de fim.');
-            return;
+            alert('A data de início deve ser anterior à data de fim.');            return;
         }
         
         // Encontrar e atualizar lote
@@ -620,8 +826,11 @@ function salvarLoteData() {
             // Renomear todos os lotes para manter ordem
             renomearLotesAutomaticamente();
             
-            renderizarLotesPorData();
+            // CORREÇÃO: NÃO renderizar para preservar interface
+            // renderizarLotesPorData(); // ❌ Esta função limpa todos os botões
             salvarLotesNoCookie();
+            
+            console.log('✅ Lote salvo sem recarregar interface');
             
             // Fechar modal
             if (typeof closeModal === 'function') {
@@ -651,8 +860,7 @@ function salvarLotePercentual() {
     
     // Validações
     if (!percentual) {
-        alert('Por favor, preencha todos os campos obrigatórios.');
-        return;
+        alert('Por favor, preencha todos os campos obrigatórios.');            return;
     }
     
     // Verificar se não ultrapassa 100% (excluindo o próprio lote)
@@ -661,8 +869,7 @@ function salvarLotePercentual() {
         .reduce((sum, lote) => sum + lote.percentual, 0);
     
     if (totalOutros + percentual > 100) {
-        alert(`Este percentual faria o total ultrapassar 100%. Disponível: ${100 - totalOutros}%`);
-        return;
+        alert(`Este percentual faria o total ultrapassar 100%. Disponível: ${100 - totalOutros}%`);            return;
     }
     
     // Encontrar e atualizar lote
@@ -700,8 +907,7 @@ function excluirLoteData(id) {
     // Verificar se há ingressos associados a este lote
     const lote = lotesData.porData.find(l => l.id === id);
     if (lote && verificarIngressosNoLote(lote.id)) {
-        alert('Não é possível excluir este lote pois existem ingressos associados a ele. Exclua os ingressos primeiro.');
-        return;
+        alert('Não é possível excluir este lote pois existem ingressos associados a ele. Exclua os ingressos primeiro.');            return;
     }
     
     if (confirm('Tem certeza que deseja excluir este lote?')) {
@@ -716,8 +922,7 @@ function excluirLotePercentual(id) {
     // Verificar se há ingressos associados a este lote
     const lote = lotesData.porPercentual.find(l => l.id === id);
     if (lote && verificarIngressosNoLote(lote.id)) {
-        alert('Não é possível excluir este lote pois existem ingressos associados a ele. Exclua os ingressos primeiro.');
-        return;
+        alert('Não é possível excluir este lote pois existem ingressos associados a ele. Exclua os ingressos primeiro.');            return;
     }
     
     if (confirm('Tem certeza que deseja excluir este lote?')) {
@@ -809,6 +1014,44 @@ function formatarDataBrasil(dateTimeLocal) {
 function salvarLotesNoCookie() {
     // Salvar apenas os lotes, não todo o wizard
     setCookie('lotesData', JSON.stringify(lotesData), 7); // 7 dias
+    
+    // TAMBÉM SALVAR NO WIZARDDATACOLLECTOR
+    if (window.WizardDataCollector) {
+        console.log('💾 Salvando lotes no WizardDataCollector');
+        
+        window.WizardDataCollector.dados.lotes = [];
+        
+        // Lotes por data
+        if (lotesData.porData) {
+            lotesData.porData.forEach(lote => {
+                window.WizardDataCollector.dados.lotes.push({
+                    id: lote.id,
+                    tipo: 'data',
+                    nome: lote.nome,
+                    data_inicio: lote.dataInicio,
+                    data_fim: lote.dataFim,
+                    divulgar: lote.divulgar || false
+                });
+            });
+        }
+        
+        // Lotes por percentual
+        if (lotesData.porPercentual) {
+            lotesData.porPercentual.forEach(lote => {
+                window.WizardDataCollector.dados.lotes.push({
+                    id: lote.id,
+                    tipo: 'percentual',
+                    nome: lote.nome,
+                    percentual: lote.percentual,
+                    divulgar: lote.divulgar || false
+                });
+            });
+        }
+        
+        // Salvar no localStorage
+        localStorage.setItem('wizardDataCollector', JSON.stringify(window.WizardDataCollector));
+        console.log('✅ Lotes salvos no WizardDataCollector:', window.WizardDataCollector.dados.lotes);
+    }
 }
 
 function carregarLotesDoCookie() {
@@ -876,8 +1119,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Verificar se estamos na página correta
     if (!document.getElementById('lotesPorDataList')) {
-        console.log('Página não é o novo evento, sistema de lotes não carregado');
-        return;
+        console.log('Página não é o novo evento, sistema de lotes não carregado');            return;
     }
     
     console.log('Elementos DOM encontrados');
@@ -891,11 +1133,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // NÃO carregar lotes automaticamente - apenas quando o usuário pedir
     // A função carregarLotesDoCookie será chamada pelo sistema principal se necessário
-    
-    // Adicionar event listeners para prevenir propagação de eventos
-    const modals = ['loteDataModal', 'lotePercentualModal', 'editLoteDataModal', 'editLotePercentualModal'];
-    modals.forEach(modalId => {
-        const modal = document.getElementById(modalId);
+});
+
+// Adicionar funções às exportações
+if (typeof window.restaurarLotes !== 'function') {
+    console.error('❌ ERRO: window.restaurarLotes não foi definida corretamente!');
+} else {
+    console.log('✅ window.restaurarLotes está disponível');
+}
+
+// Garantir que outras funções estão disponíveis globalmente
+window.adicionarLotePorData = adicionarLotePorData;
+window.adicionarLotePorPercentual = adicionarLotePorPercentual;
+
+// Integração com sistema de steps existente
+window.validarStep5 = function() {
+    return validarLotes();
+};
+
+console.log('✅ Sistema de lotes carregado completamente');
         if (modal) {
             // Prevenir que cliques dentro do modal fechem ele
             modal.addEventListener('click', function(e) {

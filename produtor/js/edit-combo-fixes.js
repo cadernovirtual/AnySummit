@@ -221,7 +221,7 @@ window.populateComboTicketSelect = function(loteId) {
 window.updatePaidTicket = function() {
     console.log('💾 Salvando alterações do ingresso pago...');
     
-    const ticketId = document.getElementById('editTicketId')?.value;
+    const ticketId = document.getElementById('editPaidTicketId')?.value;
     if (!ticketId) {
         alert('Erro ao identificar o ingresso');
         return;

@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Função de validação completa
-    window.validateStep = function(stepNumber) {
+    window.validateStep = async function(stepNumber) {
         console.log('🔍 Validando step:', stepNumber);
         const validationMessage = document.getElementById(`validation-step-${stepNumber}`);
         let isValid = true;
@@ -177,81 +177,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
                 
             case 5:
-                // Validar se há pelo menos um lote cadastrado (por data OU por quantidade)
-                const lotesPorData = document.getElementById('lotesPorDataList');
-                const lotesPorQuantidade = document.getElementById('lotesPorQuantidadeList');
-                
-                console.log('🔍 Debug Lotes:', {
-                    lotesPorData: !!lotesPorData,
-                    lotesPorQuantidade: !!lotesPorQuantidade
-                });
-                
-                let temLotes = false;
-                let lotesDataCount = 0;
-                let lotesQtdCount = 0;
-                
-                // Verificar lotes por data - procurar por qualquer elemento que indique lote
-                if (lotesPorData) {
-                    // Tentar várias classes possíveis
-                    const lotesData = lotesPorData.querySelectorAll('.lote-card, .lote-item, [class*="lote"]:not(.lote-empty-state)');
-                    lotesDataCount = lotesData.length;
-                    
-                    // Verificar se não está mostrando o estado vazio
-                    const emptyState = lotesPorData.querySelector('.lote-empty-state');
-                    const hasEmptyState = emptyState && emptyState.style.display !== 'none';
-                    
-                    if (lotesDataCount > 0 && !hasEmptyState) {
-                        temLotes = true;
-                    }
-                    
-                    console.log('📅 Lotes por Data:', {
-                        elementos: lotesDataCount,
-                        emptyState: hasEmptyState,
-                        innerHTML: lotesPorData.innerHTML.substring(0, 200)
-                    });
-                }
-                
-                // Verificar lotes por quantidade
-                if (!temLotes && lotesPorQuantidade) {
-                    const lotesQtd = lotesPorQuantidade.querySelectorAll('.lote-card, .lote-item, [class*="lote"]:not(.lote-empty-state)');
-                    lotesQtdCount = lotesQtd.length;
-                    
-                    const emptyState = lotesPorQuantidade.querySelector('.lote-empty-state');
-                    const hasEmptyState = emptyState && emptyState.style.display !== 'none';
-                    
-                    if (lotesQtdCount > 0 && !hasEmptyState) {
-                        temLotes = true;
-                    }
-                    
-                    console.log('📊 Lotes por Quantidade:', {
-                        elementos: lotesQtdCount,
-                        emptyState: hasEmptyState,
-                        innerHTML: lotesPorQuantidade.innerHTML.substring(0, 200)
-                    });
-                }
-                
-                // Verificar também se há dados nos arrays globais
-                if (!temLotes && window.lotesPorData && window.lotesPorData.length > 0) {
-                    temLotes = true;
-                    console.log('✅ Lotes encontrados no array global lotesPorData:', window.lotesPorData.length);
-                }
-                
-                if (!temLotes && window.lotesPorQuantidade && window.lotesPorQuantidade.length > 0) {
-                    temLotes = true;
-                    console.log('✅ Lotes encontrados no array global lotesPorQuantidade:', window.lotesPorQuantidade.length);
-                }
-                
-                if (!temLotes) {
-                    camposInvalidos.push('Pelo menos 1 lote (por data ou quantidade)');
+                // Validação aprimorada de lotes com regras específicas
+                const lotesValidos = await validarLotesComRegrasEspecificas(camposInvalidos);
+                if (!lotesValidos) {
                     isValid = false;
                 }
-                
-                console.log('✅ Resultado validação lotes:', {
-                    temLotes: temLotes,
-                    lotesDataCount: lotesDataCount,
-                    lotesQtdCount: lotesQtdCount,
-                    isValid: isValid
-                });
                 break;
                 
             case 6:
@@ -306,11 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // Função nextStep definitiva
-    window.nextStep = function() {
+    window.nextStep = async function() {
         console.log('🚀 [DEFINITIVO] nextStep - step atual:', window.wizardState.currentStep);
         
         const currentStep = window.wizardState.currentStep;
-        const isValid = window.validateStep(currentStep);
+        const isValid = await window.validateStep(currentStep);
         
         if (isValid) {
             if (currentStep < window.wizardState.totalSteps) {
@@ -367,6 +297,20 @@ document.addEventListener('DOMContentLoaded', function() {
             step.classList.toggle('completed', stepNum < currentStep);
         });
         
+        // CORREÇÃO PROBLEMA 2: Atualizar DOM quando entrar na etapa 5
+        if (currentStep === 5) {
+            console.log('🎨 Entrando na etapa 5 - atualizando DOM dos lotes...');
+            setTimeout(async () => {
+                if (typeof window.renderizarLotesUnificado === 'function') {
+                    console.log('🔄 Forçando atualização dos lotes na etapa 5...');
+                    await window.renderizarLotesUnificado();
+                    console.log('✅ DOM dos lotes atualizado na etapa 5');
+                } else {
+                    console.warn('⚠️ Função renderizarLotesUnificado não disponível');
+                }
+            }, 200);
+        }
+        
         // Atualizar barra de progresso
         const progressLine = document.getElementById('progressLine');
         if (progressLine) {
@@ -381,6 +325,93 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!window.updateStepDisplay) {
         window.updateStepDisplay = updateDisplay;
     }
+    
+    /**
+     * Validação específica de lotes com regras de negócio
+     */
+    async function validarLotesComRegrasEspecificas(camposInvalidos) {
+        console.log('🔍 [VALIDAÇÃO] Verificando lotes com regras específicas...');
+        
+        try {
+            // CORREÇÃO PROBLEMA 3: Carregar lotes diretamente do banco via API
+            let lotes = [];
+            const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+            
+            if (eventoId && typeof window.fazerRequisicaoAPI === 'function') {
+                console.log('📡 Carregando lotes via API para validação...');
+                try {
+                    const resultado = await window.fazerRequisicaoAPI('recuperar_evento_simples');
+                    lotes = resultado.evento?.lotes || [];
+                    console.log('📦 Lotes carregados via API:', lotes);
+                } catch (apiError) {
+                    console.warn('⚠️ Erro na API, tentando função global:', apiError);
+                    // Fallback para função global
+                    if (typeof window.carregarLotesDoBanco === 'function') {
+                        lotes = await window.carregarLotesDoBanco();
+                    }
+                }
+            } else if (typeof window.carregarLotesDoBanco === 'function') {
+                console.log('📦 Carregando lotes via função global...');
+                lotes = await window.carregarLotesDoBanco();
+            } else {
+                console.warn('⚠️ Nenhuma função de carregamento disponível');
+                lotes = [];
+            }
+            
+            console.log('📦 Lotes finais para validação:', lotes);
+            console.log('📊 Quantidade total de lotes:', lotes.length);
+            
+            // REGRA 1: Verificar se há pelo menos 1 lote
+            if (lotes.length === 0) {
+                console.log('❌ Nenhum lote encontrado');
+                camposInvalidos.push('É necessário criar pelo menos 1 lote para prosseguir');
+                return false;
+            }
+            
+            console.log('✅ Pelo menos 1 lote encontrado');
+            
+            // REGRA 2: Se há lotes por quantidade, um deles deve ter 100%
+            const lotesPorQuantidade = lotes.filter(l => {
+                const tipo = l.tipo;
+                return tipo === 'quantidade' || tipo === 'percentual';
+            });
+            
+            console.log(`📊 Lotes por quantidade encontrados: ${lotesPorQuantidade.length}`);
+            lotesPorQuantidade.forEach(l => {
+                console.log(`  - ${l.nome}: ${l.percentual_venda || l.percentual}% (tipo: ${l.tipo})`);
+            });
+            
+            if (lotesPorQuantidade.length > 0) {
+                console.log(`📊 Verificando se algum lote tem 100%...`);
+                
+                const temLote100 = lotesPorQuantidade.some(l => {
+                    const percentual = l.percentual_venda || l.percentual;
+                    console.log(`  - Verificando ${l.nome}: ${percentual}%`);
+                    return parseInt(percentual) === 100;
+                });
+                
+                if (!temLote100) {
+                    console.log('❌ Nenhum lote por quantidade tem 100%');
+                    const nomesLotes = lotesPorQuantidade.map(l => `${l.nome} (${l.percentual_venda || l.percentual}%)`).join(', ');
+                    camposInvalidos.push(`Se existir lote por quantidade, um deles deve ter 100%. Lotes atuais: ${nomesLotes}`);
+                    return false;
+                }
+                
+                console.log('✅ Existe pelo menos um lote com 100% de quantidade');
+            }
+            
+            console.log('✅ Todas as regras de validação de lotes foram atendidas');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Erro na validação de lotes:', error);
+            camposInvalidos.push('Erro ao validar lotes - tente novamente');
+            return false;
+        }
+    }
+    
+    // Exportar função para uso global
+    window.validarLotesComRegrasEspecificas = validarLotesComRegrasEspecificas;
     
     console.log('✅ Validação definitiva configurada com sucesso!');
     console.log('📊 Estado:', {

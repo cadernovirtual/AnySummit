@@ -240,7 +240,26 @@ function criarElementoLote(lote, tipo, index) {
 // Função de edição (placeholder)
 window.editarLote = window.editarLote || function(loteId, tipo) {
     console.log('✏️ Editando lote:', loteId, tipo);
-    alert('Função de edição em desenvolvimento');
+    
+    // CORREÇÃO: Implementar função real baseada no tipo
+    if (tipo === 'data') {
+        if (typeof window.editarLoteData === 'function') {
+            window.editarLoteData(loteId);
+        } else {
+            console.error('❌ Função editarLoteData não encontrada');
+            alert('Função de edição de lotes por data não disponível');
+        }
+    } else if (tipo === 'percentual' || tipo === 'quantidade') {
+        if (typeof window.editarLotePercentual === 'function') {
+            window.editarLotePercentual(loteId);
+        } else {
+            console.error('❌ Função editarLotePercentual não encontrada');
+            alert('Função de edição de lotes por percentual não disponível');
+        }
+    } else {
+        console.error('❌ Tipo de lote desconhecido:', tipo);
+        alert('Tipo de lote não reconhecido: ' + tipo);
+    }
 };
 
 // Carregar lotes do cookie ao iniciar

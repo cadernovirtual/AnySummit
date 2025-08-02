@@ -1,6 +1,19 @@
 <?php
 include("check_login.php");
 include("conm/conn.php");
+
+// Debug - verificar dados da sessão
+error_log("Session ID: " . session_id());
+error_log("Usuario ID: " . ($_SESSION['usuarioid'] ?? 'não definido'));
+error_log("Session Data: " . print_r($_SESSION, true));
+
+// Buscar categorias ativas
+$sql_categorias = "SELECT id, nome FROM categorias_evento WHERE ativo = 1 ORDER BY nome";
+$result_categorias = mysqli_query($con, $sql_categorias);
+$categorias = [];
+while ($row = mysqli_fetch_assoc($result_categorias)) {
+    $categorias[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -14,10 +27,12 @@ include("conm/conn.php");
       <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-painel-1-0-0.css">
          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" type="text/css" href="/produtor/css/criaevento.css" />
+        <link rel="stylesheet" type="text/css" href="/produtor/css/busca-endereco.css" />
         <link rel="stylesheet" type="text/css" href="/produtor/css/iphone-switch.css" />
         <link rel="stylesheet" type="text/css" href="/produtor/css/custom-dialogs.css" />
         <link rel="stylesheet" type="text/css" href="/produtor/css/combo-styles.css" />
         <link rel="stylesheet" type="text/css" href="/produtor/css/form-alignment.css" />
+        <link rel="stylesheet" type="text/css" href="/produtor/css/sistema-ingressos-etapa6.css" />
   
     <style>
         /* Estilo para botão cancelar */
@@ -279,14 +294,7 @@ include("conm/conn.php");
             color: #EF4444;
         }
         
-        .percentual-summary {
-            background: rgba(15, 15, 35, 0.4);
-            border: 1px solid rgba(114, 94, 255, 0.2);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(5px);
-        }
+        /* percentual-summary CSS REMOVIDO - não será mais usado */
         
         .summary-item {
             display: flex;
@@ -743,7 +751,29 @@ include("conm/conn.php");
                 transform: scale(0.8);
             }
         }
+        
+        /* Estilo para botão secundário */
+        .btn-secondary {
+            background: #6b7280 !important;
+            color: white !important;
+            border: 1px solid #4b5563 !important;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563 !important;
+        }
     </style>
+    
+    <script>
+        // Dados da sessão PHP para JavaScript
+        window.sessionData = {
+            usuarioId: <?php echo json_encode($_SESSION['usuarioid'] ?? null); ?>,
+            contratanteId: <?php echo json_encode($_SESSION['contratanteid'] ?? null); ?>,
+            usuarioNome: <?php echo json_encode($_SESSION['usuario_nome'] ?? ''); ?>,
+            usuarioEmail: <?php echo json_encode($_SESSION['usuario_email'] ?? ''); ?>
+        };
+        console.log('📋 Dados da sessão:', window.sessionData);
+    </script>
 </head>
 <body>
     <div class="particle"></div>
@@ -952,12 +982,13 @@ include("conm/conn.php");
                             <label for="category">Categoria <span class="required">*</span></label>
                             <select id="category">
                                 <option value="">Selecione uma categoria</option>
-                                <option value="tecnologia">Tecnologia</option>
-                                <option value="negocios">Negócios</option>
-                                <option value="educacao">Educação</option>
-                                <option value="entretenimento">Entretenimento</option>
-                                <option value="esportes">Esportes</option>
-                                <option value="arte-cultura">Arte e Cultura</option>
+                                <?php if (empty($categorias)): ?>
+                                    <option value="1">Geral</option>
+                                <?php else: ?>
+                                    <?php foreach ($categorias as $categoria): ?>
+                                        <option value="<?php echo $categoria['id']; ?>"><?php echo htmlspecialchars($categoria['nome']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
                     </div>
@@ -1078,16 +1109,24 @@ include("conm/conn.php");
                     <div class="conditional-section show" id="presentialLocation">
                         <div class="form-group full-width">
                             <label for="addressSearch">Buscar endereço</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="addressSearch" placeholder="Digite o endereço completo ou nome do local" style="flex: 1;">
-                                <button type="button" class="btn btn-primary" onclick="searchAddressManual()" style="white-space: nowrap;">
-                                    🔍 Buscar Endereço
+                            <div class="address-input-group">
+                                <div class="address-input-wrapper">
+                                    <input type="text" 
+                                           id="addressSearch" 
+                                           placeholder="Ex: Av Paulista 1000, São Paulo" 
+                                           autocomplete="off"
+                                           spellcheck="false">
+                                    <div id="addressSuggestions" class="address-suggestions"></div>
+                                    <div class="address-loading" id="addressLoading">
+                                        <div class="spinner"></div>
+                                        <span>Buscando endereços...</span>
+                                    </div>
+                                </div>
+                                <button type="button" 
+                                        class="btn btn-primary btn-buscar-endereco" 
+                                        onclick="searchAddressManual()">
+                                    🔍 Buscar
                                 </button>
-                            </div>
-                            <div id="addressSuggestions" class="address-suggestions"></div>
-                            <div class="address-loading" id="addressLoading">
-                                <div class="spinner"></div>
-                                <span>Carregando endereço...</span>
                             </div>
                         </div>
                         
@@ -1125,6 +1164,11 @@ include("conm/conn.php");
                                 <input type="text" id="state" placeholder="Estado" readonly>
                             </div>
                         </div>
+                        
+                        <!-- Campos hidden para latitude/longitude -->
+                        <input type="hidden" id="latitude" value="">
+                        <input type="hidden" id="longitude" value="">
+                        
                         <div id="map" class="map-container" style="display:none;"></div>
                     </div>
 
@@ -1185,6 +1229,34 @@ include("conm/conn.php");
                                     <p>Controle vendas por percentual atingido</p>
                                 </div>
                                 
+                                <!-- Controle de Limite de Vendas -->
+                                <div class="controle-limite-vendas" style="margin-bottom: 20px; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                        <input type="checkbox" id="controlar_limite_vendas" onchange="handleControleVendasChange(event)" style="margin-right: 8px;">
+                                        <label for="controlar_limite_vendas" style="font-weight: 500; margin: 0;">
+                                            🎯 Deseja controlar o limite global de vendas?
+                                        </label>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #6c757d; margin-left: 24px;">
+                                        Ao ativar, você define uma lotação máxima para o evento e programar a virada de lotes a partir do percentual de vendas realizadas
+                                    </div>
+                                    
+                                    <div id="campoLimiteVendas" style="display: none; margin-top: 15px; margin-left: 24px;">
+                                        <label for="limiteVendas" style="display: block; font-weight: 500; margin-bottom: 8px;">
+                                            Lotação Máxima do Evento:
+                                        </label>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <input type="number" id="limiteVendas" min="1" placeholder="Ex: 1000" 
+                                                   style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                            <span style="color: #6c757d; font-size: 0.85rem;">pessoas</span>
+                                            <button type="button" id="btnConfirmarLimite" onclick="confirmarLimiteVendas()" 
+                                                    style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                                                ✅ Confirmar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="lotes-list" id="lotesPorPercentualList">
                                     <div class="lote-empty-state" id="lotePercentualEmpty">
                                         <div style="font-size: 2rem; margin-bottom: 10px;">📊</div>
@@ -1192,26 +1264,17 @@ include("conm/conn.php");
                                         <div style="color: #8B95A7; font-size: 0.85rem;">Clique em "Adicionar" para criar</div>
                                     </div>
                                 </div>
+
+                                <!-- percentual-summary REMOVIDO DEFINITIVAMENTE -->
                                 
-                                <div class="percentual-summary" id="percentualSummary" style="display: none;">
-                                    <div class="summary-item">
-                                        <span>Total configurado:</span>
-                                        <span id="totalPercentual">0%</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>Restante:</span>
-                                        <span id="restantePercentual">100%</span>
-                                    </div>
-                                </div>
-                                
-                                <button class="btn btn-outline btn-small" type="button" onclick="adicionarLotePorPercentual()">
+                                <button class="btn btn-outline btn-small" type="button" id="btnCriarLoteQuantidade" onclick="adicionarLotePorPercentual()" disabled>
                                     ➕ Adicionar Lote por Percentual
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="validation-message" id="validation-step-5">
+                    <div class="validation-message" id="validation-step-5" style="display: none;">
                         Por favor, configure pelo menos um lote para continuar.
                     </div>
 
@@ -1355,7 +1418,10 @@ include("conm/conn.php");
 
                     <div class="step-navigation">
                         <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
-                        <button class="nav-btn btn-publish" onClick="publishEvent()">
+                        <button class="nav-btn btn-secondary" onClick="pausarEvento()">
+                            💾 Salvar e Continuar Depois
+                        </button>
+                        <button class="nav-btn btn-publish" onClick="publicarEvento()">
                             ✓ Publicar evento
                         </button>
                     </div>
@@ -1993,7 +2059,7 @@ include("conm/conn.php");
                 <button class="modal-close" onClick="closeModal('editPaidTicketModal')">&times;</button>
             </div>
 
-            <input type="hidden" id="editTicketId">
+            <input type="hidden" id="editPaidTicketId">
 
             <div class="form-group full-width">
                 <label>Título do tipo de ingresso <span class="required">*</span></label>
@@ -2001,10 +2067,26 @@ include("conm/conn.php");
             </div>
 
             <div class="form-group full-width" style="margin-top: 15px;">
-                <label>Lote <span class="required">*</span></label>
-                <select id="editPaidTicketLote" class="form-control" onchange="updateEditPaidTicketDates()">
-                    <option value="">Selecione um lote</option>
-                </select>
+                <label>Lote</label>
+                <!-- ELEMENTO ORIGINAL - OCULTO MAS FUNCIONAL -->
+                <div id="editPaidTicketLoteLabel" style="
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    color: #333;
+                    display: none;
+                ">-</div>
+                <input type="hidden" id="editPaidTicketLote">
+                
+                <!-- NOVO LABEL APENAS VISUAL -->
+                <div id="editPaidTicketLoteDisplay" style="
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    color: #333;
+                ">-</div>
             </div>
 
             <div class="form-grid" style="margin-top: 10px; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
@@ -2125,10 +2207,26 @@ include("conm/conn.php");
             </div>
             
             <div class="form-group full-width">
-                <label>Lote <span class="required">*</span></label>
-                <select id="editFreeTicketLote" class="form-control">
-                    <option value="">Selecione um lote</option>
-                </select>
+                <label>Lote</label>
+                <!-- ELEMENTO ORIGINAL - OCULTO MAS FUNCIONAL -->
+                <div id="editFreeTicketLoteLabel" style="
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    color: #333;
+                    display: none;
+                ">-</div>
+                <input type="hidden" id="editFreeTicketLote">
+                
+                <!-- NOVO LABEL APENAS VISUAL -->
+                <div id="editFreeTicketLoteDisplay" style="
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    color: #333;
+                ">-</div>
             </div>
 
             <hr class="section-divider">
@@ -2174,14 +2272,14 @@ include("conm/conn.php");
     </div>
 
     <!-- Modal para Editar Combo -->
-    <div class="modal-overlay" id="editComboModal">
+    <div class="modal-overlay" id="editComboTicketModal">
         <div class="modal" style="max-width: 1000px; width: 90%;">
             <div class="modal-header">
                 <div class="modal-title">Editar combo de tipos de ingresso</div>
-                <button class="modal-close" onClick="closeModal('editComboModal')">&times;</button>
+                <button class="modal-close" onClick="closeModal('editComboTicketModal')">&times;</button>
             </div>
 
-            <input type="hidden" id="editComboId">
+            <input type="hidden" id="editComboTicketId">
 
             <div class="form-group full-width">
                 <label>Título do combo <span class="required">*</span></label>
@@ -2189,10 +2287,26 @@ include("conm/conn.php");
             </div>
 
             <div class="form-group full-width" style="margin-top: 10px;">
-                <label>Lote <span class="required">*</span></label>
-                <select id="editComboLote" class="form-control" onchange="updateEditComboTicketDates()">
-                    <option value="">Selecione um lote</option>
-                </select>
+                <label>Lote</label>
+                <!-- ELEMENTO ORIGINAL - OCULTO MAS FUNCIONAL -->
+                <div id="editComboLoteLabel" style="
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    color: #333;
+                    display: none;
+                ">-</div>
+                <input type="hidden" id="editComboTicketLote">
+                
+                <!-- NOVO LABEL APENAS VISUAL -->
+                <div id="editComboLoteDisplay" style="
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    color: #333;
+                ">-</div>
             </div>
 
             <div class="form-grid" style="margin-top: 10px; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
@@ -2290,7 +2404,7 @@ include("conm/conn.php");
             </div>
 
             <div class="modal-actions" style="margin-top: 15px;">
-                <button class="btn btn-secondary" onClick="closeModal('editComboModal')">Cancelar</button>
+                <button class="btn btn-secondary" onClick="closeModal('editComboTicketModal')">Cancelar</button>
                 <button class="btn btn-primary" onClick="updateComboTicket()">Salvar alterações</button>
             </div>
         </div>
@@ -2433,45 +2547,17 @@ include("conm/conn.php");
 
             <div class="modal-actions">
                 <button class="btn btn-secondary" onClick="closeModal('editLotePercentualModal')">Cancelar</button>
-                <button class="btn btn-primary" onClick="salvarLotePercentual()">Salvar Alterações</button>
+                <button class="btn btn-primary" onClick="salvarEdicaoLotePercentual()">Salvar Alterações</button>
             </div>
         </div>
     </div>
     <!-- ==================== FIM DOS MODAIS DE LOTES ==================== -->
     
-     <!-- CORREÇÃO DEFINITIVA TOTAL - DEVE SER O PRIMEIRO SCRIPT -->
-     <!-- <script language='javascript' src="/produtor/js/correcao-definitiva-total.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
-     <!-- CORREÇÃO TOTAL V2 - RESOLVE TUDO -->
-     <!-- <script language='javascript' src="/produtor/js/correcao-total-v2.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
-     
-     <!-- Scripts de recuperação e salvamento -->
-     <script language='javascript' src="/produtor/js/save-fix.js?v=<?php echo time(); ?>"></script>
-     <!-- <script language='javascript' src="/produtor/js/custom-recovery.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
-     
-     <!-- Scripts anteriores desabilitados temporariamente
-     <script language='javascript' src="/produtor/js/json-recovery-fix.js?v=<?php echo time(); ?>"></script>
-     <script language='javascript' src="/produtor/js/wizard-management.js?v=<?php echo time(); ?>"></script>
-     -->
-     
+     <!-- Scripts principais do sistema -->
      <script language='javascript' src="/produtor/js/custom-dialogs.js"></script>
      <script language='javascript' src="/produtor/js/alert-overrides.js"></script>
-     <script language='javascript' src="/produtor/js/temporary-tickets.js"></script>
-     <script language='javascript' src="/produtor/js/lotes.js"></script>
+     <script language='javascript' src="/produtor/js/lotes-restauracao-simples.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/lote-protection.js?v=<?php echo time(); ?>"></script>
-     <script language='javascript' src="/produtor/js/ingressos-pagos.js"></script>
-     
-     <!-- SOLUÇÃO SIMPLES DE NAVEGAÇÃO - ANTES DO CRIAEVENTO.JS -->
-     <script src="js/simple-navigation-fix.js?v=<?php echo time(); ?>"></script>
-     
-     <script language='javascript' src="/produtor/js/criaevento.js?v=<?php echo time(); ?>"></script>
-     <script language='javascript' src="/produtor/js/debug-validacoes.js?v=<?php echo time(); ?>"></script>
-     <script language='javascript' src="/produtor/js/combo-functions.js"></script>
-     <script language='javascript' src="/produtor/js/combo-override.js"></script>
-     <script language='javascript' src="/produtor/js/ingressos-pagos-edit.js"></script>
-     <script language='javascript' src="/produtor/js/ingressos-gratuitos.js"></script>
-     <script language='javascript' src="/produtor/js/ingressos-gratuitos-create.js"></script>
-     <script language='javascript' src="/produtor/js/address-improvements.js"></script>
-     <script language='javascript' src="/produtor/js/modal-correto.js"></script>
 
      <!-- Modal para Termos de Uso -->
      <div class="modal-overlay" id="termsModal">
@@ -2508,36 +2594,6 @@ include("conm/conn.php");
              </div>
          </div>
      </div>
-
-     <!-- Script de Teste para Debug do Combo -->
-     <script>
-         // Teste adicional para debug
-         window.addEventListener('load', function() {
-             console.log('🧪 Teste de debug carregado');
-             
-             const comboBtn = document.getElementById('addComboTicket');
-             console.log('🔍 Botão encontrado:', comboBtn);
-             
-             if (typeof openModal === 'function') {
-                 console.log('✅ Função openModal existe');
-             } else {
-                 console.error('❌ Função openModal NÃO existe');
-             }
-             
-             if (typeof populateComboTicketSelect === 'function') {
-                 console.log('✅ Função populateComboTicketSelect existe');
-             } else {
-                 console.error('❌ Função populateComboTicketSelect NÃO existe');
-             }
-             
-             // Teste direto no botão
-             if (comboBtn) {
-                 comboBtn.addEventListener('click', function() {
-                     console.log('🎯 Clique detectado no botão combo!');
-                 });
-             }
-         });
-     </script>
 
      <!-- Fix para o ícone da lixeira -->
      <script>
@@ -2576,38 +2632,38 @@ include("conm/conn.php");
                  </div>
              `).join('');
          };
-         console.log('✅ Função updateComboItemsList corrigida com ícone SVG');
      });
      </script>
 
-       <!-- Scripts principais do sistema - REMOVIDOS DUPLICADOS (já carregados acima) -->
-     <!-- 
-     <script language='javascript' src="/produtor/js/custom-dialogs.js"></script>
-     <script language='javascript' src="/produtor/js/alert-overrides.js"></script>
-     <script language='javascript' src="/produtor/js/temporary-tickets.js"></script>
-     <script language='javascript' src="/produtor/js/lotes.js"></script>
-     <script language='javascript' src="/produtor/js/lote-protection.js?v=<?php echo time(); ?>"></script>
-     <script language='javascript' src="/produtor/js/ingressos-pagos.js"></script>
-     
-     <!-- SOLUÇÃO SIMPLES DE NAVEGAÇÃO - ANTES DO CRIAEVENTO.JS -->
-     <script src="js/simple-navigation-fix.js?v=<?php echo time(); ?>"></script>
-     
-     <script language='javascript' src="/produtor/js/criaevento.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/ingressos-pagos.js" charset="UTF-8"></script>
+     <script language='javascript' src="/produtor/js/criaevento.js?v=<?php echo time(); ?>" charset="UTF-8"></script>
+     <script language='javascript' src="/produtor/js/spinner-carregamento.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/wizard-database.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/busca-endereco-direto.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/diagnostico-google-maps.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/verificacao-final.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/fix-wizard-initialization.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/hide-validation-messages.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/wizard-restore-helpers.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/debug-validacoes.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/debug-currentstep.js?v=<?php echo time(); ?>"></script>
+     <script language='javascript' src="/produtor/js/fix-currentstep.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/combo-functions.js"></script>
      <script language='javascript' src="/produtor/js/combo-override.js"></script>
      <script language='javascript' src="/produtor/js/ingressos-pagos-edit.js"></script>
      <script language='javascript' src="/produtor/js/ingressos-gratuitos.js"></script>
      <script language='javascript' src="/produtor/js/ingressos-gratuitos-create.js"></script>
-     <script language='javascript' src="/produtor/js/address-improvements.js"></script>
      <script language='javascript' src="/produtor/js/modal-correto.js"></script>
-     -->
      
      <!-- Google Maps API -->
      <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>
      
      <!-- Scripts de correção -->
-     <!-- <script src="js/wizard-validation-definitive.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
+     <!-- <script src="js/wizard-validation-definitive.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com unified-recovery -->
+     
+     <!-- CORREÇÃO DEFINITIVA: NextStep que sobrescreve todos os outros -->
+     <script src="js/nextStep-definitivo.js?v=<?php echo time(); ?>"></script>
+     
      <script src="js/publish-event-fix.js?v=<?php echo time(); ?>"></script>
      <script src="js/modal-fixes.js"></script>
      <script src="js/terms-privacy-handler.js"></script>
@@ -2616,7 +2672,7 @@ include("conm/conn.php");
      <script src="js/preview-fix.js"></script>
      <!-- <script src="js/wizard-fix-definitivo.js"></script> DESABILITADO: Conflito -->
      <script src="js/maps-fix.js"></script>
-     <!-- <script src="js/restore-fix.js"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
+     <!-- <script src="js/restore-fix.js"></script> DESABILITADO: Conflito com unified-recovery -->
      <script src="js/complete-fixes.js"></script>
 <script src="js/ticket-functions-fix.js"></script>
 <script src="js/lote-ticket-functions.js"></script>
@@ -2650,28 +2706,23 @@ include("conm/conn.php");
 <script src="js/color-fix.js?v=<?php echo time(); ?>"></script>
 <script src="js/cleanup-after-publish.js?v=<?php echo time(); ?>"></script>
 <script src="js/producer-fix.js?v=<?php echo time(); ?>"></script>
-<script src="js/test-recovery.js?v=<?php echo time(); ?>"></script>
-<script src="js/force-save.js?v=<?php echo time(); ?>"></script>
-<!-- <script src="js/cookie-monitor.js?v=<?php echo time(); ?>"></script> DESABILITADO: loop desnecessário no console -->
-<script src="js/override-save.js?v=<?php echo time(); ?>"></script>
-<!-- <script src="js/diagnostico.js?v=<?php echo time(); ?>"></script> REMOVIDO: causava dialog de teste -->
-<!-- Remover todos os scripts de validação anteriores -->
 
-<!-- CORREÇÃO DEFINITIVA FINAL - USA window.customDialog -->
-<script src="js/fixes/correcao-definitiva-final.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO DEFINITIVA FINAL - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/fixes/correcao-definitiva-final.js?v=<?php echo time(); ?>"></script> -->
 <!-- Correção para exclusão de lotes -->
 <script src="js/lote-exclusao-fix.js?v=<?php echo time(); ?>"></script>
 
 <!-- CORREÇÃO FINAL ABSOLUTA - DEVE SER O ÚLTIMO SCRIPT -->
 <!-- <script src="js/correcao-exclusao-final.js?v=<?php echo time(); ?>"></script> REMOVIDO: Usa callback errado -->
 <!-- CORREÇÃO DEFINITIVA COM PROMISE -->
-<!-- <script src="js/correcao-lote-promise.js?v=<?php echo time(); ?>"></script> DESABILITADO: Dialog test desnecessário -->
-<!-- CORREÇÃO DEFINITIVA DE ASSOCIAÇÃO LOTES/INGRESSOS -->
+<script src="js/correcao-lote-promise.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÕES ANTIGAS TEMPORARIAMENTE DESABILITADAS -->
+<!-- 
 <script src="js/correcao-associacao-definitiva.js?v=<?php echo time(); ?>"></script>
-<!-- CORREÇÃO URGENTE - RENDERIZAÇÃO DE LOTES -->
 <script src="js/correcao-urgente-lotes.js?v=<?php echo time(); ?>"></script>
-<!-- GARANTIA FINAL - FORÇA ATUALIZAÇÃO -->
-<script src="js/garantia-final-lotes.js?v=<?php echo time(); ?>"></script>
+-->
+<!-- GARANTIA FINAL - FORÇA ATUALIZAÇÃO - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/garantia-final-lotes.js?v=<?php echo time(); ?>"></script> -->
 <!-- VERIFICAÇÃO DE INGRESSOS EM LOTES -->
 <script src="js/verificacao-ingressos-final.js?v=<?php echo time(); ?>"></script>
 <!-- CORREÇÃO DO ENVIO DO EVENTO -->
@@ -2680,18 +2731,17 @@ include("conm/conn.php");
 <script src="js/debug-envio-api.js?v=<?php echo time(); ?>"></script>
 <!-- Correção de performance na descrição -->
 <script src="js/descricao-performance-fix.js?v=<?php echo time(); ?>"></script>
-<!-- Correção do salvamento de dados do wizard -->
-<script src="js/wizard-data-fix.js?v=<?php echo time(); ?>"></script>
 <!-- Debug melhorado -->
 <script src="js/debug-wizard-data.js?v=<?php echo time(); ?>"></script>
 <!-- Correção dos checkboxes de termos -->
+<!-- CORREÇÃO DE BUSCA DE ENDEREÇOS -->
+<script src="js/maps-fix.js?v=<?php echo time(); ?>"></script>
+
 <script src="js/terms-checkbox-fix.js?v=<?php echo time(); ?>"></script>
 <!-- CORREÇÃO COMPLETA CHECKBOX E DEBUG -->
 <script src="js/correcao-checkbox-debug.js?v=<?php echo time(); ?>"></script>
 <!-- CORREÇÃO PARA CHECKBOX CUSTOMIZADO (DIV) -->
 <script src="js/checkbox-customizado-fix.js?v=<?php echo time(); ?>"></script>
-<!-- CORREÇÃO DE COOKIES E RECUPERAÇÃO -->
-<!-- <script src="js/correcao-cookies-recuperacao.js?v=<?php echo time(); ?>"></script> DESABILITADO: Conflito com recovery-confirm-v2 -->
 <!-- OVERRIDE TOTAL - FORÇA PUBLICAÇÃO -->
 <script src="js/override-total-publicacao.js?v=<?php echo time(); ?>"></script>
 <!-- DEBUG COMPLETO DA API -->
@@ -2701,16 +2751,193 @@ include("conm/conn.php");
 <!-- TESTE API MÍNIMA -->
 <script src="js/teste-api-minima.js?v=<?php echo time(); ?>"></script>
 
-<!-- SISTEMA DE SALVAMENTO V2 - ESTRUTURA COMPATÍVEL COM CRIAEVENTOS.JS -->
-<script src="js/wizard-save-system-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/wizard-recovery-confirm-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/complete-recovery-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/specific-data-recovery-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/lotes-save-system-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/image-recovery-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/wizard-publish-integration-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/api-format-fix-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/id-mapping-fix-v2.js?v=<?php echo time(); ?>"></script>
-<script src="js/save-debug-v2.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO FORÇADA DO STEP 1 - DEVE SER O ÚLTIMO SCRIPT -->
+<!-- <script src="js/force-step1-fix.js?v=<?php echo time(); ?>"></script> TEMPORARIAMENTE DESABILITADO PARA DEBUG -->
+<script src="js/fix-retomar-rascunho.js?v=<?php echo time(); ?>"></script>
+<script src="js/fix-restaurar-imagens.js?v=<?php echo time(); ?>"></script>
+<script src="js/debug-functions.js?v=<?php echo time(); ?>"></script>
+<script src="js/debug-wizard-envio.js?v=<?php echo time(); ?>"></script>
+<script src="js/debug-restauracao-completo.js?v=<?php echo time(); ?>"></script>
+<!-- <script src="js/debug-lotes.js?v=<?php echo time(); ?>"></script> DESABILITADO -->
+<script src="js/debug-carregamento-lotes.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcao-carregamento-lotes-etapa5.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcao-exibicao-lotes.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcao-atualizacao-etapa5.js?v=<?php echo time(); ?>"></script>
+<script src="js/fix-validacao-etapa5.js?v=<?php echo time(); ?>"></script>
+<script src="js/teste-restaurar-lotes.js?v=<?php echo time(); ?>"></script>
+<script src="js/debug-etapa6.js?v=<?php echo time(); ?>"></script>
+<script src="js/teste-etapa6-corrigida.js?v=<?php echo time(); ?>"></script>
+<script src="js/debug-campos-ingresso.js?v=<?php echo time(); ?>"></script>
+<script src="js/teste-salvamento-lotes.js?v=<?php echo time(); ?>"></script>
+<script src="js/controle-campos-ingresso.js?v=<?php echo time(); ?>"></script>
+<script src="js/controle-campos-ingresso-especifico.js?v=<?php echo time(); ?>"></script>
+<script src="js/teste-coleta-ingressos.js?v=<?php echo time(); ?>"></script>
+<script src="js/teste-lote-id.js?v=<?php echo time(); ?>"></script>
+<script src="js/ingressos-correcao-completa.js?v=<?php echo time(); ?>"></script>
+<script src="js/patch-coleta-modais.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcao-definitiva-ingressos.js?v=<?php echo time(); ?>"></script>
+<script src="js/debug-envio-final.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcao-ultra-definitiva.js?v=<?php echo time(); ?>"></script>
+<!-- CORREÇÃO FINAL INGRESSOS - DESABILITADO: ERRO DE SINTAXE -->
+<!-- <script src="js/correcao-final-ingressos.js?v=<?php echo time(); ?>"></script> -->
+<script src="js/bloqueio-simplificado.js?v=<?php echo time(); ?>"></script>
+
+<!-- GARANTIR RESTAURAÇÃO DE IMAGENS - DEVE SER O ÚLTIMO -->
+<script src="js/garantir-restauracao.js?v=<?php echo time(); ?>"></script>
+<script src="js/solucao-definitiva-imagens.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcoes-finais.js?v=<?php echo time(); ?>"></script>
+
+<!-- DEBUG DE VALIDAÇÃO DE CAMPOS -->
+<script src="js/debug-validacao-campos.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO DE LOTE_ID NUMÉRICO -->
+<script src="js/correcao-lote-id-numerico.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX ESPECÍFICO PARA PROBLEMAS DOS MODAIS -->
+<script src="js/fix-modal-problemas-especificos.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO AGRESSIVA FINAL - DEVE SER ABSOLUTAMENTE O ÚLTIMO SCRIPT -->
+<script src="js/patch-super-agressivo.js?v=<?php echo time(); ?>"></script>
+<script src="js/correcao-agressiva-final.js?v=<?php echo time(); ?>"></script>
+<script src="js/sistema-edicao-imediata-ingressos.js?v=<?php echo time(); ?>"></script>
+<script src="js/sistema-edicao-imediata-lotes.js?v=<?php echo time(); ?>"></script>
+<script src="js/sistema-insert-corrigido.js?v=<?php echo time(); ?>"></script>
+<!-- <script src="js/botoes-lotes-funcionais.js?v=<?php echo time(); ?>"></script> DESABILITADO -->
+
+<!-- COMBO: REGRAS DE LOTE E SALVAMENTO -->
+<script src="js/combo-regras-lote.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO COMPLETA PARA PROBLEMAS DOS COMBOS -->
+<script src="js/correcao-combos-completa.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE SIMPLES DOS COMBOS -->
+<script src="js/teste-simples-combos.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO ESPECÍFICA PARA EDIÇÃO DE COMBOS -->
+<script src="js/correcao-edicao-combos.js?v=<?php echo time(); ?>"></script>
+
+<!-- COMBO SALVAMENTO COMPLETO - DESABILITADO: ERRO DE SINTAXE -->
+<!-- <script src="js/combo-salvamento-completo.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- EDIÇÃO COM DADOS DO BANCO -->
+<script src="js/edicao-dados-banco.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX SELECT DE LOTE EM EDIÇÃO -->
+<script src="js/fix-select-lote-edicao.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX ERRO UPDATE PAID TICKET -->
+<script src="js/fix-update-paid-ticket.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX BOTÕES DUPLICADOS DE LOTES -->
+<script src="js/fix-botoes-duplicados-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX SALVAR LOTE DATA -->
+<script src="js/fix-salvar-lote-data.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX COMBO ITEMS COLETA -->
+<script src="js/fix-combo-items-coleta.js?v=<?php echo time(); ?>"></script>
+
+<!-- SISTEMA INGRESSOS ETAPA 6 CORRIGIDO - DESABILITADO: ERRO JSON -->
+<!-- <script src="js/sistema-ingressos-etapa6-corrigido.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- SISTEMA EDIÇÃO COMBOS CORRIGIDO -->
+<script src="js/sistema-edicao-combos-corrigido.js?v=<?php echo time(); ?>"></script>
+
+<!-- CONTROLE DE LIMITE DE VENDAS - ETAPA 5 -->
+<script src="js/controle-limite-vendas.js?v=<?php echo time(); ?>"></script>
+
+<!-- SISTEMA UNIFICADO DE RENDERIZAÇÃO - CARREGA PRIMEIRO -->
+<script src="js/renderizacao-unificada-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- NOVO SISTEMA DE LOTES MYSQL - SUBSTITUI COOKIES -->
+<script src="js/sistema-lotes-mysql.js?v=<?php echo time(); ?>"></script>
+
+<!-- INTERFACE DE LOTES MYSQL - SUBSTITUI MODAIS -->
+<script src="js/interface-lotes-mysql.js?v=<?php echo time(); ?>"></script>
+
+<!-- LIMPEZA DE DADOS FANTASMA - REMOVE CONFLITOS -->
+<script src="js/limpeza-dados-fantasma.js?v=<?php echo time(); ?>"></script>
+
+<!-- DEBUG MYSQL API - PARA TESTES -->
+<script src="js/debug-mysql-api.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE API LOTES - PARA DEBUG -->
+<script src="js/teste-api-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE RECUPERAÇÃO LOTES - PARA DEBUG -->
+<script src="js/teste-recuperacao-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- DEBUG RECUPERAÇÃO ESPECÍFICO - INTERCEPTADOR -->
+<script src="js/debug-recuperacao-especifico.js?v=<?php echo time(); ?>"></script>
+
+<!-- CONTROLE LIMITE DE VENDAS - EXCLUSÃO AUTOMÁTICA -->
+<script src="js/controle-limite-vendas.js?v=<?php echo time(); ?>"></script>
+
+<!-- DEBUG FUNÇÕES DISPONÍVEIS - PARA DIAGNÓSTICO -->
+<script src="js/debug-funcoes-disponiveis.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTADOR CRIAÇÃO LOTES - PARA DIAGNÓSTICO -->
+<script src="js/testador-criacao-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO FINAL DOS PROBLEMAS DE LOTES POR PERCENTUAL - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/correcao-lotes-percentual-final.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- INTERCEPTADOR PARA SALVAMENTO IMEDIATO DE LOTES - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/interceptador-lotes-quantidade.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- CORREÇÃO ESPECÍFICA EDIÇÃO -->
+<script src="js/correcao-especifica-edicao.js?v=<?php echo time(); ?>"></script>
+
+<!-- PADRONIZAÇÃO DEFINITIVA - SOBRESCREVE TUDO - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/padronizacao-definitiva.js?v=<?php echo time(); ?>"></script> -->
+<!-- <script src="js/padronizacao-lotes.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- BYPASS DIRETO PARA COMBO -->
+<script src="js/combo-bypass-direto.js?v=<?php echo time(); ?>"></script>
+
+<!-- CONSOLIDAÇÃO FINAL - REMOVE CONFLITOS E LOOPS -->
+<script src="js/consolidacao-final.js?v=<?php echo time(); ?>"></script>
+
+<!-- SISTEMA DE DISPLAY DE LOTE -->
+<script src="js/lote-display-sistema.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE DIRETO DE LOTE -->
+<script src="js/teste-direto-lote.js?v=<?php echo time(); ?>"></script>
+
+<!-- OVERRIDE FINAL - FORÇA TEXTO CORRETO DO LOTE -->
+<script src="js/override-lote-final.js?v=<?php echo time(); ?>"></script>
+
+<!-- Scripts de diagnóstico removidos - funcionalidade implementada corretamente -->
+
+
+<!-- DIAGNÓSTICO - BOTÕES DE EDITAR INVISÍVEIS -->
+<script src="js/diagnostico-botoes-editar.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO FINAL DEFINITIVA - RESOLVE EXCLUSÃO MYSQL E BOTÕES - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/correcao-final-lotes.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- SCRIPT DE TESTE PARA VERIFICAR CORREÇÕES -->
+<script src="js/teste-correcao-final.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE ESPECÍFICO DE EXCLUSÃO MYSQL -->
+<script src="js/teste-exclusao-mysql.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO AGRESSIVA - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/correcao-agressiva-lotes.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- CORREÇÃO ETAPA 6 - INGRESSOS COM CONFIRMAÇÃO CUSTOMIZADA -->
+<script src="js/correcao-etapa6-ingressos.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO ESPECÍFICA - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/correcao-lotes-percentual.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- DEBUG ESPECÍFICO - EDIÇÃO DE LOTES -->
+<script src="js/debug-edicao-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO CONSERVADORA - DESABILITADO: CONFLITA COM MYSQL -->
+<!-- <script src="js/correcao-ids-conservadora.js?v=<?php echo time(); ?>"></script> -->
+
+<!-- CORREÇÃO DEFINITIVA - IDS REAIS DO MYSQL (TEMPORARIAMENTE DESABILITADA) -->
+<!-- <script src="js/correcao-ids-mysql.js?v=<?php echo time(); ?>"></script> -->
 </body>
 </html>

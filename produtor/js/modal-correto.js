@@ -270,11 +270,36 @@ function formatDateTimeLocal(date) {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
+// Funções de fallback caso não estejam definidas ainda
+if (typeof excluirLoteData === 'undefined') {
+    window.excluirLoteData = function(id) {
+        console.warn('excluirLoteData chamada antes de lotes.js carregar');
+        // Tentar chamar depois que lotes.js carregar
+        setTimeout(() => {
+            if (window.excluirLoteData && window.excluirLoteData !== arguments.callee) {
+                window.excluirLoteData(id);
+            }
+        }, 100);
+    };
+}
+
+if (typeof excluirLotePercentual === 'undefined') {
+    window.excluirLotePercentual = function(id) {
+        console.warn('excluirLotePercentual chamada antes de lotes.js carregar');
+        setTimeout(() => {
+            if (window.excluirLotePercentual && window.excluirLotePercentual !== arguments.callee) {
+                window.excluirLotePercentual(id);
+            }
+        }, 100);
+    };
+}
+
 // Garantir que as funções estejam globais
 window.editarLoteData = editarLoteData;
 window.editarLotePercentual = editarLotePercentual;
-window.excluirLoteData = excluirLoteData;
-window.excluirLotePercentual = excluirLotePercentual;
+// Não sobrescrever se já existirem
+if (!window.excluirLoteData) window.excluirLoteData = excluirLoteData;
+if (!window.excluirLotePercentual) window.excluirLotePercentual = excluirLotePercentual;
 
 // Adicionar listeners para fechar ao clicar fora
 document.addEventListener('DOMContentLoaded', function() {

@@ -68,7 +68,7 @@ try {
             FROM eventos e 
             LEFT JOIN categorias_evento cat ON e.categoria_id = cat.id AND cat.ativo = 1
             LEFT JOIN ingressos ing ON e.id = ing.evento_id AND ing.ativo = 1
-            WHERE e.contratante_id = ? AND e.usuario_id = ?
+            WHERE e.contratante_id = ? AND e.usuario_id = ? AND e.status != 'rascunho'
             GROUP BY e.id
             ORDER BY e.criado_em DESC";
 
@@ -722,9 +722,9 @@ try {
             <div class="eventos-container">
                 <div class="eventos-header">
                     <h1>Meus Eventos</h1>
-                    <a href="/produtor/novoevento" class="novo-evento-btn">
+                    <button onclick="criarNovoEvento()" class="novo-evento-btn">
                         ➕ Novo Evento
-                    </a>
+                    </button>
                 </div>
 
                 <?php if (empty($eventos)): ?>
@@ -732,9 +732,9 @@ try {
                         <div class="empty-state-icon">🎪</div>
                         <h3>Nenhum evento encontrado</h3>
                         <p>Comece criando seu primeiro evento e transforme suas ideias em realidade!</p>
-                        <a href="/produtor/novoevento" class="novo-evento-btn">
+                       <button onclick="criarNovoEvento()" class="novo-evento-btn">
                             🚀 Criar Primeiro Evento
-                        </a>
+                       </button>
                         
                         <div style="margin-top: 20px; padding: 15px; background: rgba(255, 193, 7, 0.1); border-radius: 12px; border: 1px solid rgba(255, 193, 7, 0.3);">
                             <p style="color: #FFC107; font-size: 14px;">
@@ -1307,5 +1307,10 @@ try {
             });
         });
     </script>
+    
+    <!-- Script para gerenciar criação de novos eventos -->
+    <script src="/produtor/js/modal-rascunho.js"></script>
+    <script src="/produtor/js/gerenciar-rascunhos.js"></script>
+    
 </body>
 </html>

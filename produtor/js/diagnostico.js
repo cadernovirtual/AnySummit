@@ -1,25 +1,20 @@
 // Script de diagnóstico completo
-console.log('🔍 INICIANDO DIAGNÓSTICO COMPLETO...\n');
 
 // 1. Verificar se cookies estão habilitados
-console.log('1️⃣ TESTE DE COOKIES:');
 document.cookie = "teste=123; path=/";
 const testeCookie = document.cookie.includes('teste=123');
-console.log('- Cookies habilitados:', testeCookie ? '✅ SIM' : '❌ NÃO');
 document.cookie = "teste=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
 // 2. Listar TODOS os cookies
-console.log('\n2️⃣ TODOS OS COOKIES ATUAIS:');
 const allCookies = document.cookie.split(';');
 allCookies.forEach((cookie, index) => {
     const trimmed = cookie.trim();
     if (trimmed) {
-        console.log(`  ${index + 1}. ${trimmed}`);
+        
     }
 });
 
 // 3. Procurar especificamente pelo eventoWizard
-console.log('\n3️⃣ COOKIE eventoWizard:');
 const wizardCookie = allCookies.find(c => c.trim().startsWith('eventoWizard='));
 if (wizardCookie) {
     const value = wizardCookie.trim().substring(13);

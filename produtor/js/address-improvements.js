@@ -1,6 +1,7 @@
 /**
  * Melhorias para o sistema de endereço
  * Adiciona spinner e gerenciamento de campos
+ * Copiado exatamente de produtor_git/js/address-improvements.js
  */
 
 // Override da função initAddressSearch
@@ -17,7 +18,7 @@ window.initAddressSearch = function() {
         return;
     }
     
-    console.log('🔍 Inicializando busca de endereços com melhorias...');
+    console.log('🔍 Inicializando busca de endereços with melhorias...');
     console.log('addressFields encontrado:', !!addressFields);
     
     let searchTimeout;
