@@ -2674,6 +2674,10 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
      <script src="js/maps-fix.js"></script>
      <!-- <script src="js/restore-fix.js"></script> DESABILITADO: Conflito com unified-recovery -->
      <script src="js/complete-fixes.js"></script>
+
+<!-- CORREÇÃO RADICAL E IMEDIATA DOS PROBLEMAS REPORTADOS - DEVE SER CARREGADO PRIMEIRO -->
+<script src="js/correcao-radical-problemas.js?v=<?php echo time(); ?>"></script>
+
 <script src="js/ticket-functions-fix.js"></script>
 <script src="js/lote-ticket-functions.js"></script>
     <script src="js/edit-combo-fixes.js"></script>
@@ -2899,6 +2903,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 
 <!-- TESTE ESPECÍFICO DOS PROBLEMAS REPORTADOS -->
 <script src="js/teste-problemas-reportados.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTE DA CORREÇÃO RADICAL -->
+<script src="js/teste-correcao-radical.js?v=<?php echo time(); ?>"></script>
 
 <!-- CORREÇÃO FINAL DOS PROBLEMAS DE LOTES POR PERCENTUAL - DESABILITADO: CONFLITA COM MYSQL -->
 <!-- <script src="js/correcao-lotes-percentual-final.js?v=<?php echo time(); ?>"></script> -->
