@@ -2888,6 +2888,12 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- TESTADOR CRIAÇÃO LOTES - PARA DIAGNÓSTICO -->
 <script src="js/testador-criacao-lotes.js?v=<?php echo time(); ?>"></script>
 
+<!-- DOM ESPELHO MYSQL - ETAPA 6: Garante que DOM = MySQL sempre -->
+<script src="js/dom-espelho-mysql-etapa6.js?v=<?php echo time(); ?>"></script>
+
+<!-- TESTADOR DOM ESPELHO MYSQL - ETAPA 6: Funções de teste e debug -->
+<script src="js/testador-dom-espelho-mysql.js?v=<?php echo time(); ?>"></script>
+
 <!-- CORREÇÃO FINAL DOS PROBLEMAS DE LOTES POR PERCENTUAL - DESABILITADO: CONFLITA COM MYSQL -->
 <!-- <script src="js/correcao-lotes-percentual-final.js?v=<?php echo time(); ?>"></script> -->
 

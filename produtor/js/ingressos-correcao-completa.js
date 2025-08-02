@@ -6,9 +6,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔧 Sistema de coleta e restauração de ingressos carregado');
     
-    // FUNÇÃO PARA RESTAURAR INGRESSOS (estava faltando!)
+    // FUNÇÃO PARA RESTAURAR INGRESSOS (usando a mesma rotina das atualizações!)
     window.restaurarIngressos = function(ingressos) {
-        console.log('🎟️ Restaurando ingressos do banco:', ingressos);
+        console.log('🎟️ Restaurando ingressos do banco (usando rotina de atualizações):', ingressos);
         
         if (!ingressos || !Array.isArray(ingressos) || ingressos.length === 0) {
             console.log('⚠️ Nenhum ingresso para restaurar');
@@ -21,52 +21,80 @@ document.addEventListener('DOMContentLoaded', function() {
             ticketList.innerHTML = '';
         }
         
-        // Restaurar cada ingresso
+        // Restaurar cada ingresso usando a MESMA FUNÇÃO que as operações usam
         ingressos.forEach((ingresso, index) => {
             console.log(`📋 Restaurando ingresso ${index + 1}:`, ingresso);
             
-            // Mapear dados do banco para o formato da interface
-            const ticketData = {
-                type: mapearTipoParaIngles(ingresso.tipo),
-                tipo: ingresso.tipo,
-                title: ingresso.titulo,
-                titulo: ingresso.titulo,
-                description: ingresso.descricao || '',
-                descricao: ingresso.descricao || '',
-                quantity: parseInt(ingresso.quantidade_total) || 100,
-                price: parseFloat(ingresso.preco) || 0,
-                preco: parseFloat(ingresso.preco) || 0,
-                taxaPlataforma: parseFloat(ingresso.taxa_plataforma) || 0,
-                valorReceber: parseFloat(ingresso.valor_receber) || 0,
-                startDate: ingresso.inicio_venda,
-                inicio_venda: ingresso.inicio_venda,
-                endDate: ingresso.fim_venda,
-                fim_venda: ingresso.fim_venda,
-                minQuantity: parseInt(ingresso.limite_min) || 1,
-                maxQuantity: parseInt(ingresso.limite_max) || 5,
-                limite_min: parseInt(ingresso.limite_min) || 1,
-                limite_max: parseInt(ingresso.limite_max) || 5,
-                loteId: ingresso.lote_id,
-                loteName: ingresso.lote_nome || '',
-                lote_nome: ingresso.lote_nome || '',
-                id: ingresso.id
-            };
+            // Converter dados do banco para os parâmetros que addTicketToList() espera
+            const type = mapearTipoParaIngles(ingresso.tipo);
+            const title = ingresso.titulo;
+            const quantity = parseInt(ingresso.quantidade_total) || 100;
+            const price = type === 'paid' ? `R$ ${parseFloat(ingresso.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Gratuito';
+            const loteId = ingresso.lote_id || '';
+            const description = ingresso.descricao || '';
+            const saleStart = ingresso.inicio_venda || '';
+            const saleEnd = ingresso.fim_venda || '';
+            const minQuantity = parseInt(ingresso.limite_min) || 1;
+            const maxQuantity = parseInt(ingresso.limite_max) || 5;
             
-            // Se é combo, decodificar conteúdo
-            if (ingresso.tipo === 'combo' && ingresso.conteudo_combo) {
-                try {
-                    ticketData.comboData = JSON.parse(ingresso.conteudo_combo);
-                    ticketData.comboItems = ticketData.comboData;
-                } catch (e) {
-                    console.error('Erro ao parsear combo data:', e);
+            // USAR A MESMA FUNÇÃO que as operações usam!
+            if (typeof addTicketToList === 'function') {
+                addTicketToList(type, title, quantity, price, loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
+                
+                // Após adicionar, corrigir o ID para usar o ID real do banco
+                const elementos = document.querySelectorAll('.ticket-item');
+                const ultimoElemento = elementos[elementos.length - 1];
+                if (ultimoElemento) {
+                    // Corrigir dataset para usar ID real
+                    ultimoElemento.dataset.ticketId = ingresso.id;
+                    
+                    // Corrigir botões para usar ID real
+                    const editBtn = ultimoElemento.querySelector('button[onclick*="editTicket"]');
+                    const removeBtn = ultimoElemento.querySelector('button[onclick*="removeTicket"]');
+                    if (editBtn) {
+                        editBtn.setAttribute('onclick', `editTicket(${ingresso.id})`);
+                    }
+                    if (removeBtn) {
+                        removeBtn.setAttribute('onclick', `removeTicket(${ingresso.id})`);
+                    }
+                    
+                    // Armazenar dados completos do banco no elemento
+                    ultimoElemento.ticketData = {
+                        id: ingresso.id,
+                        type: type,
+                        title: title,
+                        quantity: quantity,
+                        price: parseFloat(ingresso.preco) || 0,
+                        description: description,
+                        saleStart: saleStart,
+                        saleEnd: saleEnd,
+                        minQuantity: minQuantity,
+                        maxQuantity: maxQuantity,
+                        loteId: loteId,
+                        loteNome: ingresso.lote_nome || '',
+                        taxaPlataforma: parseFloat(ingresso.taxa_plataforma) || 0,
+                        valorReceber: parseFloat(ingresso.valor_receber) || 0,
+                        isFromDatabase: true
+                    };
+                    
+                    // Adicionar informação do lote se não foi mostrada automaticamente
+                    if (ingresso.lote_nome && !ultimoElemento.querySelector('.ticket-lote-info')) {
+                        const ticketTitle = ultimoElemento.querySelector('.ticket-title');
+                        if (ticketTitle) {
+                            const loteSpan = document.createElement('span');
+                            loteSpan.className = 'ticket-lote-info';
+                            loteSpan.style.cssText = 'font-size: 11px; color: #666; margin-left: 10px;';
+                            loteSpan.textContent = ingresso.lote_nome;
+                            ticketTitle.appendChild(loteSpan);
+                        }
+                    }
                 }
+            } else {
+                console.error('❌ Função addTicketToList não encontrada');
             }
-            
-            // Criar elemento na interface
-            criarElementoIngresso(ticketData);
         });
         
-        console.log('✅ Ingressos restaurados na interface');
+        console.log('✅ Ingressos restaurados usando rotina de atualizações');
     };
     
     // Mapear tipo português para inglês (para compatibilidade)
@@ -77,67 +105,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'combo': 'combo'
         };
         return mapa[tipo] || 'paid';
-    }
-    
-    // Criar elemento de ingresso na interface
-    function criarElementoIngresso(ticketData) {
-        const ticketList = document.getElementById('ticketList');
-        if (!ticketList) {
-            console.error('❌ Container ticketList não encontrado');
-            return;
-        }
-        
-        const ticketItem = document.createElement('div');
-        ticketItem.className = 'ticket-item';
-        ticketItem.ticketData = ticketData; // DADOS COMPLETOS AQUI
-        
-        // HTML baseado no tipo
-        let ticketHtml = '';
-        
-        if (ticketData.tipo === 'combo') {
-            const totalIngressos = (ticketData.comboItems || []).length;
-            ticketHtml = `
-                <div class="ticket-header">
-                    <div class="ticket-info">
-                        <div class="ticket-name" style="color: #00C2FF;">${ticketData.titulo}</div>
-                        <div class="ticket-details">
-                            <span>Combo com ${totalIngressos} ingressos</span>
-                            <span>Preço: R$ ${ticketData.preco.toFixed(2)}</span>
-                        </div>
-                    </div>
-                    <div class="ticket-actions">
-                        <button class="btn-secondary btn-sm" onclick="editarIngresso(this)">Editar</button>
-                        <button class="btn-danger btn-sm" onclick="removeTicket(this.closest('.ticket-item').dataset.ticketId)">Excluir</button>
-                    </div>
-                </div>
-            `;
-        } else {
-            const tipoLabel = ticketData.tipo === 'pago' ? 'Pago' : 'Gratuito';
-            const precoText = ticketData.tipo === 'pago' ? `R$ ${ticketData.preco.toFixed(2)}` : 'Gratuito';
-            
-            ticketHtml = `
-                <div class="ticket-header">
-                    <div class="ticket-info">
-                        <div class="ticket-name">${ticketData.titulo}</div>
-                        <div class="ticket-details">
-                            <span class="ticket-type">${tipoLabel}</span>
-                            <span class="ticket-price">${precoText}</span>
-                            <span class="ticket-quantity">Qtd: ${ticketData.quantity}</span>
-                            ${ticketData.lote_nome ? `<span class="ticket-lote">Lote: ${ticketData.lote_nome}</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="ticket-actions">
-                        <button class="btn-secondary btn-sm" onclick="editarIngresso(this)">Editar</button>
-                        <button class="btn-danger btn-sm" onclick="removeTicket(this.closest('.ticket-item').dataset.ticketId)">Excluir</button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        ticketItem.innerHTML = ticketHtml;
-        ticketList.appendChild(ticketItem);
-        
-        console.log(`✅ Elemento criado para ingresso: ${ticketData.titulo}`);
     }
     
     // FUNÇÃO MELHORADA PARA COLETAR DADOS DOS INGRESSOS

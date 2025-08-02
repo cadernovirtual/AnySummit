@@ -103,57 +103,88 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function criarElementoIngresso(ingresso) {
-        const div = document.createElement('div');
-        div.className = 'ticket-item';
-        div.dataset.ticketId = ingresso.id;
-        div.dataset.ingressoId = ingresso.id;
-        div.dataset.tipo = ingresso.tipo;
-        div.dataset.loteId = ingresso.lote_id;
+        console.log('🎨 Criando elemento com MESMA renderização do addTicketToList');
         
-        // Buscar dados completos do lote
-        const lote = lotesDoBanco.find(l => l.id == ingresso.lote_id);
-        let infoLote = `Lote ID ${ingresso.lote_id}`;
-        let detalhesLote = '';
+        // Converter dados do banco para o formato que addTicketToList() espera
+        const type = ingresso.tipo === 'pago' ? 'paid' : (ingresso.tipo === 'gratuito' ? 'free' : 'combo');
+        const title = ingresso.titulo;
+        const quantity = parseInt(ingresso.quantidade_total) || 100;
+        const price = type === 'paid' ? 
+            `R$ ${(parseFloat(ingresso.preco) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 
+            'Gratuito';
+        const loteId = ingresso.lote_id || '';
+        const description = ingresso.descricao || '';
+        const saleStart = ingresso.inicio_venda || '';
+        const saleEnd = ingresso.fim_venda || '';
+        const minQuantity = parseInt(ingresso.limite_min) || 1;
+        const maxQuantity = parseInt(ingresso.limite_max) || 5;
         
-        if (lote) {
-            const tipoTexto = lote.tipo === 'data' ? 'Por Data' : 'Por Vendas';
-            infoLote = `📦 ${lote.nome} - ${tipoTexto}`;
+        // Criar elemento temporário para usar addTicketToList()
+        const tempTicketList = document.createElement('div');
+        
+        // Usar addTicketToList() para gerar HTML idêntico
+        if (typeof addTicketToList === 'function') {
+            // Backup do ticketList original
+            const originalTicketList = document.getElementById('ticketList');
             
-            // Adicionar detalhes específicos do tipo de lote
-            if (lote.tipo === 'data') {
-                const dataInicio = new Date(lote.data_inicio).toLocaleDateString('pt-BR');
-                const dataFim = new Date(lote.data_fim).toLocaleDateString('pt-BR');
-                detalhesLote = `📅 ${dataInicio} até ${dataFim}`;
-            } else {
-                detalhesLote = `📈 ${lote.percentual_venda}% dos ingressos vendidos`;
+            // Substituir temporariamente por nosso elemento
+            const tempContainer = document.createElement('div');
+            tempContainer.id = 'ticketList';
+            document.body.appendChild(tempContainer);
+            
+            // Chamar addTicketToList() para gerar o HTML
+            addTicketToList(type, title, quantity, price, loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
+            
+            // Pegar o elemento gerado
+            const elementoGerado = tempContainer.querySelector('.ticket-item');
+            
+            // Restaurar o ticketList original
+            document.body.removeChild(tempContainer);
+            
+            if (elementoGerado) {
+                // Corrigir dataset para usar ID real do banco
+                elementoGerado.dataset.ticketId = ingresso.id;
+                elementoGerado.dataset.ingressoId = ingresso.id;
+                elementoGerado.dataset.tipo = ingresso.tipo;
+                elementoGerado.dataset.loteId = ingresso.lote_id;
+                
+                // Corrigir botões para usar ID real
+                const editBtn = elementoGerado.querySelector('button[onclick*="editTicket"]');
+                const removeBtn = elementoGerado.querySelector('button[onclick*="removeTicket"]');
+                if (editBtn) {
+                    editBtn.setAttribute('onclick', `editTicket(${ingresso.id})`);
+                }
+                if (removeBtn) {
+                    removeBtn.setAttribute('onclick', `removeTicket(${ingresso.id})`);
+                }
+                
+                // Armazenar dados completos
+                elementoGerado.ticketData = {
+                    ...ingresso,
+                    id: ingresso.id,
+                    type: type,
+                    title: title,
+                    quantity: quantity,
+                    price: parseFloat(ingresso.preco) || 0,
+                    description: description,
+                    saleStart: saleStart,
+                    saleEnd: saleEnd,
+                    minQuantity: minQuantity,
+                    maxQuantity: maxQuantity,
+                    loteId: loteId,
+                    isFromDatabase: true
+                };
+                
+                return elementoGerado;
             }
         }
         
-        // Layout uniforme para todos os tipos
-        div.innerHTML = `
-            <div class="ticket-header">
-                <h4 class="ticket-title">${ingresso.titulo}</h4>
-                <span class="ticket-type-badge type-${ingresso.tipo}">${ingresso.tipo.toUpperCase()}</span>
-            </div>
-            <div class="ticket-body">
-                <div class="ticket-info">
-                    <div>
-                        <span class="ticket-quantity">📊 ${ingresso.quantidade_total} unidades</span>
-                        ${ingresso.tipo !== 'gratuito' ? `<span class="ticket-price">💰 R$ ${parseFloat(ingresso.preco || 0).toFixed(2).replace('.', ',')}</span>` : ''}
-                    </div>
-                    <div>
-                        <span class="ticket-batch">${infoLote}</span>
-                        ${detalhesLote ? `<span class="ticket-lote-info">${detalhesLote}</span>` : ''}
-                    </div>
-                </div>
-                ${ingresso.descricao ? `<p class="ticket-description">${ingresso.descricao}</p>` : ''}
-            </div>
-            <div class="ticket-actions">
-                <button class="btn-icon btn-edit" onclick="editarIngressoDoBanco(${ingresso.id})" title="Editar ingresso">✏️</button>
-                <button class="btn-icon btn-delete" onclick="removeTicket(${ingresso.id})" title="Excluir ingresso">🗑️</button>
-            </div>
-        `;
-        
+        // Fallback se addTicketToList não funcionar
+        console.error('❌ addTicketToList não disponível, usando fallback');
+        const div = document.createElement('div');
+        div.className = 'ticket-item';
+        div.dataset.ticketId = ingresso.id;
+        div.innerHTML = `<div>Erro na renderização</div>`;
         return div;
     }
     

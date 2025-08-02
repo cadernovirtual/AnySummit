@@ -40,7 +40,7 @@ function addTicketToCreationList(type, title, quantity, price, description = '',
         valorReceber: valorReceber,
         loteId: loteId,
         loteInfo: loteInfo,
-        isTemporary: true
+        isTemporary: true // IMPORTANTE: Marcar como temporário
     };
     
     // Armazenar no Map
@@ -78,6 +78,11 @@ function renderTicketInList(ticketData) {
         `R$ ${receiveAmount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 
         'Gratuito';
     
+    // Determinar qual função usar nos botões baseado no tipo de ingresso
+    const isTemporary = ticketData.isTemporary !== false; // Se não especificado, assume temporário
+    const editFunction = isTemporary ? 'editTemporaryTicket' : 'editTicket';
+    const removeFunction = isTemporary ? 'removeTemporaryTicket' : 'removeTicket';
+    
     ticketItem.innerHTML = `
         <div class="ticket-header">
             <div class="ticket-title">
@@ -88,8 +93,8 @@ function renderTicketInList(ticketData) {
                 ${ticketData.loteInfo ? `<span class="ticket-lote-info" style="font-size: 11px; color: #666; margin-left: 10px;">${ticketData.loteInfo.nome}</span>` : ''}
             </div>
             <div class="ticket-actions">
-                <button class="btn-icon" onClick="editTemporaryTicket('${ticketData.id}')" title="Editar">✏️</button>
-                <button class="btn-icon" onClick="removeTemporaryTicket('${ticketData.id}')" title="Remover">🗑️</button>
+                <button class="btn-icon" onClick="${editFunction}('${ticketData.id}')" title="Editar">✏️</button>
+                <button class="btn-icon" onClick="${removeFunction}('${ticketData.id}')" title="Remover">🗑️</button>
             </div>
         </div>
         <div class="ticket-details">

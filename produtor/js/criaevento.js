@@ -1955,185 +1955,80 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             
             // Restaurar ingressos
             if (data.tickets && data.tickets.length > 0) {
-                console.log('Restaurando ingressos:', data.tickets.length);
+                console.log('📋 Restaurando ingressos usando MESMA rotina das atualizações:', data.tickets.length);
+                
                 // Limpar lista atual
                 const ticketList = document.getElementById('ticketList');
                 if (ticketList) ticketList.innerHTML = '';
                 
-                // Restaurar cada ingresso usando as fun��es de cria��o
+                // Restaurar cada ingresso usando a MESMA FUNÇÃO das atualizações
                 data.tickets.forEach((ticket, index) => {
-                    // Recriar o elemento do ingresso
-                    const ticketId = ticket.id || `ticket_${Date.now()}_${index}`;
-                    const ticketItem = document.createElement('div');
-                    ticketItem.className = 'ticket-item';
-                    ticketItem.dataset.ticketId = ticketId;
-                    ticketItem.dataset.ticketType = ticket.tipo || ticket.type;
-                    ticketItem.dataset.loteId = ticket.loteId;
+                    console.log(`🎫 Restaurando ingresso ${index + 1}:`, ticket);
                     
-                    // Salvar dados completos
-                    ticketItem.ticketData = ticket;
+                    // Mapear dados para os parâmetros que addTicketToList() espera
+                    const type = ticket.tipo || ticket.type || 'paid';
+                    const title = ticket.titulo || ticket.title || '';
+                    const quantity = parseInt(ticket.quantidade || ticket.quantity) || 100;
+                    const price = type === 'paid' ? 
+                        `R$ ${(parseFloat(ticket.preco || ticket.price) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 
+                        'Gratuito';
+                    const loteId = ticket.loteId || '';
+                    const description = ticket.descricao || ticket.description || '';
+                    const saleStart = ticket.inicio_venda || ticket.saleStart || '';
+                    const saleEnd = ticket.fim_venda || ticket.saleEnd || '';
+                    const minQuantity = parseInt(ticket.limite_min || ticket.minQuantity) || 1;
+                    const maxQuantity = parseInt(ticket.limite_max || ticket.maxQuantity) || 5;
                     
-                    // Criar HTML baseado no tipo
-                    if (ticket.tipo === 'combo' || ticket.type === 'combo') {
-                        const totalIngressos = (ticket.items || ticket.comboItems || []).length;
-                        ticketItem.innerHTML = `
-                            <div class="ticket-header">
-                                <div class="ticket-info">
-                                    <div class="ticket-name" style="color: #00C2FF;">${ticket.titulo || ticket.title}</div>
-                                    <div class="ticket-details">
-                                        <span class="ticket-detail-item">
-                                            <span class="ticket-detail-label">Combo com ${totalIngressos} ingressos</span>
-                                        </span>
-                                        <span class="ticket-detail-item">
-                                            <span class="ticket-detail-label">Quantidade:</span>
-                                            <span class="ticket-detail-value">${ticket.quantidade || ticket.quantity}</span>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="ticket-pricing">
-                                    <div class="ticket-price-item">
-                                        <span class="ticket-price-label">Valor do combo:</span>
-                                        <span class="ticket-buyer-price">R$ ${(parseFloat(ticket.preco) || parseFloat(ticket.price) || 0).toFixed(2).replace('.', ',')}</span>
-                                    </div>
-                                </div>
-                                <div class="ticket-actions">
-                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">??</button>
-                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">???</button>
-                                </div>
-                            </div>
-                        `;
-                    } else if (ticket.tipo === 'gratuito' || ticket.tipo === 'free' || ticket.type === 'free') {
-                        ticketItem.innerHTML = `
-                            <div class="ticket-header">
-                                <div class="ticket-info">
-                                    <div class="ticket-name">${ticket.titulo || ticket.title}</div>
-                                    <div class="ticket-details">
-                                        <span class="ticket-detail-item">
-                                            <span class="ticket-detail-label">Quantidade:</span>
-                                            <span class="ticket-detail-value">${ticket.quantidade || ticket.quantity}</span>
-                                        </span>
-                                        <span class="ticket-detail-item">
-                                            <span class="ticket-detail-label">Lote:</span>
-                                            <span class="ticket-detail-value">Lote ${ticket.loteId ? 'definido' : 'n�o definido'}</span>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="ticket-pricing">
-                                    <div class="ticket-price-item">
-                                        <span class="ticket-price-label">Valor:</span>
-                                        <span class="ticket-buyer-price">Gratuito</span>
-                                    </div>
-                                </div>
-                                <div class="ticket-actions">
-                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">??</button>
-                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">???</button>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        // Ingresso pago
-                        const preco = parseFloat(ticket.preco) || parseFloat(ticket.price) || 0;
-                        const valorComprador = ticket.taxaServico ? preco + (ticket.taxaPlataforma || 0) : preco;
-                        const valorReceber = ticket.valorReceber || preco;
+                    // USAR A MESMA FUNÇÃO que as atualizações usam!
+                    if (typeof addTicketToList === 'function') {
+                        addTicketToList(type, title, quantity, price, loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
                         
-                        ticketItem.innerHTML = `
-                            <div class="ticket-header">
-                                <div class="ticket-info">
-                                    <div class="ticket-name">${ticket.titulo || ticket.title}</div>
-                                    <div class="ticket-details">
-                                        <span class="ticket-detail-item">
-                                            <span class="ticket-detail-label">Quantidade:</span>
-                                            <span class="ticket-detail-value">${ticket.quantidade || ticket.quantity}</span>
-                                        </span>
-                                        <span class="ticket-detail-item">
-                                            <span class="ticket-detail-label">Lote:</span>
-                                            <span class="ticket-detail-value">Lote ${ticket.loteId ? 'definido' : 'n�o definido'}</span>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="ticket-pricing">
-                                    <div class="ticket-price-item">
-                                        <span class="ticket-price-label">Valor para o comprador:</span>
-                                        <span class="ticket-buyer-price">R$ ${valorComprador.toFixed(2).replace('.', ',')}</span>
-                                    </div>
-                                    <div class="ticket-price-item">
-                                        <span class="ticket-price-label">Voc� recebe:</span>
-                                        <span class="ticket-receive-amount">R$ ${valorReceber.toFixed(2).replace('.', ',')}</span>
-                                    </div>
-                                </div>
-                                <div class="ticket-actions">
-                                    <button class="btn-icon" onclick="editTicket('${ticketId}')" title="Editar">??</button>
-                                    <button class="btn-icon delete" onclick="removeTicket('${ticketId}')" title="Excluir">???</button>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    ticketList.appendChild(ticketItem);
-                });
-            }
-            
-            // Restaurar ingressos completos se existirem
-            if (data.ingressosCompletos && window.restaurarIngressosCompletos) {
-                setTimeout(() => window.restaurarIngressosCompletos(data.ingressosCompletos), 300);
-            }
-            
-            // Restaurar ingressos da etapa 6
-            if (data.ingressos && data.ingressos.length > 0) {
-                console.log('Restaurando ingressos salvos:', data.ingressos);
-                setTimeout(() => {
-                    data.ingressos.forEach(ticket => {
-                        // Criar o ingresso baseado no tipo
-                        if (ticket.tipo === 'gratuito') {
-                            if (window.createFreeTicket) {
-                                window.createFreeTicket();
-                            }
-                        } else if (ticket.tipo === 'combo' && ticket.comboData) {
-                            if (window.createComboTicket) {
-                                // Criar combo com os dados salvos
-                                window.comboItems = ticket.comboData;
-                                window.createComboTicket();
-                            }
-                        } else {
-                            if (window.createPaidTicket) {
-                                window.createPaidTicket();
-                            }
-                        }
-                        
-                        // Aguardar um pouco e preencher os dados
-                        setTimeout(() => {
-                            const allTickets = document.querySelectorAll('.ticket-item');
-                            const lastTicket = allTickets[allTickets.length - 1];
+                        // Após adicionar, corrigir o ID para usar o ID real se disponível
+                        const elementos = document.querySelectorAll('.ticket-item');
+                        const ultimoElemento = elementos[elementos.length - 1];
+                        if (ultimoElemento && ticket.id) {
+                            // Corrigir dataset para usar ID real
+                            ultimoElemento.dataset.ticketId = ticket.id;
                             
-                            if (lastTicket) {
-                                // Armazenar dados no elemento
-                                lastTicket.ticketData = ticket;
-                                lastTicket.dataset.ticketId = ticket.id;
-                                lastTicket.dataset.ticketType = ticket.tipo;
-                                lastTicket.dataset.loteId = ticket.loteId || '';
-                                
-                                // Atualizar visualiza��o
-                                const nameElement = lastTicket.querySelector('.ticket-name');
-                                if (nameElement) nameElement.textContent = ticket.titulo;
-                                
-                                const priceElement = lastTicket.querySelector('.ticket-buyer-price');
-                                if (priceElement) priceElement.textContent = `R$ ${ticket.preco.toFixed(2).replace('.', ',')}`;
-                                
-                                const quantityElement = lastTicket.querySelector('.ticket-detail-value');
-                                if (quantityElement) quantityElement.textContent = ticket.quantidade;
-                                
-                                // Se for combo, atualizar a lista de itens
-                                if (ticket.tipo === 'combo' && ticket.comboData) {
-                                    window.comboItems = ticket.comboData;
-                                    if (window.updateComboItemsList) {
-                                        window.updateComboItemsList();
-                                    }
-                                }
+                            // Corrigir botões para usar ID real
+                            const editBtn = ultimoElemento.querySelector('button[onclick*="editTicket"]');
+                            const removeBtn = ultimoElemento.querySelector('button[onclick*="removeTicket"]');
+                            if (editBtn) {
+                                editBtn.setAttribute('onclick', `editTicket(${ticket.id})`);
                             }
-                        }, 200);
-                    });
-                }, 500);
+                            if (removeBtn) {
+                                removeBtn.setAttribute('onclick', `removeTicket(${ticket.id})`);
+                            }
+                            
+                            // Armazenar dados completos do banco no elemento
+                            ultimoElemento.ticketData = {
+                                ...ticket,
+                                id: ticket.id,
+                                type: type,
+                                title: title,
+                                quantity: quantity,
+                                price: parseFloat(ticket.preco || ticket.price) || 0,
+                                description: description,
+                                saleStart: saleStart,
+                                saleEnd: saleEnd,
+                                minQuantity: minQuantity,
+                                maxQuantity: maxQuantity,
+                                loteId: loteId,
+                                isFromDatabase: true
+                            };
+                        }
+                    } else {
+                        console.error('❌ Função addTicketToList não encontrada');
+                    }
+                });
+                
+                console.log('✅ Ingressos restaurados usando MESMA rotina das atualizações');
             }
+            
+            // Restaurar ingressos completos se existirem - DESABILITADO: Usava renderização diferente
+            // if (data.ingressosCompletos && window.restaurarIngressosCompletos) {
+            //     setTimeout(() => window.restaurarIngressosCompletos(data.ingressosCompletos), 300);
+            // }
             
             // Ir para o step salvo
             if (data.currentStep && data.currentStep > 1) {
@@ -3039,32 +2934,51 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             
             const buyerPrice = type === 'paid' ? price : 'Gratuito';
             const cleanPrice = type === 'paid' ? parseFloat(price.replace(/[R$\s\.]/g, '').replace(',', '.')) : 0;
-            const tax = type === 'paid' ? cleanPrice * 0.1 : 0;
-            const receiveAmount = type === 'paid' ? cleanPrice * 0.9 : 0;
+            const tax = type === 'paid' ? cleanPrice * 0.08 : 0; // Corrigido para 8%
+            const receiveAmount = type === 'paid' ? cleanPrice - tax : 0; // Corrigido o cálculo
             
             const taxFormatted = type === 'paid' ? `R$ ${tax.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 0,00';
             const receiveFormatted = type === 'paid' ? `R$ ${receiveAmount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Gratuito';
             
+            // Obter informações do lote se existir
+            let loteInfo = null;
+            if (loteId) {
+                // Buscar nome do lote nos selects disponíveis
+                const selects = ['paidTicketLote', 'freeTicketLote', 'comboTicketLote'];
+                for (const selectId of selects) {
+                    const select = document.getElementById(selectId);
+                    if (select) {
+                        const option = select.querySelector(`option[value="${loteId}"]`);
+                        if (option && option.textContent !== 'Selecione um lote') {
+                            loteInfo = { nome: option.textContent };
+                            break;
+                        }
+                    }
+                }
+            }
+            
             ticketItem.innerHTML = `
                 <div class="ticket-header">
                     <div class="ticket-title">
-                        ${title}
+                        <span class="ticket-name">${title}</span>
                         <span class="ticket-type-badge ${type === 'paid' ? 'pago' : 'gratuito'}">
-                            ${type === 'paid' ? 'Pago' : 'Gratuito'}
+                            (${type === 'paid' ? 'Pago' : 'Gratuito'})
                         </span>
+                        ${loteInfo ? `<span class="ticket-lote-info" style="font-size: 11px; color: #666; margin-left: 10px;">${loteInfo.nome}</span>` : ''}
                     </div>
                     <div class="ticket-actions">
-                        <button class="btn-icon" onClick="editTicket(${ticketCount})" title="Editar">??</button>
-                        <button class="btn-icon" onClick="removeTicket(${ticketCount})" title="Remover">???</button>
+                        <button class="btn-icon" onClick="editTicket(${ticketCount})" title="Editar">✏️</button>
+                        <button class="btn-icon" onClick="removeTicket(${ticketCount})" title="Remover">🗑️</button>
                     </div>
                 </div>
                 <div class="ticket-details">
                     <div class="ticket-info">
                         <span>Quantidade: <strong>${quantity}</strong></span>
-                        ${type === 'paid' ? `<span>Pre�o: <strong>${buyerPrice}</strong></span>` : ''}
+                        ${type === 'paid' ? `<span>Preço: <strong class="ticket-buyer-price">${buyerPrice}</strong></span>` : '<span class="ticket-buyer-price">Gratuito</span>'}
                         <span>Taxa: <strong>${taxFormatted}</strong></span>
                         <span>Você recebe: <strong>${receiveFormatted}</strong></span>
                     </div>
+                    ${description ? `<div class="ticket-description" style="margin-top: 8px; font-size: 12px; color: #666;">${description}</div>` : ''}
                 </div>
             `;
             
