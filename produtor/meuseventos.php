@@ -1312,11 +1312,5 @@ try {
     <script src="/produtor/js/modal-rascunho.js"></script>
     <script src="/produtor/js/gerenciar-rascunhos.js"></script>
     
-    <!-- TESTE EMERGENCIAL -->
-    <script src="/produtor/js/teste-emergencial.js?v=<?php echo time(); ?>"></script>
-    
-    <!-- TESTE RÁPIDO DA CORREÇÃO -->
-    <script src="/produtor/js/teste-rapido.js?v=<?php echo time(); ?>"></script>
-    
 </body>
 </html>

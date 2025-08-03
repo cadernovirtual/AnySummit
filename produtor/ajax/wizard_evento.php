@@ -12,17 +12,16 @@
 // Iniciar buffer de output para evitar headers já enviados
 ob_start();
 
-// CORREÇÃO: Configurar para evitar warnings e garantir JSON limpo
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
+// Configurar relatório de erros para debug
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 require_once '../conm/conn.php';
 session_start();
 
-// Headers para JSON - APENAS UMA VEZ
+// Headers para CORS e JSON
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -38,7 +37,7 @@ $usuario_id = $_SESSION['usuarioid'];
 $contratante_id = $_SESSION['contratanteid'] ?? null;
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-// error_log("wizard_evento.php - Action: $action, Usuario: $usuario_id");
+error_log("wizard_evento.php - Action: $action, Usuario: $usuario_id");
 
 switch ($action) {
     case 'verificar_rascunho':
@@ -3256,7 +3255,4 @@ function renomearLotesSequencial($con, $usuario_id) {
 }
 
 mysqli_close($con);
-
-// CORREÇÃO: Limpar buffer e garantir JSON limpo
-ob_end_clean();
 ?>
