@@ -92,6 +92,10 @@ switch ($action) {
         excluirIngresso($con, $usuario_id);
         break;
         
+    case 'buscar_ingresso':
+        buscarIngresso($con, $usuario_id);
+        break;
+        
     case 'verificar_referencia_combo':
         verificarReferenciaCombo($con, $usuario_id);
         break;
@@ -138,6 +142,10 @@ switch ($action) {
     
     case 'salvar_limite_vendas':
         salvarLimiteVendas($con, $usuario_id);
+        break;
+    
+    case 'salvar_controle_limite':
+        salvarControleLimit($con, $usuario_id);
         break;
     
     case 'carregar_limite_vendas':
@@ -1393,6 +1401,48 @@ function excluirIngresso($con, $usuario_id) {
 }
 
 /**
+ * Buscar dados de um ingresso específico
+ */
+function buscarIngresso($con, $usuario_id) {
+    error_log("=== BUSCANDO INGRESSO ===");
+    
+    $evento_id = intval($_POST['evento_id']);
+    $ingresso_id = intval($_POST['ingresso_id']);
+    
+    error_log("Evento ID: $evento_id, Ingresso ID: $ingresso_id");
+    
+    // Verificar se evento pertence ao usuário
+    $sql = "SELECT id FROM eventos WHERE id = ? AND usuario_id = ?";
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "ii", $evento_id, $usuario_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (!mysqli_fetch_assoc($result)) {
+        echo json_encode(['erro' => 'Evento não encontrado']);
+        return;
+    }
+    
+    // Buscar ingresso
+    $sql = "SELECT * FROM ingressos WHERE id = ? AND evento_id = ?";
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "ii", $ingresso_id, $evento_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($ingresso = mysqli_fetch_assoc($result)) {
+        error_log("✅ Ingresso $ingresso_id encontrado");
+        echo json_encode([
+            'sucesso' => true,
+            'ingresso' => $ingresso
+        ]);
+    } else {
+        error_log("❌ Ingresso $ingresso_id não encontrado");
+        echo json_encode(['erro' => 'Ingresso não encontrado']);
+    }
+}
+
+/**
  * Verificar se ingresso está referenciado em combos
  */
 function verificarReferenciaCombo($con, $usuario_id) {
@@ -1961,6 +2011,64 @@ function carregarLimiteVendas($con, $usuario_id) {
         
     } catch (Exception $e) {
         error_log("Erro ao carregar limite de vendas: " . $e->getMessage());
+        echo json_encode(['erro' => 'Erro interno do servidor']);
+    }
+}
+
+/**
+ * Salvar apenas o controle de limite (sem valor do limite)
+ */
+function salvarControleLimit($con, $usuario_id) {
+    try {
+        $evento_id = intval($_POST['evento_id'] ?? 0);
+        $controlar_limite = intval($_POST['controlar_limite_vendas'] ?? 0);
+        
+        if (!$evento_id) {
+            echo json_encode(['erro' => 'ID do evento é obrigatório']);
+            return;
+        }
+        
+        // Verificar se o evento pertence ao usuário
+        if (!verificarPermissaoEvento($con, $evento_id, $usuario_id)) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para este evento']);
+            return;
+        }
+        
+        error_log("Salvando controle de limite: evento=$evento_id, controlar=$controlar_limite");
+        
+        // Verificar se a coluna existe
+        $result = $con->query("SHOW COLUMNS FROM eventos LIKE 'controlar_limite_vendas'");
+        if ($result->num_rows == 0) {
+            $con->query("ALTER TABLE eventos ADD COLUMN controlar_limite_vendas TINYINT(1) DEFAULT 0");
+            error_log("Coluna controlar_limite_vendas criada");
+        }
+        
+        $sql = "UPDATE eventos SET 
+                controlar_limite_vendas = ?, 
+                atualizado_em = NOW() 
+                WHERE id = ? AND usuario_id = ?";
+        
+        $stmt = $con->prepare($sql);
+        $stmt->bind_param("iii", $controlar_limite, $evento_id, $usuario_id);
+        
+        if ($stmt->execute()) {
+            if ($stmt->affected_rows > 0) {
+                error_log("✅ Controle de limite atualizado com sucesso");
+                echo json_encode(['sucesso' => true]);
+            } else {
+                error_log("⚠️ Nenhuma linha afetada");
+                echo json_encode(['erro' => 'Nenhuma alteração realizada']);
+            }
+        } else {
+            error_log("❌ Erro na query: " . $stmt->error);
+            echo json_encode(['erro' => 'Erro ao atualizar controle']);
+        }
+        
+        $stmt->close();
+        
+    } catch (Exception $e) {
+        error_log("Erro ao salvar controle de limite: " . $e->getMessage());
         echo json_encode(['erro' => 'Erro interno do servidor']);
     }
 }

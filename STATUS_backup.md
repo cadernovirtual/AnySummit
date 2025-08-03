@@ -1,57 +1,110 @@
 # Status da Sessão Atual
 
-## Tarefa em Andamento
-CORREÇÃO DOS 3 PROBLEMAS ESPECÍFICOS DA ETAPA 6
+## 🐛 INVESTIGAÇÃO DO PROBLEMA DOS RASCUNHOS
 
-## Problemas Identificados e Soluções
+### **PROBLEMA PERSISTENTE:**
+```
+🆕 Verificando rascunhos existentes...
+Erro ao verificar rascunho: SyntaxError: Unexpected end of JSON input
+```
 
-### ✅ PROBLEMA 1: Duplicação de lotes nos selects
-- **Causa**: Selects não eram limpos antes de nova população
-- **Solução**: Sobrescrita das funções para limpar completamente com `innerHTML = ''` antes de popular
+### **INVESTIGAÇÃO EM ANDAMENTO**
 
-### ✅ PROBLEMA 2: IDs temporários nos botões de edição/exclusão  
-- **Causa**: Sistema usava `ticket_${Date.now()}` em vez de IDs reais do banco
-- **Solução**: Sistema para atualizar IDs após salvamento no banco
+O problema dos rascunhos ainda persiste mesmo após as correções. Agora estou investigando com ferramentas específicas de debug.
 
-### ✅ PROBLEMA 3: Erro de conexão e duplicação no salvamento de combos
-- **Causa**: Warnings PHP sobre campos undefined + múltiplos salvamentos
-- **Soluções**:
-  - Flag `salvandoCombo` para prevenir salvamentos múltiplos
-  - Correção no PHP: `?? 0` para `taxa_plataforma` e `valor_receber`
-  - Parsing robusto do JSON ignorando warnings PHP
-  - Limpeza do formulário após sucesso
+#### **FERRAMENTAS DE DEBUG CRIADAS:**
 
-## Arquivos Modificados
-- `correcao-selects-lotes-etapa6.js` (EXISTENTE: 234 linhas - CORREÇÃO SELECTS)
-- `correcao-problemas-especificos-etapa6.js` (NOVO: 367 linhas - CORREÇÕES ESPECÍFICAS)
-- `teste-correcao-selects.js` (EXISTENTE: 151 linhas - SCRIPT DE TESTE)
-- `wizard_evento.php` (linhas 1291-1292: correção warnings PHP)
-- `novoevento.php` (linha ~2870: adicionado novo script)
+#### **1. DEBUG ESPECÍFICO PARA RASCUNHOS**
+**Arquivo**: `js/debug-rascunhos.js` (165 linhas)
 
-## Próximos Passos
-1. ✅ Testar se selects não duplicam mais ao reabrir modais
-2. ✅ Testar se botões de edição usam IDs reais após salvamento
-3. ✅ Testar se salvamento de combo não mostra mais erro de conexão
-4. ✅ Verificar se combo não é salvo múltiplas vezes
-5. ✅ Fazer commit das correções
+**Funcionalidades:**
+- ✅ **Intercepta APENAS** `action=verificar_rascunho`
+- ✅ **Análise detalhada** da resposta da API
+- ✅ **Limpeza automática** se houver contaminação
+- ✅ **Logs detalhados** de todo o processo
 
-## Funções de Teste Disponíveis
-- `window.testarSelects()` - Testa se selects estão populados
-- `window.testarModais()` - Abre modais e testa selects automaticamente
-- `window.verificarCorrecao()` - Verifica se correção está ativa
-- `window.debugCorrecoesEtapa6()` - Debug específico das novas correções
+**Funções disponíveis:**
+```javascript
+window.testarAPIRascunho()              // Testa API diretamente
+window.verificarContaminacaoRascunho()  // Verifica se há lixo no JSON
+```
 
-## Status Esperado Após Correções
-- ✅ Modais abrem sem duplicar lotes nos selects
-- ✅ Botões de edição/exclusão usam IDs reais do banco
-- ✅ Combos salvam sem erro e não duplicam
-- ✅ Warnings PHP eliminados
+#### **2. API DE TESTE ISOLADA**
+**Arquivo**: `ajax/teste_rascunho.php` (86 linhas)
 
-## Contexto Importante
-- **NÃO MEXER NA ETAPA 5**: Sistema de lotes MySQL está 100% funcional
-- **Função que funciona**: `window.carregarLotesDoBanco()` (Etapa 5)
-- **Problema específico**: Funções da Etapa 6 usavam cookies em vez de MySQL
-- **Commit anterior**: "etapa 5 - lotes direto no mysql - finalizada e funcional"
+**Funcionalidades:**
+- ✅ **Cópia isolada** da função `verificarRascunho`
+- ✅ **Buffer limpo** (`ob_start()` + `ob_clean()`)
+- ✅ **Error reporting desabilitado**
+- ✅ **Headers corretos** para JSON
 
-## Comando para Retomar
-Se necessário, continuar testando a correção e verificar se todos os 3 modais (pago, gratuito, combo) agora mostram a mesma lista de lotes do banco MySQL.
+#### **3. TESTE COMPARATIVO**
+**Arquivo**: `js/teste-api-rascunho.js` (115 linhas)
+
+**Funcionalidades:**
+- ✅ **Testa API original** (`wizard_evento.php`)
+- ✅ **Testa API isolada** (`teste_rascunho.php`)
+- ✅ **Compara resultados** para identificar diferenças
+- ✅ **Análise char-by-char** da resposta
+
+**Funções disponíveis:**
+```javascript
+window.testarAPIOriginal()  // Testa wizard_evento.php
+window.testarAPITeste()     // Testa teste_rascunho.php  
+window.compararAPIs()       // Compara ambas
+```
+
+### **POSICIONAMENTO DOS SCRIPTS**
+
+**Arquivo**: `meuseventos.php` (modificado)
+```html
+<script src="/produtor/js/modal-rascunho.js"></script>
+<script src="/produtor/js/gerenciar-rascunhos.js"></script>
+<script src="/produtor/js/debug-rascunhos.js"></script>
+<script src="/produtor/js/teste-api-rascunho.js"></script>
+```
+
+### **SUSPEITAS ATUAIS**
+
+#### **1. CONTAMINAÇÃO POR ERROR_LOG**
+- Apesar de termos removido `error_log()` das funções principais
+- Pode haver outros `error_log()` no código que afetam a resposta
+
+#### **2. BUFFER OUTPUT CONTAMINADO**
+- PHP pode estar enviando warnings, notices ou whitespace
+- `ob_start()` pode não estar funcionando corretamente
+
+#### **3. HEADERS DUPLICADOS**
+- Múltiplos `header('Content-Type: application/json')` 
+- Podem estar causando problemas na resposta
+
+#### **4. SESSÃO OU INCLUDE CONTAMINADO**
+- Arquivos incluídos podem estar gerando output
+- Sessão pode estar enviando dados extras
+
+### **PRÓXIMOS PASSOS**
+
+#### **1. EXECUTAR TESTES**
+- Abrir `meuseventos.php` no navegador
+- Verificar console para logs dos testes automáticos
+- Executar `compararAPIs()` manualmente se necessário
+
+#### **2. ANALISAR RESULTADOS**
+- Se API isolada funciona mas original não → problema no `wizard_evento.php`
+- Se ambas não funcionam → problema de sessão/login
+- Se ambas funcionam → problema no JavaScript
+
+#### **3. APLICAR CORREÇÃO DEFINITIVA**
+- Baseada nos resultados dos testes
+- Pode ser limpeza adicional do PHP
+- Ou interceptação específica mais robusta
+
+## 🔍 INVESTIGAÇÃO EM PROGRESSO
+
+**OBJETIVO:** Identificar exatamente o que está contaminando o JSON da API `verificar_rascunho`
+
+**FERRAMENTAS:** Debug scripts + API isolada + testes comparativos
+
+**STATUS:** ⏳ Aguardando resultados dos testes automáticos
+
+**Assim que executar os testes, teremos o diagnóstico exato do problema!** 🐛

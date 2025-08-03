@@ -7,6 +7,24 @@ error_log("Session ID: " . session_id());
 error_log("Usuario ID: " . ($_SESSION['usuarioid'] ?? 'não definido'));
 error_log("Session Data: " . print_r($_SESSION, true));
 
+// Verificar se está editando um evento existente
+$evento_id = isset($_GET['evento_id']) ? intval($_GET['evento_id']) : 0;
+$dados_evento = null;
+
+if ($evento_id > 0) {
+    $usuario_id = $_SESSION['usuarioid'];
+    $sql_evento = "SELECT controlar_limite_vendas, limite_vendas FROM eventos WHERE id = ? AND usuario_id = ?";
+    $stmt = mysqli_prepare($con, $sql_evento);
+    mysqli_stmt_bind_param($stmt, "ii", $evento_id, $usuario_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($row = mysqli_fetch_assoc($result)) {
+        $dados_evento = $row;
+        error_log("Dados do evento carregados: " . print_r($dados_evento, true));
+    }
+}
+
 // Buscar categorias ativas
 $sql_categorias = "SELECT id, nome FROM categorias_evento WHERE ativo = 1 ORDER BY nome";
 $result_categorias = mysqli_query($con, $sql_categorias);
@@ -772,7 +790,16 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             usuarioNome: <?php echo json_encode($_SESSION['usuario_nome'] ?? ''); ?>,
             usuarioEmail: <?php echo json_encode($_SESSION['usuario_email'] ?? ''); ?>
         };
+        
+        // PROBLEMA 1: Dados do evento para carregar estado do checkbox
+        window.dadosEvento = {
+            id: <?php echo json_encode($evento_id); ?>,
+            controlarLimiteVendas: <?php echo json_encode($dados_evento ? intval($dados_evento['controlar_limite_vendas']) : 0); ?>,
+            limiteVendas: <?php echo json_encode($dados_evento ? intval($dados_evento['limite_vendas']) : 0); ?>
+        };
+        
         console.log('📋 Dados da sessão:', window.sessionData);
+        console.log('🎯 Dados do evento:', window.dadosEvento);
     </script>
 </head>
 <body>
@@ -2882,6 +2909,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- CONTROLE LIMITE DE VENDAS - EXCLUSÃO AUTOMÁTICA -->
 <script src="js/controle-limite-vendas.js?v=<?php echo time(); ?>"></script>
 
+<!-- CORREÇÕES DEFINITIVAS - LIMITE DE VENDAS (SUBSTITUI funcoes-limite-vendas-fix.js) -->
+<script src="js/correcoes-definitivas-limite-vendas.js?v=<?php echo time(); ?>"></script>
+
 <!-- DEBUG FUNÇÕES DISPONÍVEIS - PARA DIAGNÓSTICO -->
 <script src="js/debug-funcoes-disponiveis.js?v=<?php echo time(); ?>"></script>
 
@@ -2960,5 +2990,6 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 
 <!-- CORREÇÃO DEFINITIVA - IDS REAIS DO MYSQL (TEMPORARIAMENTE DESABILITADA) -->
 <!-- <script src="js/correcao-ids-mysql.js?v=<?php echo time(); ?>"></script> -->
+
 </body>
 </html>
