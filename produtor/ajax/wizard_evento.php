@@ -89,6 +89,10 @@ switch ($action) {
         salvarIngressoIndividual($con, $usuario_id);
         break;
         
+    case 'salvar_ingresso_direto':
+        salvarIngressoDireto($con, $usuario_id);
+        break;
+        
     case 'excluir_ingresso':
         excluirIngresso($con, $usuario_id);
         break;
@@ -1361,6 +1365,96 @@ function salvarIngressoIndividual($con, $usuario_id) {
             error_log("❌ Erro ao criar ingresso: " . mysqli_error($con));
             echo json_encode(['erro' => 'Erro ao criar ingresso']);
         }
+    }
+}
+
+/**
+ * Salvar ingresso direto (aceita dados via POST diretamente)
+ */
+function salvarIngressoDireto($con, $usuario_id) {
+    error_log("=== SALVANDO INGRESSO DIRETO ===");
+    
+    $evento_id = intval($_POST['evento_id']);
+    
+    error_log("Evento ID: $evento_id");
+    error_log("Dados POST: " . print_r($_POST, true));
+    
+    // Verificar se evento pertence ao usuário
+    $sql = "SELECT id FROM eventos WHERE id = ? AND usuario_id = ?";
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "ii", $evento_id, $usuario_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (!mysqli_fetch_assoc($result)) {
+        echo json_encode(['erro' => 'Evento não encontrado']);
+        return;
+    }
+    
+    // Extrair dados do POST
+    $tipo = $_POST['tipo'] ?? 'pago';
+    $titulo = $_POST['titulo'] ?? $_POST['ticketName'] ?? '';
+    $descricao = $_POST['descricao'] ?? $_POST['description'] ?? '';
+    $quantidade = intval($_POST['quantidade_total'] ?? $_POST['quantity'] ?? 100);
+    $preco = floatval($_POST['preco'] ?? $_POST['price'] ?? 0);
+    $taxa_plataforma = floatval($_POST['taxa_plataforma'] ?? 0);
+    $valor_receber = floatval($_POST['valor_receber'] ?? $preco);
+    $inicio_venda = $_POST['inicio_venda'] ?? $_POST['saleStart'] ?? null;
+    $fim_venda = $_POST['fim_venda'] ?? $_POST['saleEnd'] ?? null;
+    $limite_min = intval($_POST['limite_min'] ?? $_POST['minQuantity'] ?? 1);
+    $limite_max = intval($_POST['limite_max'] ?? $_POST['maxQuantity'] ?? 5);
+    $lote_id = !empty($_POST['lote_id']) ? intval($_POST['lote_id']) : null;
+    
+    // Validações básicas
+    if (empty($titulo)) {
+        echo json_encode(['erro' => 'Título é obrigatório']);
+        return;
+    }
+    
+    if ($quantidade < 1) {
+        echo json_encode(['erro' => 'Quantidade deve ser maior que zero']);
+        return;
+    }
+    
+    // Tratar conteudo_combo
+    $conteudo_combo = $_POST['conteudo_combo'] ?? null;
+    if (!empty($conteudo_combo) && $conteudo_combo !== '') {
+        // Se é um JSON string, manter como está
+        if (is_string($conteudo_combo) && (strpos($conteudo_combo, '[') === 0 || strpos($conteudo_combo, '{') === 0)) {
+            // Já é JSON string
+        } else {
+            $conteudo_combo = null;
+        }
+    } else {
+        $conteudo_combo = null;
+    }
+    
+    // INSERT
+    $sql = "INSERT INTO ingressos 
+            (evento_id, tipo, titulo, descricao, quantidade_total, preco, 
+             taxa_plataforma, valor_receber, inicio_venda, fim_venda, 
+             limite_min, limite_max, lote_id, conteudo_combo, criado_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "isssidddssiiis",
+        $evento_id, $tipo, $titulo, $descricao, $quantidade,
+        $preco, $taxa_plataforma, $valor_receber,
+        $inicio_venda, $fim_venda, $limite_min, $limite_max,
+        $lote_id, $conteudo_combo
+    );
+    
+    if (mysqli_stmt_execute($stmt)) {
+        $ingresso_id = mysqli_insert_id($con);
+        error_log("✅ Ingresso $ingresso_id criado com sucesso via método direto");
+        echo json_encode([
+            'sucesso' => true, 
+            'ingresso_id' => $ingresso_id,
+            'mensagem' => 'Ingresso criado com sucesso'
+        ]);
+    } else {
+        error_log("❌ Erro ao criar ingresso via método direto: " . mysqli_error($con));
+        echo json_encode(['erro' => 'Erro ao criar ingresso: ' . mysqli_error($con)]);
     }
 }
 
