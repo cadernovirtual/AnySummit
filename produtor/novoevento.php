@@ -2991,5 +2991,8 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- CORREÇÃO DEFINITIVA - IDS REAIS DO MYSQL (TEMPORARIAMENTE DESABILITADA) -->
 <!-- <script src="js/correcao-ids-mysql.js?v=<?php echo time(); ?>"></script> -->
 
+<!-- CORREÇÃO FINAL - INGRESSOS E FUNÇÕES (CARREGADO POR ÚLTIMO) -->
+<script src="js/correcao-final-ingressos.js?v=<?php echo time(); ?>"></script>
+
 </body>
 </html>

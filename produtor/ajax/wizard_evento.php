@@ -9,19 +9,20 @@
  * - Publicação final do evento
  */
 
-// Iniciar buffer de output para evitar headers já enviados
+// CORREÇÃO: Iniciar buffer de output limpo
 ob_start();
 
-// Configurar relatório de erros para debug
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// CORREÇÃO: Desativar error reporting para evitar contaminar JSON
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 
 require_once '../conm/conn.php';
 session_start();
 
-// Headers para CORS e JSON
+// CORREÇÃO: Headers limpos para JSON
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -3363,4 +3364,7 @@ function renomearLotesSequencial($con, $usuario_id) {
 }
 
 mysqli_close($con);
+
+// CORREÇÃO: Limpar output buffer e enviar apenas JSON limpo
+ob_end_flush();
 ?>
