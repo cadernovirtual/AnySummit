@@ -12,7 +12,7 @@ setTimeout(() => {
         // Coletar dados com IDs CORRETOS
         const titulo = document.getElementById('paidTicketTitle')?.value?.trim();
         const descricao = document.getElementById('paidTicketDescription')?.value?.trim() || '';
-        const quantidade = parseInt(document.getElementById('paidTicketQuantity')?.value) || 100;
+        const quantidade = parseInt(document.getElementById('paidTicketQuantity')?.value) || 0;
         const precoRaw = document.getElementById('paidTicketPrice')?.value || '';
         
         // Converter preço corretamente
@@ -108,7 +108,7 @@ setTimeout(() => {
                 
                 const titulo = document.getElementById('paidTicketTitle')?.value?.trim();
                 const descricao = document.getElementById('paidTicketDescription')?.value?.trim() || '';
-                const quantidade = parseInt(document.getElementById('paidTicketQuantity')?.value) || 100;
+                const quantidade = parseInt(document.getElementById('paidTicketQuantity')?.value) || 0;
                 const precoRaw = document.getElementById('paidTicketPrice')?.value || '';
                 const preco = parseFloat(precoRaw.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                 const loteSelect = document.getElementById('paidTicketLote');

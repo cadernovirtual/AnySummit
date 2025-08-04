@@ -919,7 +919,6 @@ function criarElementoComboPersonalizado(ingresso) {
         </div>
         <div class="ticket-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
             <div class="ticket-info">
-                <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
                 <div style="margin-bottom: 6px;"><strong>Preço:</strong> R$ ${precoReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 <div style="margin-bottom: 6px;"><strong>Taxa:</strong> R$ ${taxaReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
@@ -1051,7 +1050,7 @@ function criarElementoManualNormal(ingresso) {
                 <span class="ticket-price">${price}</span>
             </div>
             <div class="ticket-details">
-                <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
+                ${(ingresso.quantidade_total > 0) ? `<div style="margin-bottom: 6px;"><strong>Quantidade Limite a Venda:</strong> ${ingresso.quantidade_total}</div>` : ''}
                 <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
             </div>
         </div>

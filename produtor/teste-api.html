@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste API wizard_evento.php</title>
+</head>
+<body>
+    <h1>Teste de Conectividade da API</h1>
+    <div id="resultado"></div>
+    
+    <script>
+    // Testar se a API está respondendo
+    fetch('ajax/wizard_evento.php', {
+        method: 'POST',
+        body: new FormData()
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('resultado').innerHTML = `
+            <h2>Resposta da API:</h2>
+            <pre>${data}</pre>
+        `;
+        console.log('API Response:', data);
+    })
+    .catch(error => {
+        document.getElementById('resultado').innerHTML = `
+            <h2>Erro:</h2>
+            <pre>${error}</pre>
+        `;
+        console.error('Erro:', error);
+    });
+    </script>
+</body>
+</html>

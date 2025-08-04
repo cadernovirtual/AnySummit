@@ -301,7 +301,7 @@ function criarElementoTicket(ingresso) {
         // Detalhes simples para gratuito
         detalhesHtml = `
             <div class="ticket-details" style="margin-top: 10px;">
-                <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
+                ${(ingresso.quantidade_total > 0) ? `<div style="margin-bottom: 6px;"><strong>Quantidade Limite a Venda:</strong> ${ingresso.quantidade_total}</div>` : ''}
                 <div style="margin-bottom: 6px;"><strong>Preço:</strong> ${precoTexto}</div>
                 <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
             </div>
@@ -384,7 +384,6 @@ function criarElementoTicket(ingresso) {
         detalhesHtml = `
             <div class="ticket-details" style="margin-top: 10px; display: flex; gap: 20px;">
                 <div class="info-column" style="flex: 1;">
-                    <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
                     <div style="margin-bottom: 6px;"><strong>Preço:</strong> ${precoTexto}</div>
                     <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
                 </div>
@@ -403,7 +402,7 @@ function criarElementoTicket(ingresso) {
         // Detalhes simples para pago
         detalhesHtml = `
             <div class="ticket-details" style="margin-top: 10px;">
-                <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
+                ${(ingresso.quantidade_total > 0) ? `<div style="margin-bottom: 6px;"><strong>Quantidade Limite a Venda:</strong> ${ingresso.quantidade_total}</div>` : ''}
                 <div style="margin-bottom: 6px;"><strong>Preço:</strong> ${precoTexto}</div>
                 <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
             </div>

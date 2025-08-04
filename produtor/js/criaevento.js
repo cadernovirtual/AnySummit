@@ -1968,7 +1968,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                     // Mapear dados para os parâmetros que addTicketToList() espera
                     const type = ticket.tipo || ticket.type || 'paid';
                     const title = ticket.titulo || ticket.title || '';
-                    const quantity = parseInt(ticket.quantidade || ticket.quantity) || 100;
+                    const quantity = parseInt(ticket.quantidade || ticket.quantity) || 0;
                     const price = type === 'paid' ? 
                         `R$ ${(parseFloat(ticket.preco || ticket.price) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 
                         'Gratuito';
@@ -2973,7 +2973,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 </div>
                 <div class="ticket-details">
                     <div class="ticket-info">
-                        <span>Quantidade: <strong>${quantity}</strong></span>
+                        ${type === 'combo' ? '' : (quantity > 0 ? `<span>Quantidade Limite a Venda: <strong>${quantity}</strong></span>` : '')}
                         ${type === 'paid' ? `<span>Preço: <strong class="ticket-buyer-price">${buyerPrice}</strong></span>` : '<span class="ticket-buyer-price">Gratuito</span>'}
                         <span>Taxa: <strong>${taxFormatted}</strong></span>
                         <span>Você recebe: <strong>${receiveFormatted}</strong></span>
@@ -3342,7 +3342,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                     {
                         tipo: 'gratuito',
                         titulo: 'Ingresso Teste',
-                        quantidade_total: 100,
+                        quantidade_total: 0,
                         valor_comprador: 0,
                         valor_receber: 0,
                         ativo: true,
@@ -3683,31 +3683,99 @@ console.log('🎯 criaevento.js iniciando carregamento...');
 
 // ==================== FUNÇÕES DE EDIÇÃO DE INGRESSOS ====================
 
-// Fun��o para editar ingresso existente
-function editTicket(ticketId) {
+// Função para editar ingresso existente - HÍBRIDA (preserva funcionamento + consulta banco para checkbox)
+async function editTicket(ticketId) {
     console.log('🔧 Editando ingresso:', ticketId);
     
-    // Buscar os dados do ingresso na lista atual
+    // MÉTODO ORIGINAL: Buscar os dados do ingresso na lista atual (para preservar funcionalidade)
     const ticketElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
     if (!ticketElement) {
-        alert('Ingresso n�o encontrado');
+        alert('Ingresso não encontrado');
         return;
     }
     
-    // Extrair dados do elemento
+    // Extrair dados do elemento (método original)
     const ticketData = extractTicketDataFromElement(ticketElement);
     
-    // Verificar se � pago ou gratuito
+    // Abrir modal com dados do elemento (método original)
     if (ticketData.tipo === 'pago') {
         populateEditPaidTicketModal(ticketData);
         document.getElementById('editPaidTicketModal').style.display = 'flex';
-    } else {
+        
+        // ADICIONAR: Consulta ao banco APENAS para configurar checkbox corretamente
+        await configurarCheckboxComDadosDoBanco(ticketId, 'limitEditPaidQuantityCheck', 'editPaidTicketQuantity');
+        
+    } else if (ticketData.tipo === 'gratuito') {
         populateEditFreeTicketModal(ticketData);
         document.getElementById('editFreeTicketModal').style.display = 'flex';
+        
+        // ADICIONAR: Consulta ao banco APENAS para configurar checkbox corretamente
+        await configurarCheckboxComDadosDoBanco(ticketId, 'limitEditFreeQuantityCheck', 'editFreeTicketQuantity');
+        
+    } else if (ticketData.tipo === 'combo') {
+        // Para combos, usar as funções existentes sem alteração
+        if (typeof populateEditComboModal === 'function') {
+            populateEditComboModal(ticketData);
+            document.getElementById('editComboTicketModal').style.display = 'flex';
+        }
     }
 }
 
-// Fun��o para extrair dados do ingresso do elemento HTML
+// NOVA FUNÇÃO: Configurar checkbox com dados do banco (sem afetar resto do modal)
+async function configurarCheckboxComDadosDoBanco(ticketId, checkboxId, campoId) {
+    try {
+        console.log(`🎯 Configurando checkbox ${checkboxId} com dados do banco...`);
+        
+        const eventoId = new URLSearchParams(window.location.search).get('evento_id');
+        if (!eventoId) {
+            console.warn('⚠️ evento_id não encontrado na URL');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'buscar_ingresso');
+        formData.append('ingresso_id', ticketId);
+        formData.append('evento_id', eventoId);
+        
+        const response = await fetch('ajax/wizard_evento.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.sucesso && data.ingresso) {
+            const quantidade = parseInt(data.ingresso.quantidade_total) || 0;
+            const checkbox = document.getElementById(checkboxId);
+            const campo = document.getElementById(campoId);
+            
+            if (checkbox && campo) {
+                console.log(`📊 Quantidade real do banco: ${quantidade}`);
+                
+                if (quantidade > 0) {
+                    checkbox.checked = true;
+                    campo.value = quantidade;
+                    console.log(`✅ Checkbox ${checkboxId} marcado - quantidade: ${quantidade}`);
+                } else {
+                    checkbox.checked = false;
+                    campo.value = '0';
+                    console.log(`✅ Checkbox ${checkboxId} desmarcado - quantidade: ${quantidade}`);
+                }
+                
+                // Disparar evento para atualizar interface
+                checkbox.dispatchEvent(new Event('change'));
+            }
+        } else {
+            console.warn('⚠️ Não foi possível obter dados do banco para checkbox:', data.erro);
+        }
+        
+    } catch (error) {
+        console.warn('⚠️ Erro ao configurar checkbox com dados do banco:', error);
+        // Não quebrar o funcionamento - apenas logar o erro
+    }
+}
+
+// Função para extrair dados do ingresso do elemento HTML
 function extractTicketDataFromElement(element) {
     const titleElement = element.querySelector('.ticket-title');
     const title = titleElement ? titleElement.textContent.trim() : '';
@@ -3718,12 +3786,17 @@ function extractTicketDataFromElement(element) {
         tipo = 'pago';
     }
     
+    // CORREÇÃO: Extrair lote_id do dataset do elemento
+    const loteId = element.dataset.loteId || element.getAttribute('data-lote-id') || null;
+    console.log(`🏷️ Extraindo lote_id do elemento: ${loteId}`);
+    
     return {
         id: element.dataset.ticketId,
-        titulo: title.replace(/\s+(Gratuito|Pago|C�digo)$/, ''),
+        titulo: title.replace(/\s+(Gratuito|Pago|Código)$/, ''),
         tipo: tipo,
-        // Estes dados vir�o do backend quando implementarmos a busca AJAX
-        quantidade_total: 100,
+        lote_id: loteId, // ADICIONADO: lote_id extraído do elemento
+        // Estes dados virão do backend quando implementarmos a busca AJAX
+        quantidade_total: 0,
         preco: 0,
         inicio_venda: new Date().toISOString().slice(0, 16),
         fim_venda: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
@@ -3818,6 +3891,13 @@ function populateEditPaidTicketModal(ticketData) {
     } else {
         console.error('❌ editPaidTicketDescription n�o encontrado');
     }
+    
+    // CORREÇÃO: Preencher lote_id se disponível
+    const editPaidTicketLote = document.getElementById('editPaidTicketLote');
+    if (editPaidTicketLote && ticketData.lote_id) {
+        editPaidTicketLote.value = ticketData.lote_id;
+        console.log('✅ editPaidTicketLote definido:', ticketData.lote_id);
+    }
 }
 
 // Fun��o para popular modal de edi��o de ingresso gratuito
@@ -3888,6 +3968,13 @@ function populateEditFreeTicketModal(ticketData) {
     } else {
         console.error('❌ editFreeTicketDescription n�o encontrado');
     }
+    
+    // CORREÇÃO: Preencher lote_id se disponível
+    const editFreeTicketLote = document.getElementById('editFreeTicketLote');
+    if (editFreeTicketLote && ticketData.lote_id) {
+        editFreeTicketLote.value = ticketData.lote_id;
+        console.log('✅ editFreeTicketLote definido:', ticketData.lote_id);
+    }
 }
 
 // Fun��o para atualizar ingresso pago
@@ -3901,7 +3988,8 @@ function updatePaidTicket() {
         fim_venda: document.getElementById('editPaidSaleEnd').value,
         limite_min: parseInt(document.getElementById('editPaidMinQuantity').value) || 1,
         limite_max: parseInt(document.getElementById('editPaidMaxQuantity').value) || 5,
-        descricao: document.getElementById('editPaidTicketDescription').value
+        descricao: document.getElementById('editPaidTicketDescription').value,
+        lote_id: document.getElementById('editPaidTicketLote')?.value || null // CORREÇÃO: Incluir lote_id
     };
     
     // Valida�ões
@@ -3930,7 +4018,8 @@ function updateFreeTicket() {
         fim_venda: document.getElementById('editFreeSaleEnd').value,
         limite_min: parseInt(document.getElementById('editFreeMinLimit').value) || 1,
         limite_max: parseInt(document.getElementById('editFreeMaxLimit').value) || 5,
-        descricao: document.getElementById('editFreeTicketDescription').value
+        descricao: document.getElementById('editFreeTicketDescription').value,
+        lote_id: document.getElementById('editFreeTicketLote')?.value || null // CORREÇÃO: Incluir lote_id
     };
     
     // Valida�ões
@@ -3969,7 +4058,7 @@ function updateTicketInList(ticketData) {
     if (detailsElement) {
         let detailsHTML = `
             <div class="ticket-info">
-                <span>Quantidade: <strong>${ticketData.quantidade_total}</strong></span>
+                ${ticketData.tipo === 'combo' ? '' : (ticketData.quantidade_total > 0 ? `<span>Quantidade Limite a Venda: <strong>${ticketData.quantidade_total}</strong></span>` : '')}
         `;
         
         if (ticketData.preco > 0) {
@@ -4234,7 +4323,6 @@ function updateComboInList(comboData) {
     if (detailsElement) {
         let detailsHTML = `
             <div class="ticket-info">
-                <span>Quantidade: <strong>${comboData.quantidade_total}</strong></span>
                 <span>Pre�o: <strong>R$ ${comboData.preco.toFixed(2).replace('.', ',')}</strong></span>
                 <span>Vendas: ${formatDateForDisplay(comboData.inicio_venda)} - ${formatDateForDisplay(comboData.fim_venda)}</span>
             </div>

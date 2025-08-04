@@ -3126,5 +3126,11 @@ function toggleEditFreeQuantityFields() {
 }
 </script>
 
+<!-- CORREÇÃO DEFINITIVA PARA QUANTIDADES - COMBOS=0, CHECKBOX PARA OUTROS -->
+<script src="js/correcao-definitiva-quantidades.js?v=<?php echo time(); ?>"></script>
+
+<!-- CONSULTA DIRETA AO BANCO PARA MODAIS DE EDIÇÃO -->
+<script src="js/modal-consulta-banco.js?v=<?php echo time(); ?>"></script>
+
 </body>
 </html>

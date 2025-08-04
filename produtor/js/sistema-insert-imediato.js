@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return {
             titulo: document.getElementById('paidTicketTitle')?.value || '',
             descricao: document.getElementById('paidTicketDescription')?.value || '',
-            quantidade_total: parseInt(document.getElementById('paidTicketQuantity')?.value) || 100,
+            quantidade_total: parseInt(document.getElementById('paidTicketQuantity')?.value) || 0,
             preco: parseFloat(document.getElementById('paidTicketPrice')?.value) || 0,
             inicio_venda: document.getElementById('paidSaleStart')?.value || null,
             fim_venda: document.getElementById('paidSaleEnd')?.value || null,
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return {
             titulo: document.getElementById('freeTicketTitle')?.value || '',
             descricao: document.getElementById('freeTicketDescription')?.value || '',
-            quantidade_total: parseInt(document.getElementById('freeTicketQuantity')?.value) || 100,
+            quantidade_total: parseInt(document.getElementById('freeTicketQuantity')?.value) || 0,
             preco: 0,
             inicio_venda: document.getElementById('freeSaleStart')?.value || null,
             fim_venda: document.getElementById('freeSaleEnd')?.value || null,
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return {
             titulo: document.getElementById('comboTicketTitle')?.value || '',
             descricao: document.getElementById('comboTicketDescription')?.value || '',
-            quantidade_total: parseInt(document.getElementById('comboTicketQuantity')?.value) || 100,
+            quantidade_total: parseInt(document.getElementById('comboTicketQuantity')?.value) || 0,
             preco: parseFloat(document.getElementById('comboTicketPrice')?.value) || 0,
             inicio_venda: document.getElementById('comboSaleStart')?.value || null,
             fim_venda: document.getElementById('comboSaleEnd')?.value || null,
