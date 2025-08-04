@@ -81,14 +81,53 @@ try {
     }
     
     // Buscar dados do ingresso para log
-    $sql_ingresso = "SELECT titulo FROM ingressos WHERE id = ?";
+    $sql_ingresso = "SELECT titulo, evento_id FROM ingressos WHERE id = ?";
     $stmt_ingresso = $conn->prepare($sql_ingresso);
     $stmt_ingresso->bind_param("i", $ticket_id);
     $stmt_ingresso->execute();
     $result_ingresso = $stmt_ingresso->get_result();
     $ingresso_data = $result_ingresso->fetch_assoc();
     
-    // Remover ingresso
+    if (!$ingresso_data) {
+        echo json_encode(['success' => false, 'message' => 'Ingresso não encontrado']);
+        exit;
+    }
+    
+    $evento_id = $ingresso_data['evento_id'];
+    
+    // VALIDAÇÃO: Verificar se ingresso está referenciado em algum combo
+    $sql_combos = "SELECT id, titulo, conteudo_combo FROM ingressos 
+                   WHERE evento_id = ? AND tipo = 'combo' AND conteudo_combo IS NOT NULL";
+    $stmt_combos = $conn->prepare($sql_combos);
+    $stmt_combos->bind_param("i", $evento_id);
+    $stmt_combos->execute();
+    $result_combos = $stmt_combos->get_result();
+    
+    $combos_que_referenciam = [];
+    
+    while ($combo = $result_combos->fetch_assoc()) {
+        $conteudo_combo = json_decode($combo['conteudo_combo'], true);
+        
+        if (is_array($conteudo_combo)) {
+            foreach ($conteudo_combo as $item) {
+                if (isset($item['ingresso_id']) && $item['ingresso_id'] == $ticket_id) {
+                    $combos_que_referenciam[] = $combo['titulo'];
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Se está referenciado em combos, bloquear exclusão
+    if (!empty($combos_que_referenciam)) {
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Esse ingresso não pode ser excluído pois está inserido em um Combo: ' . implode(', ', $combos_que_referenciam)
+        ]);
+        exit;
+    }
+    
+    // Se não está em combos, pode excluir
     $sql_delete = "DELETE FROM ingressos WHERE id = ?";
     $stmt_delete = $conn->prepare($sql_delete);
     $stmt_delete->bind_param("i", $ticket_id);

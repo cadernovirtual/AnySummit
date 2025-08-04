@@ -1577,7 +1577,15 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Venda</h4>
                     
-                    <div class="form-group">
+                    <!-- Checkbox para controlar limitação de quantidade -->
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; font-size: 12px; gap: 8px;">
+                            <input type="checkbox" id="limitPaidQuantityCheck" onchange="togglePaidQuantityFields()" style="margin: 0;">
+                            Limitar a Quantidade de Vendas desse ingresso
+                        </label>
+                    </div>
+                    
+                    <div class="form-group" id="paidQuantityContainer" style="display: none;">
                         <label style="font-size: 12px;">Quantidade <span class="required">*</span></label>
                         <input type="number" id="paidTicketQuantity" placeholder="Ex. 100" min="1" oninput="calcularQuantidadeLote()">
                     </div>
@@ -1680,7 +1688,15 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Venda</h4>
                     
-                    <div class="form-group">
+                    <!-- Checkbox para controlar limitação de quantidade -->
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; font-size: 12px; gap: 8px;">
+                            <input type="checkbox" id="limitFreeQuantityCheck" onchange="toggleFreeQuantityFields()" style="margin: 0;">
+                            Limitar a Quantidade de Vendas desse ingresso
+                        </label>
+                    </div>
+                    
+                    <div class="form-group" id="freeQuantityContainer" style="display: none;">
                         <label style="font-size: 12px;">Quantidade <span class="required">*</span></label>
                         <input type="number" id="freeTicketQuantity" placeholder="Ex. 100" min="1" oninput="calcularQuantidadeLoteFree()">
                     </div>
@@ -1863,10 +1879,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Venda</h4>
                     
-                    <div class="form-group">
-                        <label style="font-size: 12px;">Quantidade de Combos <span class="required">*</span></label>
-                        <input type="number" id="comboTicketQuantity" placeholder="Ex. 50" min="1" oninput="calcularQuantidadeLoteCombo()">
-                    </div>
+                    <!-- Campo de quantidade removido - sempre será salvo como 0 -->
                     
                     <div class="form-group" style="margin-top: 15px;">
                         <label id="comboTicketPeriodTitle" style="font-size: 11px; font-weight: 600;">Período das vendas</label>
@@ -2158,7 +2171,15 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Venda</h4>
                     
-                    <div class="form-group">
+                    <!-- Checkbox para controlar limitação de quantidade -->
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; font-size: 12px; gap: 8px;">
+                            <input type="checkbox" id="limitEditPaidQuantityCheck" onchange="toggleEditPaidQuantityFields()" style="margin: 0;">
+                            Limitar a Quantidade de Vendas desse ingresso
+                        </label>
+                    </div>
+                    
+                    <div class="form-group" id="editPaidQuantityContainer" style="display: none;">
                         <label style="font-size: 12px;">Quantidade <span class="required">*</span></label>
                         <input type="number" id="editPaidTicketQuantity" placeholder="Ex. 100" min="1" oninput="calcularQuantidadeLoteEdit()">
                     </div>
@@ -2227,10 +2248,19 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                     <input type="text" id="editFreeTicketTitle" placeholder="Ingresso único, Meia-Entrada, VIP, etc." maxlength="45">
                     <small style="color: #8B95A7;">45 caracteres restantes</small>
                 </div>
+                
+                <!-- Checkbox para controlar limitação de quantidade -->
                 <div class="form-group">
-                    <label>Quantidade <span class="required">*</span></label>
-                    <input type="number" id="editFreeTicketQuantity" placeholder="Ex. 100" min="1">
+                    <label style="display: flex; align-items: center; font-size: 12px; gap: 8px;">
+                        <input type="checkbox" id="limitEditFreeQuantityCheck" onchange="toggleEditFreeQuantityFields()" style="margin: 0;">
+                        Limitar a Quantidade de Vendas desse ingresso
+                    </label>
                 </div>
+            </div>
+            
+            <div class="form-group" id="editFreeQuantityContainer" style="display: none;">
+                <label>Quantidade <span class="required">*</span></label>
+                <input type="number" id="editFreeTicketQuantity" placeholder="Ex. 100" min="1">
             </div>
             
             <div class="form-group full-width">
@@ -2300,7 +2330,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 
     <!-- Modal para Editar Combo -->
     <div class="modal-overlay" id="editComboTicketModal">
-        <div class="modal" style="max-width: 1000px; width: 90%;">
+        <div class="modal" style="max-width: 1200px; width: 95%;">
             <div class="modal-header">
                 <div class="modal-title">Editar combo de tipos de ingresso</div>
                 <button class="modal-close" onClick="closeModal('editComboTicketModal')">&times;</button>
@@ -2378,10 +2408,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Venda</h4>
                     
-                    <div class="form-group">
-                        <label style="font-size: 12px;">Quantidade de Combos <span class="required">*</span></label>
-                        <input type="number" id="editComboQuantity" placeholder="Ex. 50" min="1" oninput="calcularQuantidadeLoteEditCombo()">
-                    </div>
+                    <!-- Campo de quantidade removido - sempre será salvo como 0 -->
                     
                     <div class="form-group" style="margin-top: 15px;">
                         <label id="editComboTicketPeriodTitle" style="font-size: 11px; font-weight: 600;">Período das vendas</label>
@@ -2867,6 +2894,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <!-- SISTEMA INGRESSOS ETAPA 6 CORRIGIDO - DESABILITADO: ERRO JSON -->
 <!-- <script src="js/sistema-ingressos-etapa6-corrigido.js?v=<?php echo time(); ?>"></script> -->
 
+<!-- DEFINIÇÃO DA FUNÇÃO editComboTicket -->
+<script src="js/editComboTicket-definition.js?v=<?php echo time(); ?>"></script>
+
 <!-- SISTEMA EDIÇÃO COMBOS CORRIGIDO -->
 <script src="js/sistema-edicao-combos-corrigido.js?v=<?php echo time(); ?>"></script>
 
@@ -2993,6 +3023,108 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 
 <!-- VERSÃO FINAL COMPLETA COMBOS - INGRESSOS (SUBSTITUI TODOS OS ANTERIORES) -->
 <script src="js/versao-final-completa-combos.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO ESPECÍFICA PARA BOTÕES DE COMBO -->
+<script src="js/combo-button-fix.js?v=<?php echo time(); ?>"></script>
+
+<!-- FIX ESPECÍFICO PARA PROBLEMAS DOS COMBOS - DEVE SER O ÚLTIMO -->
+<script src="js/combo-fix-especifico.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÕES FINAIS - RENDERIZAÇÃO + CÁLCULOS + updateComboTicket -->
+<script src="js/combo-correcoes-finais.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÕES ADICIONAIS - CACHE LOTES + ATUALIZAÇÃO PÓS-EDIÇÃO -->
+<script src="js/combo-correcoes-adicionais.js?v=<?php echo time(); ?>"></script>
+
+<!-- RENDERIZAÇÃO DE TICKET APÓS UPDATE - FOCO ÚNICO -->
+<script src="js/renderizacao-ticket-update.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO UPDATEFREETICKET - CHAMADA REAL PARA API -->
+<script src="js/correcao-updatefreeticket.js?v=<?php echo time(); ?>"></script>
+
+<!-- VALIDAÇÃO DE EXCLUSÃO DE INGRESSOS EM COMBOS -->
+<script src="js/validacao-exclusao-ingressos.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO ESPECÍFICA PARA DUPLICAÇÃO DE LOTES AO CANCELAR MODAL -->
+<script src="js/correcao-duplicacao-lotes.js?v=<?php echo time(); ?>"></script>
+
+<!-- SISTEMA DE CHECKBOX PARA CONTROLE DE QUANTIDADE DE INGRESSOS -->
+<script src="js/checkbox-quantidade-sistema.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO ESPECÍFICA PARA DUPLICAÇÃO DE LOTES NO MODAL PAGO -->
+<script src="js/correcao-duplicacao-lotes-pago.js?v=<?php echo time(); ?>"></script>
+
+<!-- ARQUIVO DE TESTE E DEBUG PARA CHECKBOXES -->
+<script src="js/teste-checkbox-debug.js?v=<?php echo time(); ?>"></script>
+
+<!-- FUNÇÕES DE CONTROLE DE QUANTIDADE -->
+<script>
+// Funções para controlar exibição dos campos de quantidade
+
+// Modal de criação ingresso pago
+function togglePaidQuantityFields() {
+    const checkbox = document.getElementById('limitPaidQuantityCheck');
+    const container = document.getElementById('paidQuantityContainer');
+    const quantityField = document.getElementById('paidTicketQuantity');
+    
+    if (checkbox.checked) {
+        container.style.display = 'block';
+        quantityField.required = true;
+    } else {
+        container.style.display = 'none';
+        quantityField.required = false;
+        quantityField.value = 0; // SEMPRE zerar quando desmarcado
+    }
+}
+
+// Modal de criação ingresso gratuito
+function toggleFreeQuantityFields() {
+    const checkbox = document.getElementById('limitFreeQuantityCheck');
+    const container = document.getElementById('freeQuantityContainer');
+    const quantityField = document.getElementById('freeTicketQuantity');
+    
+    if (checkbox.checked) {
+        container.style.display = 'block';
+        quantityField.required = true;
+    } else {
+        container.style.display = 'none';
+        quantityField.required = false;
+        quantityField.value = 0; // SEMPRE zerar quando desmarcado
+    }
+}
+
+// Modal de edição ingresso pago
+function toggleEditPaidQuantityFields() {
+    const checkbox = document.getElementById('limitEditPaidQuantityCheck');
+    const container = document.getElementById('editPaidQuantityContainer');
+    const quantityField = document.getElementById('editPaidTicketQuantity');
+    
+    if (checkbox.checked) {
+        container.style.display = 'block';
+        quantityField.required = true;
+    } else {
+        container.style.display = 'none';
+        quantityField.required = false;
+        quantityField.value = 0; // SEMPRE zerar quando desmarcado
+    }
+}
+
+// Modal de edição ingresso gratuito
+function toggleEditFreeQuantityFields() {
+    const checkbox = document.getElementById('limitEditFreeQuantityCheck');
+    const container = document.getElementById('editFreeQuantityContainer');
+    const quantityField = document.getElementById('editFreeTicketQuantity');
+    
+    if (checkbox.checked) {
+        container.style.display = 'block';
+        quantityField.required = true;
+    } else {
+        container.style.display = 'none';
+        quantityField.required = false;
+        quantityField.value = 0; // SEMPRE zerar quando desmarcado
+    }
+}
+</script>
 
 </body>
 </html>

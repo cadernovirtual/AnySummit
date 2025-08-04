@@ -1357,7 +1357,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 document.getElementById('paidTicketTitle').classList.add('error-field');
                 hasError = true;
             }
-            if (!quantity) {
+            if (!quantity && quantity !== '0') { // Permitir quantidade 0 para checkbox desmarcado
                 document.getElementById('paidTicketQuantity').classList.add('error-field');
                 hasError = true;
             }
@@ -1477,7 +1477,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             const maxQuantity = document.getElementById('freeMaxQuantity')?.value || 5;
             const loteId = document.getElementById('freeTicketLote')?.value;
 
-            if (!title || !quantity) {
+            if (!title || (!quantity && quantity !== '0')) { // Permitir quantidade 0 para checkbox desmarcado
                 alert('Por favor, preencha todos os campos obrigat�rios.');
                 return;
             }
@@ -3485,7 +3485,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 document.getElementById('comboTicketTitle').classList.add('error-field');
                 hasError = true;
             }
-            if (!quantity) {
+            if (!quantity && quantity !== '0') { // Permitir quantidade 0 para checkbox desmarcado
                 document.getElementById('comboTicketQuantity').classList.add('error-field');
                 hasError = true;
             }

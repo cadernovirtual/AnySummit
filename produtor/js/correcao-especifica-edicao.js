@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (!dadosIngresso.quantidade_total || dadosIngresso.quantidade_total <= 0) {
+            if (!dadosIngresso.quantidade_total && dadosIngresso.quantidade_total !== 0) { // Permitir quantidade 0
                 alert('Digite uma quantidade válida');
                 return;
             }

@@ -45,7 +45,7 @@ setTimeout(() => {
             erros.push('Título está vazio');
         }
         
-        if (!quantidade || quantidade <= 0) {
+        if (quantidade < 0) { // Permitir quantidade 0 para checkbox desmarcado
             erros.push(`Quantidade inválida: ${quantidade}`);
         }
         
@@ -120,7 +120,7 @@ setTimeout(() => {
                 
                 console.log('📊 Dados:', { titulo, quantidade, preco, loteId });
                 
-                if (!titulo || quantidade <= 0 || preco <= 0 || !loteId) {
+                if (!titulo || quantidade < 0 || preco <= 0 || !loteId) { // Permitir quantidade 0
                     console.error('❌ Validação falhou');
                     return null;
                 }

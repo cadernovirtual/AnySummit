@@ -191,7 +191,6 @@
 }
 
 /* Mensagens de status */
-.lote-readonly-msg,
 .datas-readonly-msg {
     display: flex;
     align-items: center;
@@ -200,15 +199,6 @@
     border-radius: 6px;
     font-size: 13px;
     margin: 8px 0;
-}
-
-.lote-readonly-msg {
-    background: #e3f2fd;
-    border: 1px solid #2196f3;
-    color: #1976d2;
-}
-
-.datas-readonly-msg {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
     color: #856404;

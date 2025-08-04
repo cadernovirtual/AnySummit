@@ -160,6 +160,10 @@ switch ($action) {
     case 'carregar_lotes_quantidade':
         carregarLotesQuantidade($con, $usuario_id);
         break;
+        
+    case 'carregar_todos_lotes':
+        carregarTodosLotes($con, $usuario_id);
+        break;
     
     case 'criar_lote_data':
         criarLoteData($con, $usuario_id);
@@ -729,7 +733,7 @@ function salvarEtapa6($con, $evento_id) {
         $tipo = $ingresso['tipo'] ?? 'paid';
         $titulo = $ingresso['titulo'] ?? 'Ingresso sem título';
         $descricao = $ingresso['descricao'] ?? '';
-        $quantidade = intval($ingresso['quantidade'] ?? 100);
+        $quantidade = intval($ingresso['quantidade'] ?? 0); // Removido fallback 100
         $preco = floatval($ingresso['preco'] ?? 0);
         $taxa_plataforma = floatval($ingresso['taxa_plataforma'] ?? 0);
         $valor_receber = floatval($ingresso['valor_receber'] ?? $preco);
@@ -1395,7 +1399,7 @@ function salvarIngressoDireto($con, $usuario_id) {
     $tipo = $_POST['tipo'] ?? 'pago';
     $titulo = $_POST['titulo'] ?? $_POST['ticketName'] ?? '';
     $descricao = $_POST['descricao'] ?? $_POST['description'] ?? '';
-    $quantidade = intval($_POST['quantidade_total'] ?? $_POST['quantity'] ?? 100);
+    $quantidade = intval($_POST['quantidade_total'] ?? $_POST['quantity'] ?? 0); // Removido fallback 100
     $preco = floatval($_POST['preco'] ?? $_POST['price'] ?? 0);
     $taxa_plataforma = floatval($_POST['taxa_plataforma'] ?? 0);
     $valor_receber = floatval($_POST['valor_receber'] ?? $preco);
@@ -1411,10 +1415,11 @@ function salvarIngressoDireto($con, $usuario_id) {
         return;
     }
     
-    if ($quantidade < 1) {
-        echo json_encode(['erro' => 'Quantidade deve ser maior que zero']);
-        return;
-    }
+    // Validação removida - permitindo quantidade zero para ingressos com checkbox desmarcado
+    // if ($quantidade < 1) {
+    //     echo json_encode(['erro' => 'Quantidade deve ser maior que zero']);
+    //     return;
+    // }
     
     // Tratar conteudo_combo
     $conteudo_combo = $_POST['conteudo_combo'] ?? null;
@@ -1481,17 +1486,49 @@ function excluirIngresso($con, $usuario_id) {
         return;
     }
     
-    // Excluir ingresso
+    // VALIDAÇÃO: Verificar se ingresso está referenciado em algum combo
+    $sql_combos = "SELECT id, titulo, conteudo_combo FROM ingressos 
+                   WHERE evento_id = ? AND tipo = 'combo' AND conteudo_combo IS NOT NULL";
+    $stmt_combos = mysqli_prepare($con, $sql_combos);
+    mysqli_stmt_bind_param($stmt_combos, "i", $evento_id);
+    mysqli_stmt_execute($stmt_combos);
+    $result_combos = mysqli_stmt_get_result($stmt_combos);
+    
+    $combos_que_referenciam = [];
+    
+    while ($combo = mysqli_fetch_assoc($result_combos)) {
+        $conteudo_combo = json_decode($combo['conteudo_combo'], true);
+        
+        if (is_array($conteudo_combo)) {
+            foreach ($conteudo_combo as $item) {
+                if (isset($item['ingresso_id']) && $item['ingresso_id'] == $ingresso_id) {
+                    $combos_que_referenciam[] = $combo['titulo'];
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Se está referenciado em combos, bloquear exclusão
+    if (!empty($combos_que_referenciam)) {
+        error_log("❌ Exclusão bloqueada - ingresso $ingresso_id está em combos: " . implode(', ', $combos_que_referenciam));
+        echo json_encode([
+            'erro' => 'Esse ingresso não pode ser excluído pois está inserido em um Combo: ' . implode(', ', $combos_que_referenciam)
+        ]);
+        return;
+    }
+    
+    // Se não está em combos, pode excluir
     $sql = "DELETE FROM ingressos WHERE id = ? AND evento_id = ?";
     $stmt = mysqli_prepare($con, $sql);
     mysqli_stmt_bind_param($stmt, "ii", $ingresso_id, $evento_id);
     
     if (mysqli_stmt_execute($stmt)) {
         error_log("✅ Ingresso $ingresso_id excluído com sucesso");
-        echo json_encode(['sucesso' => true]);
+        echo json_encode(['sucesso' => true, 'mensagem' => 'Ingresso excluído com sucesso']);
     } else {
         error_log("❌ Erro ao excluir ingresso: " . mysqli_error($con));
-        echo json_encode(['erro' => 'Erro ao excluir ingresso']);
+        echo json_encode(['erro' => 'Erro ao excluir ingresso: ' . mysqli_error($con)]);
     }
 }
 
@@ -3454,6 +3491,69 @@ function renomearLotesSequencial($con, $usuario_id) {
     } catch (Exception $e) {
         error_log("❌ Exception na renomeação sequencial: " . $e->getMessage());
         echo json_encode(['sucesso' => false, 'erro' => 'Erro interno do servidor']);
+    }
+}
+
+/**
+ * Carrega TODOS os lotes (por data e por quantidade/percentual)
+ */
+function carregarTodosLotes($con, $usuario_id) {
+    try {
+        $evento_id = intval($_POST['evento_id'] ?? 0);
+        
+        if (!$evento_id) {
+            echo json_encode(['erro' => 'ID do evento é obrigatório']);
+            return;
+        }
+        
+        // Verificar permissão
+        if (!verificarPermissaoEvento($con, $evento_id, $usuario_id)) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para este evento']);
+            return;
+        }
+        
+        error_log("Carregando TODOS os lotes do evento $evento_id");
+        
+        // Buscar TODOS os lotes (por data, percentual e quantidade)
+        $sql = "SELECT id, nome, tipo, data_inicio, data_fim, percentual_venda, divulgar_criterio 
+                FROM lotes 
+                WHERE evento_id = ?
+                ORDER BY 
+                    CASE 
+                        WHEN tipo = 'data' THEN data_inicio 
+                        ELSE CONCAT('9999-12-31 ', LPAD(percentual_venda, 3, '0'))
+                    END ASC, id ASC";
+        
+        $stmt = $con->prepare($sql);
+        $stmt->bind_param("i", $evento_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $lotes = [];
+        while ($row = $result->fetch_assoc()) {
+            $lotes[] = [
+                'id' => $row['id'],
+                'nome' => $row['nome'],
+                'tipo' => $row['tipo'],
+                'data_inicio' => $row['data_inicio'],
+                'data_fim' => $row['data_fim'], 
+                'percentual_venda' => intval($row['percentual_venda']),
+                'divulgar_criterio' => (bool)$row['divulgar_criterio']
+            ];
+        }
+        
+        error_log("✅ Encontrados " . count($lotes) . " lotes (todos os tipos)");
+        
+        echo json_encode([
+            'sucesso' => true,
+            'lotes' => $lotes,
+            'total' => count($lotes)
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("❌ Erro ao carregar todos os lotes: " . $e->getMessage());
+        echo json_encode(['erro' => $e->getMessage()]);
     }
 }
 

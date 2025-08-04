@@ -115,8 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('limite_min:', limite_min);
         console.log('limite_max:', limite_max);
         
-        // Validação mínima (a original já passou)
-        if (!titulo || quantidade <= 0 || preco <= 0) {
+        // Validação mínima - permitir quantidade 0 para checkbox desmarcado
+        if (!titulo || quantidade < 0 || preco <= 0) { // Mudou <= para < para permitir quantidade 0
             console.warn('=== VALIDAÇÃO FALHOU ===');
             console.warn('titulo válido?', !!titulo, titulo);
             console.warn('quantidade > 0?', quantidade > 0, quantidade);
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const limite_min = parseInt(document.getElementById('freeMinLimit')?.value) || 1;
         const limite_max = parseInt(document.getElementById('freeMaxLimit')?.value) || 5;
         
-        if (!titulo || quantidade <= 0) {
+        if (!titulo || quantidade < 0) { // Permitir quantidade 0 para checkbox desmarcado
             console.warn('⚠️ Dados inválidos gratuito após validação - não salvando');
             return null;
         }

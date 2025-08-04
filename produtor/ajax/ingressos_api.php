@@ -92,7 +92,7 @@ function criarIngresso($con, $usuario_id) {
     $tipo = $_POST['tipo'] ?? 'pago';
     $titulo = $_POST['titulo'] ?? $_POST['ticketName'] ?? '';
     $descricao = $_POST['descricao'] ?? $_POST['description'] ?? '';
-    $quantidade = intval($_POST['quantidade_total'] ?? $_POST['quantity'] ?? 100);
+    $quantidade = intval($_POST['quantidade_total'] ?? $_POST['quantity'] ?? 0); // Removido fallback 100
     $preco = floatval($_POST['preco'] ?? $_POST['price'] ?? 0);
     $taxa_plataforma = floatval($_POST['taxa_plataforma'] ?? 0);
     $valor_receber = floatval($_POST['valor_receber'] ?? $preco);
@@ -108,10 +108,11 @@ function criarIngresso($con, $usuario_id) {
         return;
     }
     
-    if ($quantidade < 1) {
-        echo json_encode(['erro' => 'Quantidade deve ser maior que zero']);
-        return;
-    }
+    // Validação removida - permitindo quantidade zero para ingressos com checkbox desmarcado
+    // if ($quantidade < 1) {
+    //     echo json_encode(['erro' => 'Quantidade deve ser maior que zero']);
+    //     return;
+    // }
     
     // Tratar combo
     $conteudo_combo = $_POST['conteudo_combo'] ?? null;
@@ -180,15 +181,49 @@ function excluirIngresso($con, $usuario_id) {
         return;
     }
     
-    // Excluir ingresso
+    // VALIDAÇÃO: Verificar se ingresso está referenciado em algum combo
+    $sql_combos = "SELECT id, titulo, conteudo_combo FROM ingressos 
+                   WHERE evento_id = ? AND tipo = 'combo' AND conteudo_combo IS NOT NULL";
+    $stmt_combos = mysqli_prepare($con, $sql_combos);
+    mysqli_stmt_bind_param($stmt_combos, "i", $evento_id);
+    mysqli_stmt_execute($stmt_combos);
+    $result_combos = mysqli_stmt_get_result($stmt_combos);
+    
+    $combos_que_referenciam = [];
+    
+    while ($combo = mysqli_fetch_assoc($result_combos)) {
+        $conteudo_combo = json_decode($combo['conteudo_combo'], true);
+        
+        if (is_array($conteudo_combo)) {
+            foreach ($conteudo_combo as $item) {
+                if (isset($item['ingresso_id']) && $item['ingresso_id'] == $ingresso_id) {
+                    $combos_que_referenciam[] = $combo['titulo'];
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Se está referenciado em combos, bloquear exclusão
+    if (!empty($combos_que_referenciam)) {
+        echo json_encode([
+            'erro' => 'Esse ingresso não pode ser excluído pois está inserido em um Combo: ' . implode(', ', $combos_que_referenciam)
+        ]);
+        return;
+    }
+    
+    // Se não está em combos, pode excluir
     $sql = "DELETE FROM ingressos WHERE id = ? AND evento_id = ?";
     $stmt = mysqli_prepare($con, $sql);
     mysqli_stmt_bind_param($stmt, "ii", $ingresso_id, $evento_id);
     
     if (mysqli_stmt_execute($stmt)) {
-        echo json_encode(['sucesso' => true]);
+        echo json_encode([
+            'sucesso' => true,
+            'mensagem' => 'Ingresso excluído com sucesso'
+        ]);
     } else {
-        echo json_encode(['erro' => 'Erro ao excluir ingresso']);
+        echo json_encode(['erro' => 'Erro ao excluir ingresso: ' . mysqli_error($con)]);
     }
 }
 
@@ -262,6 +297,93 @@ function listarIngressos($con, $usuario_id) {
         'sucesso' => true,
         'ingressos' => $ingressos
     ]);
+}
+
+/**
+ * Editar ingresso existente
+ */
+function editarIngresso($con, $usuario_id) {
+    $evento_id = intval($_POST['evento_id']);
+    $ingresso_id = intval($_POST['ingresso_id']);
+    
+    // Verificar se evento pertence ao usuário
+    $sql = "SELECT id FROM eventos WHERE id = ? AND usuario_id = ?";
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "ii", $evento_id, $usuario_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (!mysqli_fetch_assoc($result)) {
+        echo json_encode(['erro' => 'Evento não encontrado']);
+        return;
+    }
+    
+    // Verificar se ingresso existe e pertence ao evento
+    $sql = "SELECT id FROM ingressos WHERE id = ? AND evento_id = ?";
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "ii", $ingresso_id, $evento_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (!mysqli_fetch_assoc($result)) {
+        echo json_encode(['erro' => 'Ingresso não encontrado']);
+        return;
+    }
+    
+    // Extrair dados para atualização
+    $titulo = $_POST['titulo'] ?? '';
+    $descricao = $_POST['descricao'] ?? '';
+    $quantidade = intval($_POST['quantidade_total'] ?? 0); // Removido fallback 100
+    $preco = floatval($_POST['preco'] ?? 0);
+    $tipo = $_POST['tipo'] ?? 'gratuito';
+    $lote_id = intval($_POST['lote_id'] ?? 0);
+    $limite_min = intval($_POST['limite_min'] ?? 1);
+    $limite_max = intval($_POST['limite_max'] ?? 5);
+    $inicio_venda = $_POST['inicio_venda'] ?? null;
+    $fim_venda = $_POST['fim_venda'] ?? null;
+    
+    // Para ingressos gratuitos, garantir preço zero
+    if ($tipo === 'gratuito') {
+        $preco = 0;
+    }
+    
+    // Calcular valor a receber (pode ser customizado depois)
+    $valor_receber = $preco; // Para gratuitos será 0
+    
+    // SQL para atualizar
+    $sql = "UPDATE ingressos SET 
+                titulo = ?,
+                descricao = ?,
+                quantidade_total = ?,
+                preco = ?,
+                tipo = ?,
+                lote_id = ?,
+                limite_min = ?,
+                limite_max = ?,
+                inicio_venda = ?,
+                fim_venda = ?,
+                valor_receber = ?,
+                atualizado_em = NOW()
+            WHERE id = ? AND evento_id = ?";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "ssiisiiissiii", 
+        $titulo, $descricao, $quantidade, $preco, $tipo, 
+        $lote_id, $limite_min, $limite_max, $inicio_venda, $fim_venda,
+        $valor_receber, $ingresso_id, $evento_id
+    );
+    
+    if (mysqli_stmt_execute($stmt)) {
+        echo json_encode([
+            'sucesso' => true,
+            'mensagem' => 'Ingresso atualizado com sucesso',
+            'ingresso_id' => $ingresso_id
+        ]);
+    } else {
+        echo json_encode([
+            'erro' => 'Erro ao atualizar ingresso: ' . mysqli_error($con)
+        ]);
+    }
 }
 
 mysqli_close($con);

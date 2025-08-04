@@ -1,12 +1,12 @@
 /**
- * VERSÃO FINAL COMPLETA - RENDERIZAÇÃO E EDIÇÃO DE COMBOS
+ * VERSÃO FINAL DEFINITIVA - RENDERIZAÇÃO CORRETA DE COMBOS
  * Correções específicas:
- * 1. Renderização em 2 colunas com itens na direita
- * 2. Nomes dos ingressos em vez de IDs nos itens do combo
- * 3. Carregamento correto de valores e conteudo_combo na edição
+ * 1. Renderização correta de combos com valores e itens
+ * 2. Substituição completa da função addTicketToList para combos
+ * 3. Exibição dos itens do combo (nome + quantidade)
  */
 
-console.log('🔧 VERSAO-FINAL-COMPLETA-COMBOS.JS carregando...');
+console.log('🔧 VERSAO-FINAL-DEFINITIVA-RENDERIZACAO-INGRESSOS.JS carregando...');
 
 /**
  * MAPEAMENTO COMPLETO DOS IDs DOS MODAIS
@@ -56,19 +56,16 @@ const MODAL_FIELDS = {
         lote_id: '#editFreeTicketLote'
     },
     editComboTicketModal: {
-        titulo: '#editComboTicketTitle',
-        descricao: '#editComboTicketDescription',
-        quantidade_total: '#editComboTicketQuantity',
-        preco: '#editComboTicketPrice',
-        taxa_plataforma: '#editComboTicketTaxaValor',
-        valor_receber: '#editComboTicketReceive',
+        titulo: '#editComboTitle',
+        descricao: '#editComboDescription',
+        quantidade_total: '#editComboQuantity',
+        preco: '#editComboPrice',
+        taxa_plataforma: '#editComboTaxaValor',
+        valor_receber: '#editComboReceive',
         lote_id: '#editComboTicketLote',
         conteudo_combo: null
     }
 };
-
-// Cache para nomes dos ingressos
-let ingressosNomes = {};
 
 /**
  * BLOQUEIO TOTAL DE FUNÇÕES CONFLITANTES
@@ -78,9 +75,9 @@ function bloquearFuncoesConflitantes() {
     
     // Lista de funções problemáticas para bloquear
     const funcoesParaBloquear = [
-        // 'updateFreeTicket', // DESBLOQUEADA - precisa funcionar
-        // 'updatePaidTicket', // DESBLOQUEADA - precisa funcionar
-        // 'updateComboTicket', // DESBLOQUEADA - precisa funcionar
+        'updateFreeTicket',
+        'updatePaidTicket', 
+        'updateComboTicket',
         'savePaidTicket',
         'saveFreeTicket',
         'saveComboTicket',
@@ -255,54 +252,6 @@ function resetarSelectsCompletamente() {
     });
     
     console.log('✅ Todos os selects resetados');
-}
-
-/**
- * BUSCAR NOMES DOS INGRESSOS PARA CACHE
- */
-async function buscarNomesIngressos() {
-    const eventoId = new URLSearchParams(window.location.search).get('evento_id');
-    
-    if (!eventoId) {
-        console.log('📝 Novo evento - sem nomes para buscar');
-        return;
-    }
-    
-    try {
-        console.log('🔍 Buscando nomes dos ingressos...');
-        
-        const response = await fetch('/produtor/ajax/ingressos_api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `action=listar_ingressos&evento_id=${eventoId}`
-        });
-        
-        const textResponse = await response.text();
-        console.log('📡 Resposta lista ingressos:', textResponse);
-        
-        let data;
-        try {
-            data = JSON.parse(textResponse);
-        } catch (parseError) {
-            console.error('❌ Erro ao parsear JSON lista:', parseError);
-            return;
-        }
-        
-        if (data.sucesso && data.ingressos) {
-            ingressosNomes = {};
-            data.ingressos.forEach(ingresso => {
-                ingressosNomes[ingresso.id] = ingresso.titulo; // USAR TITULO REAL
-            });
-            console.log('✅ Nomes dos ingressos carregados:', ingressosNomes);
-        } else {
-            console.error('❌ Erro ao buscar lista:', data.erro);
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro na busca de nomes:', error);
-    }
 }
 
 /**
@@ -520,6 +469,53 @@ function extrairConteudoComboEstrutraReal() {
         });
     }
     
+    // Fallback 1: Lista visual
+    if (itensCombo.length === 0) {
+        console.log('🔍 Fallback: buscando na lista visual...');
+        
+        const listaItens = document.querySelector('#comboItemsList, .combo-items-list, [data-combo-items]');
+        if (listaItens) {
+            const itens = listaItens.querySelectorAll('.combo-item, [data-combo-item]');
+            itens.forEach(item => {
+                const ingressoId = item.dataset.ingressoId || item.dataset.comboIngressoId || item.dataset.ticketId;
+                const quantidade = item.dataset.quantidade || item.dataset.comboQuantidade || item.dataset.quantity;
+                
+                if (ingressoId && quantidade) {
+                    itensCombo.push({
+                        ingresso_id: parseInt(ingressoId),
+                        quantidade: parseInt(quantidade)
+                    });
+                    console.log(`✅ Item visual adicionado: ingresso_id=${ingressoId}, quantidade=${quantidade}`);
+                }
+            });
+        }
+    }
+    
+    // Fallback 2: Inputs hidden
+    if (itensCombo.length === 0) {
+        console.log('🔍 Fallback: buscando em inputs hidden...');
+        
+        const inputsCombo = document.querySelectorAll('input[name*="combo"], input[data-combo]');
+        inputsCombo.forEach(input => {
+            try {
+                const valor = JSON.parse(input.value);
+                if (Array.isArray(valor)) {
+                    valor.forEach(item => {
+                        if (item.ingresso_id && item.quantidade) {
+                            itensCombo.push({
+                                ingresso_id: parseInt(item.ingresso_id),
+                                quantidade: parseInt(item.quantidade)
+                            });
+                            console.log(`✅ Item input adicionado: ingresso_id=${item.ingresso_id}, quantidade=${item.quantidade}`);
+                        }
+                    });
+                }
+            } catch (e) {
+                // Ignorar inputs que não são JSON
+            }
+        });
+    }
+    
     console.log('📦 Itens do combo finais:', itensCombo);
     
     const json = itensCombo.length > 0 ? JSON.stringify(itensCombo) : '[]';
@@ -681,7 +677,7 @@ function abrirModalEdicaoCompleto(ingresso) {
 }
 
 /**
- * PREENCHER MODAL DE EDIÇÃO COMPLETO (incluindo combos)
+ * Preencher modal de edição COMPLETO
  */
 function preencherModalEdicaoCompleto(modalId, ingresso) {
     console.log(`🔍 Preenchendo modal ${modalId} com dados:`, ingresso);
@@ -732,31 +728,22 @@ function preencherModalEdicaoCompleto(modalId, ingresso) {
         }
     });
     
-    // CRÍTICO: Para combos, carregar itens E recriar interface
+    // Para combos, carregar itens se existir conteudo_combo
     if (ingresso.tipo === 'combo' && ingresso.conteudo_combo) {
         try {
             const itensCombo = JSON.parse(ingresso.conteudo_combo);
-            console.log('📦 Carregando itens do combo para edição:', itensCombo);
+            console.log('📦 Carregando itens do combo:', itensCombo);
             
             // Atualizar comboItems global para edição (estrutura real)
             window.comboItems = itensCombo.map(item => ({
                 ticketId: item.ingresso_id.toString(),
                 quantity: item.quantidade,
-                name: ingressosNomes[item.ingresso_id] || `Ingresso ${item.ingresso_id}`,
+                name: `Ingresso ${item.ingresso_id}`,
                 price: '0',
                 type: 'unknown'
             }));
             
             console.log('📦 comboItems atualizado para edição:', window.comboItems);
-            
-            // CRÍTICO: Recriar interface de combo se existir função
-            if (typeof window.updateComboItemsList === 'function') {
-                setTimeout(() => {
-                    window.updateComboItemsList();
-                    console.log('✅ Interface de combo atualizada');
-                }, 200);
-            }
-            
         } catch (e) {
             console.error('❌ Erro ao parsear conteudo_combo:', e);
         }
@@ -776,9 +763,6 @@ async function recarregarListaAPILimpa() {
     
     try {
         console.log('🔄 Recarregando via API limpa...');
-        
-        // Primeiro buscar nomes dos ingressos
-        await buscarNomesIngressos();
         
         const response = await fetch('/produtor/ajax/ingressos_api.php', {
             method: 'POST',
@@ -859,7 +843,7 @@ function renderizarIngressosPersonalizado() {
 }
 
 /**
- * CRIAR ELEMENTO DE COMBO PERSONALIZADO (2 colunas + nomes)
+ * CRIAR ELEMENTO DE COMBO PERSONALIZADO
  */
 function criarElementoComboPersonalizado(ingresso) {
     console.log(`🎨 Criando elemento COMBO personalizado: ${ingresso.titulo}`);
@@ -870,7 +854,7 @@ function criarElementoComboPersonalizado(ingresso) {
     const taxaReal = parseFloat(ingresso.taxa_plataforma) || 0;
     const valorReceberReal = parseFloat(ingresso.valor_receber) || precoReal;
     
-    // Processar itens do combo COM NOMES
+    // Processar itens do combo
     let itensComboHtml = '';
     if (ingresso.conteudo_combo) {
         try {
@@ -878,16 +862,13 @@ function criarElementoComboPersonalizado(ingresso) {
             console.log('📦 Itens do combo para renderização:', itensCombo);
             
             if (itensCombo.length > 0) {
-                const itensLista = itensCombo.map(item => {
-                    const nomeIngresso = ingressosNomes[item.ingresso_id] || `Ingresso ${item.ingresso_id}`;
-                    return `<li><strong>${nomeIngresso}</strong> × ${item.quantidade}</li>`;
-                }).join('');
-                
                 itensComboHtml = `
                     <div class="combo-items-display">
-                        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #555;">Itens inclusos:</h4>
-                        <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
-                            ${itensLista}
+                        <strong>Itens do combo:</strong>
+                        <ul>
+                            ${itensCombo.map(item => `
+                                <li>Ingresso ID ${item.ingresso_id} × ${item.quantidade}</li>
+                            `).join('')}
                         </ul>
                     </div>
                 `;
@@ -903,13 +884,12 @@ function criarElementoComboPersonalizado(ingresso) {
     elemento.setAttribute('data-ticket-id', ingresso.id);
     elemento.setAttribute('data-lote-id', ingresso.lote_id || '');
     
-    // LAYOUT EM 2 COLUNAS: Info básica à esquerda, itens à direita
     elemento.innerHTML = `
         <div class="ticket-header">
             <div class="ticket-title">
                 <span class="ticket-name">${ingresso.titulo}</span>
-                <span class="ticket-type-badge combo" style="background: #ff6b35; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">
-                    COMBO
+                <span class="ticket-type-badge combo">
+                    (COMBO)
                 </span>
             </div>
             <div class="ticket-actions">
@@ -917,16 +897,14 @@ function criarElementoComboPersonalizado(ingresso) {
                 <button class="btn-icon" onclick="removeTicket(${ingresso.id})" title="Remover">🗑️</button>
             </div>
         </div>
-        <div class="ticket-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+        <div class="ticket-details">
             <div class="ticket-info">
-                <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
-                <div style="margin-bottom: 6px;"><strong>Preço:</strong> R$ ${precoReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                <div style="margin-bottom: 6px;"><strong>Taxa:</strong> R$ ${taxaReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
+                <span>Quantidade: <strong>${ingresso.quantidade_total || 100}</strong></span>
+                <span class="ticket-buyer-price">R$ ${precoReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                <span>Taxa: <strong>R$ ${taxaReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></span>
+                <span>Você recebe: <strong>R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></span>
             </div>
-            <div class="combo-items-column">
-                ${itensComboHtml}
-            </div>
+            ${itensComboHtml}
         </div>
     `;
     
@@ -966,7 +944,7 @@ function criarElementoIngressoNormal(ingresso) {
             
             addTicketToList(type, title, quantity, price, loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
             
-            // Corrigir ID do último elemento E adicionar padronização
+            // Corrigir ID do último elemento
             const ticketList = document.getElementById('ticketList');
             const ultimoElemento = ticketList.lastElementChild;
             
@@ -984,30 +962,7 @@ function criarElementoIngressoNormal(ingresso) {
                     botaoExcluir.setAttribute('onclick', `removeTicket(${ingresso.id})`);
                 }
                 
-                // ADICIONAR BADGE E PADRONIZAR ESTILO
-                const ticketTitle = ultimoElemento.querySelector('.ticket-title, .ticket-name, h3');
-                if (ticketTitle) {
-                    let badgeHtml = '';
-                    if (ingresso.tipo === 'gratuito') {
-                        badgeHtml = '<span class="ticket-type-badge gratuito" style="background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">GRATUITO</span>';
-                    } else {
-                        badgeHtml = '<span class="ticket-type-badge pago" style="background: #007bff; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">PAGO</span>';
-                    }
-                    ticketTitle.innerHTML = title + badgeHtml;
-                }
-                
-                // ADICIONAR "VOCÊ RECEBE" COM ESTILO PADRONIZADO
-                const ticketDetails = ultimoElemento.querySelector('.ticket-details');
-                if (ticketDetails && ingresso.tipo !== 'gratuito') {
-                    const valorReceberReal = parseFloat(ingresso.valor_receber) || parseFloat(ingresso.preco) || 0;
-                    const voceRecebeHtml = `<div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>`;
-                    ticketDetails.innerHTML += voceRecebeHtml;
-                } else if (ticketDetails && ingresso.tipo === 'gratuito') {
-                    const voceRecebeHtml = `<div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ 0,00</span></div>`;
-                    ticketDetails.innerHTML += voceRecebeHtml;
-                }
-                
-                console.log(`✅ ID real aplicado e estilo padronizado: ${ingresso.id}`);
+                console.log(`✅ ID real aplicado: ${ingresso.id}`);
             }
         } catch (error) {
             console.error('❌ Erro ao usar addTicketToList:', error);
@@ -1030,29 +985,20 @@ function criarElementoManualNormal(ingresso) {
     elemento.setAttribute('data-ticket-id', ingresso.id);
     
     let price;
-    let badgeHtml = '';
-    let valorReceberReal = 0;
-    
     if (ingresso.tipo === 'gratuito') {
         price = 'Gratuito';
-        badgeHtml = '<span class="ticket-type-badge gratuito" style="background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">GRATUITO</span>';
-        valorReceberReal = 0;
     } else {
-        const precoReal = parseFloat(ingresso.preco) || 0;
-        valorReceberReal = parseFloat(ingresso.valor_receber) || precoReal;
-        price = `R$ ${precoReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        badgeHtml = '<span class="ticket-type-badge pago" style="background: #007bff; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">PAGO</span>';
+        price = `R$ ${(parseFloat(ingresso.preco) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     }
     
     elemento.innerHTML = `
         <div class="ticket-content">
             <div class="ticket-header">
-                <span class="ticket-name">${ingresso.titulo}${badgeHtml}</span>
+                <span class="ticket-name">${ingresso.titulo}</span>
                 <span class="ticket-price">${price}</span>
             </div>
             <div class="ticket-details">
-                <div style="margin-bottom: 6px;"><strong>Quantidade:</strong> ${ingresso.quantidade_total || 100}</div>
-                <div style="margin-bottom: 6px;"><strong>Você recebe:</strong> <span style="color: #28a745; font-weight: bold;">R$ ${valorReceberReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
+                <span>Tipo: ${ingresso.tipo.toUpperCase()} | Quantidade: ${ingresso.quantidade_total || 100}</span>
             </div>
         </div>
         <div class="ticket-actions">
@@ -1136,7 +1082,7 @@ window.handleControleVendasChange = function(event) {
  * Inicialização
  */
 function inicializar() {
-    console.log('🚀 Inicializando versão final COMPLETA combos...');
+    console.log('🚀 Inicializando versão final DEFINITIVA com renderização...');
     
     setTimeout(() => {
         aplicarSobrescritasCompletas();
@@ -1159,10 +1105,10 @@ if (document.readyState === 'loading') {
     inicializar();
 }
 
-console.log('✅ VERSAO-FINAL-COMPLETA-COMBOS.JS carregado!');
+console.log('✅ VERSAO-FINAL-DEFINITIVA-RENDERIZACAO-INGRESSOS.JS carregado!');
 console.log('🔧 Recursos implementados:');
-console.log('  1. ✅ Renderização em 2 colunas: info + itens');
-console.log('  2. ✅ Nomes dos ingressos em vez de IDs nos itens');
-console.log('  3. ✅ Edição de combo com valores e conteudo_combo carregados');
-console.log('  4. ✅ Cache de nomes para performance');
-console.log('  5. ✅ Interface atualizada na edição de combo');
+console.log('  1. ✅ Renderização PERSONALIZADA de combos com valores corretos');
+console.log('  2. ✅ Exibição dos itens do combo (ingresso_id × quantidade)');
+console.log('  3. ✅ Badge COMBO em vez de Gratuito');
+console.log('  4. ✅ Valores financeiros corretos (preço, taxa, receber)');
+console.log('  5. ✅ Sistema híbrido: combo personalizado + normal via addTicketToList');

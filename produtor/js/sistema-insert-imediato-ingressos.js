@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function coletarDadosModalPago() {
         const titulo = document.getElementById('paidTicketTitle')?.value;
         const descricao = document.getElementById('paidTicketDescription')?.value || '';
-        const quantidade = parseInt(document.getElementById('paidTicketQuantity')?.value) || 100;
+        const quantidade = parseInt(document.getElementById('paidTicketQuantity')?.value) || 0; // Removido fallback 100
         const preco = parseFloat(document.getElementById('paidTicketPrice')?.value) || 0;
         const loteSelect = document.getElementById('paidTicketLote');
         const loteId = loteSelect ? parseInt(loteSelect.value) : null;
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function coletarDadosModalGratuito() {
         const titulo = document.getElementById('freeTicketTitle')?.value;
         const descricao = document.getElementById('freeTicketDescription')?.value || '';
-        const quantidade = parseInt(document.getElementById('freeTicketQuantity')?.value) || 100;
+        const quantidade = parseInt(document.getElementById('freeTicketQuantity')?.value) || 0; // Removido fallback 100
         const loteSelect = document.getElementById('freeTicketLote');
         const loteId = loteSelect ? parseInt(loteSelect.value) : null;
         const inicio_venda = document.getElementById('freeSaleStart')?.value || null;
@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function coletarDadosModalCombo() {
         const titulo = document.getElementById('comboTicketTitle')?.value;
         const descricao = document.getElementById('comboTicketDescription')?.value || '';
-        const quantidade = parseInt(document.getElementById('comboTicketQuantity')?.value) || 100;
+        const quantidade = parseInt(document.getElementById('comboTicketQuantity')?.value) || 0; // Removido fallback 100 (combos sempre 0)
         const preco = parseFloat(document.getElementById('comboTicketPrice')?.value) || 0;
         const loteSelect = document.getElementById('comboTicketLote');
         const loteId = loteSelect ? parseInt(loteSelect.value) : null;
