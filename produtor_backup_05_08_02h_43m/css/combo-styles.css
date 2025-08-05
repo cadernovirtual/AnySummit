@@ -1,0 +1,137 @@
+/* Estilos adicionais para badges de lote */
+
+.ticket-lote-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    background-color: #6366f1;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Variações de cores para diferentes tipos de lotes */
+.ticket-lote-badge.lote-data {
+    background-color: #3b82f6; /* Azul para lotes por data */
+}
+
+.ticket-lote-badge.lote-percentual {
+    background-color: #8b5cf6; /* Roxo para lotes percentuais */
+}
+
+/* Ajuste para alinhar badges */
+.ticket-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ticket-name {
+    font-weight: 600;
+}
+
+/* Estilos para o container de quantidade do lote */
+#quantidadeLoteComboContainer,
+#quantidadeLoteEditComboContainer {
+    padding: 10px;
+    background-color: #f0f9ff;
+    border-radius: 6px;
+    border: 1px solid #bfdbfe;
+}
+
+#quantidadeLoteComboContainer label,
+#quantidadeLoteEditComboContainer label {
+    display: block;
+    margin-bottom: 5px;
+    color: #1e40af;
+}
+
+#comboTicketQuantidadeLote,
+#editComboQuantidadeLote {
+    background-color: transparent;
+    border: none;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+/* Estilos para o switch de taxa de serviço */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #00C2FF;
+}
+
+input:checked + .slider:before {
+    transform: translateX(18px);
+}
+
+.slider.round {
+    border-radius: 22px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+/* Adicionar ao arquivo combo-styles.css */
+
+/* Estilo para campos com erro */
+.error-field {
+    border: 2px solid #ef4444 !important;
+}
+
+.error-field:focus {
+    outline-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Ajuste para select com erro */
+select.error-field {
+    border-color: #ef4444 !important;
+}
+
+/* Animação para chamar atenção */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.error-field {
+    animation: shake 0.5s;
+}

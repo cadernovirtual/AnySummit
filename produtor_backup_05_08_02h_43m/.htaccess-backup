@@ -1,0 +1,26 @@
+# Garantir que arquivos PHP sejam interpretados corretamente na pasta produtor
+
+<IfModule mod_mime.c>
+  AddType application/x-httpd-php .php
+  AddType application/x-httpd-php .phtml
+</IfModule>
+
+<FilesMatch "\.php$">
+  SetHandler application/x-httpd-ea-php81___lsphp
+</FilesMatch>
+
+# Force PHP execution for specific files that might be problematic
+<Files "meuseventos.php">
+  ForceType application/x-httpd-php
+</Files>
+
+<Files "novoevento.php">
+  ForceType application/x-httpd-php
+</Files>
+
+<Files "evento-publicado.php">
+  ForceType application/x-httpd-php
+</Files>
+
+# Ensure proper content type headers
+Header always set X-Content-Type-Options nosniff

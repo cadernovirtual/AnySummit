@@ -1,11 +1,11 @@
 <?php
 /**
  * Funções auxiliares para normalização de caminhos de imagens
- * Sistema AnySummit - Padronização para /uploads/capas/
+ * Sistema AnySummit - Padronização para /uploads/eventos/
  */
 
 /**
- * Normaliza o caminho da imagem para o padrão /uploads/capas/
+ * Normaliza o caminho da imagem para o padrão /uploads/eventos/
  * @param string $imagePath Caminho atual da imagem
  * @return string Caminho normalizado
  */
@@ -15,24 +15,24 @@ function normalizarCaminhoImagem($imagePath) {
     }
     
     // Se já é um caminho correto, retorna como está
-    if ($imagePath === '/uploads/capas/' . basename($imagePath)) {
+    if ($imagePath === '/uploads/eventos/' . basename($imagePath)) {
         return $imagePath;
     }
     
     // Casos de caminhos antigos ou incorretos
-    if (strpos($imagePath, '/produtor/uploads/eventos/') !== false) {
-        // Remove /produtor/uploads/eventos/ e adiciona /uploads/capas/
+    if (strpos($imagePath, '/produtor/uploads/capas/') !== false) {
+        // Remove /produtor/uploads/capas/ e adiciona /uploads/eventos/
         $nomeArquivo = basename($imagePath);
-        return '/uploads/capas/' . $nomeArquivo;
+        return '/uploads/eventos/' . $nomeArquivo;
     }
     
-    if (strpos($imagePath, '/uploads/eventos/') !== false) {
-        // Remove /uploads/eventos/ e adiciona /uploads/capas/
+    if (strpos($imagePath, '/uploads/capas/') !== false) {
+        // Remove /uploads/capas/ e adiciona /uploads/eventos/
         $nomeArquivo = basename($imagePath);
-        return '/uploads/capas/' . $nomeArquivo;
+        return '/uploads/eventos/' . $nomeArquivo;
     }
     
-    if (strpos($imagePath, 'uploads/capas/') !== false) {
+    if (strpos($imagePath, 'uploads/eventos/') !== false) {
         // Adiciona / inicial se não tiver
         if (substr($imagePath, 0, 1) !== '/') {
             return '/' . $imagePath;
@@ -42,12 +42,12 @@ function normalizarCaminhoImagem($imagePath) {
     
     // Se é apenas o nome do arquivo, adiciona o caminho completo
     if (strpos($imagePath, '/') === false) {
-        return '/uploads/capas/' . $imagePath;
+        return '/uploads/eventos/' . $imagePath;
     }
     
     // Fallback: extrair nome do arquivo e criar caminho correto
     $nomeArquivo = basename($imagePath);
-    return '/uploads/capas/' . $nomeArquivo;
+    return '/uploads/eventos/' . $nomeArquivo;
 }
 
 /**
@@ -89,8 +89,8 @@ function obterImagemOuPlaceholder($imagePath, $placeholder = '') {
  */
 function migrarCaminhosImagens($conn) {
     $sql = "UPDATE eventos 
-            SET imagem_capa = REPLACE(imagem_capa, '/uploads/eventos/', '/uploads/capas/') 
-            WHERE imagem_capa LIKE '/uploads/eventos/%'";
+            SET imagem_capa = REPLACE(imagem_capa, '/uploads/capas/', '/uploads/eventos/') 
+            WHERE imagem_capa LIKE '/uploads/capas/%'";
     
     $result = $conn->query($sql);
     return $conn->affected_rows;

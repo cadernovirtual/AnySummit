@@ -1,0 +1,69 @@
+# INSTRUÇÕES PARA CORRIGIR O ARQUIVO novoevento.php
+
+## PROBLEMA IDENTIFICADO
+O final do arquivo novoevento.php está com múltiplas duplicações e o script complete-fixes.js não está sendo incluído.
+
+## SOLUÇÃO - SIGA ESTES PASSOS:
+
+### 1. Abra o arquivo novoevento.php
+
+### 2. Localize a linha que contém:
+```javascript
+console.log('✅ Função updateComboItemsList corrigida com ícone SVG');
+```
+
+### 3. DELETE TUDO após o fechamento do script (</script>) que contém essa linha
+
+### 4. Cole este conteúdo no lugar:
+
+```html
+     <!-- Scripts principais do sistema -->
+     <script language='javascript' src="/produtor/js/custom-dialogs.js"></script>
+     <script language='javascript' src="/produtor/js/alert-overrides.js"></script>
+     <script language='javascript' src="/produtor/js/temporary-tickets.js"></script>
+     <script language='javascript' src="/produtor/js/lotes.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-pagos.js"></script>
+     <script language='javascript' src="/produtor/js/criaevento.js"></script>
+     <script language='javascript' src="/produtor/js/combo-functions.js"></script>
+     <script language='javascript' src="/produtor/js/combo-override.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-pagos-edit.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-gratuitos.js"></script>
+     <script language='javascript' src="/produtor/js/ingressos-gratuitos-create.js"></script>
+     <script language='javascript' src="/produtor/js/address-improvements.js"></script>
+     <script language='javascript' src="/produtor/js/modal-correto.js"></script>
+     
+     <!-- Google Maps API -->
+     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>
+     
+     <!-- Scripts de correção -->
+     <script src="js/modal-fixes.js"></script>
+     <script src="js/terms-privacy-handler.js"></script>
+     <script src="js/wizard-debug.js"></script>
+     <script src="js/wizard-fix.js"></script>
+     <script src="js/preview-fix.js"></script>
+     <script src="js/wizard-fix-definitivo.js"></script>
+     <script src="js/maps-fix.js"></script>
+     <script src="js/restore-fix.js"></script>
+     <script src="js/complete-fixes.js"></script>
+    
+</body>
+</html>
+```
+
+### 5. Salve o arquivo
+
+### 6. Limpe o cache do navegador (Ctrl+F5)
+
+## VERIFICAÇÃO
+Após fazer as alterações, ao visualizar o código fonte da página, você deve ver o script complete-fixes.js sendo incluído.
+
+## ARQUIVOS CRIADOS NA SESSÃO
+Todos os arquivos JS foram criados em: `/produtor/js/`
+- complete-fixes.js
+- maps-fix.js
+- restore-fix.js
+- wizard-fix-definitivo.js
+- wizard-debug.js
+- wizard-fix.js
+
+Certifique-se de que todos esses arquivos existem na pasta.

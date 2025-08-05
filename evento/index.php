@@ -30,43 +30,105 @@ $sql_evento = "
     FROM eventos e
     LEFT JOIN usuarios u ON e.usuario_id = u.id
     LEFT JOIN contratantes c ON e.contratante_id = c.id
-    WHERE e.slug = ? AND e.status = 'publicado' AND e.visibilidade = 'publico'
+    WHERE e.slug = ? AND e.status = 'publicado' AND (e.visibilidade = 'publico' OR e.visibilidade = '' OR e.visibilidade IS NULL)
     LIMIT 1
 ";
 
-$stmt_evento = $con->prepare($sql_evento);
-$stmt_evento->bind_param("s", $slug);
-$stmt_evento->execute();
-$result_evento = $stmt_evento->get_result();
+$stmt_evento = mysqli_prepare($con, $sql_evento);
+mysqli_stmt_bind_param($stmt_evento, "s", $slug);
+mysqli_stmt_execute($stmt_evento);
+$result_evento = mysqli_stmt_get_result($stmt_evento);
 
-if ($result_evento->num_rows == 0) {
+if (mysqli_num_rows($result_evento) == 0) {
     echo "<h1>Evento não encontrado</h1>";
     echo "<p>Slug procurado: " . htmlspecialchars($slug) . "</p>";
     exit;
 }
 
-$evento = $result_evento->fetch_assoc();
+$evento = mysqli_fetch_assoc($result_evento);
 
-// Buscar ingressos do evento
+// MODIFICADO: Buscar ingressos do evento com informações de lotes
 $sql_ingressos = "
-    SELECT *
-    FROM ingressos 
-    WHERE evento_id = ?
-    AND ativo = 1 
-    AND disponibilidade = 'publico'
-    AND (inicio_venda IS NULL OR inicio_venda <= NOW())
-    AND (fim_venda IS NULL OR fim_venda >= NOW())
-    ORDER BY posicao_ordem ASC, preco ASC
+    SELECT 
+        i.*,
+        l.id as lote_id,
+        l.nome as lote_nome,
+        l.data_inicio as lote_data_inicio,
+        l.data_fim as lote_data_fim,
+        l.divulgar_criterio,
+        l.tipo as lote_tipo
+    FROM ingressos i
+    LEFT JOIN lotes l ON i.lote_id = l.id
+    WHERE i.evento_id = ?
+    AND i.ativo = 1 
+    AND i.disponibilidade = 'publico'
+    AND (i.inicio_venda IS NULL OR i.inicio_venda <= NOW())
+    AND (i.fim_venda IS NULL OR i.fim_venda >= NOW())
+    ORDER BY i.posicao_ordem ASC, i.preco ASC
 ";
 
-$stmt_ingressos = $con->prepare($sql_ingressos);
-$stmt_ingressos->bind_param("i", $evento['id']);
-$stmt_ingressos->execute();
-$result_ingressos = $stmt_ingressos->get_result();
+$stmt_ingressos = mysqli_prepare($con, $sql_ingressos);
+mysqli_stmt_bind_param($stmt_ingressos, "i", $evento['id']);
+mysqli_stmt_execute($stmt_ingressos);
+$result_ingressos = mysqli_stmt_get_result($stmt_ingressos);
 
+// MODIFICADO: Função para validar se o lote está dentro das datas válidas
+function validarDataLote($data_inicio, $data_fim) {
+    if (empty($data_inicio) && empty($data_fim)) {
+        return true; // Se não tem datas definidas, considera válido
+    }
+    
+    $hoje = new DateTime();
+    
+    if (!empty($data_inicio)) {
+        $inicio = new DateTime($data_inicio);
+        if ($hoje < $inicio) {
+            return false; // Ainda não começou
+        }
+    }
+    
+    if (!empty($data_fim)) {
+        $fim = new DateTime($data_fim);
+        if ($hoje > $fim) {
+            return false; // Já acabou
+        }
+    }
+    
+    return true;
+}
+
+// MODIFICADO: Função para verificar se existem múltiplos lotes
+function existeMultiplosLotes($ingressos_raw) {
+    $lotes_unicos = [];
+    foreach ($ingressos_raw as $ingresso) {
+        if (!empty($ingresso['lote_id']) && !in_array($ingresso['lote_id'], $lotes_unicos)) {
+            $lotes_unicos[] = $ingresso['lote_id'];
+        }
+    }
+    return count($lotes_unicos) > 1;
+}
+
+// MODIFICADO: Processar ingressos com validação de lotes
+$ingressos_raw = [];
+while ($row = mysqli_fetch_assoc($result_ingressos)) {
+    $ingressos_raw[] = $row;
+}
+
+// Verificar se há múltiplos lotes
+$mostrar_badge_lote = existeMultiplosLotes($ingressos_raw);
+
+// Filtrar apenas ingressos com lotes válidos
 $ingressos = [];
-while ($row = $result_ingressos->fetch_assoc()) {
-    $ingressos[] = $row;
+foreach ($ingressos_raw as $ingresso) {
+    // Validar datas do lote se existir
+    if (!empty($ingresso['lote_id'])) {
+        if (validarDataLote($ingresso['lote_data_inicio'], $ingresso['lote_data_fim'])) {
+            $ingressos[] = $ingresso;
+        }
+    } else {
+        // Se não tem lote associado, inclui mesmo assim
+        $ingressos[] = $ingresso;
+    }
 }
 
 // Funções auxiliares
@@ -98,6 +160,39 @@ function limparHTML($texto) {
     // Permitir apenas tags básicas de formatação
     $tags_permitidas = '<p><br><strong><b><em><i><u><span><div><h1><h2><h3><h4><h5><h6><ul><ol><li>';
     return strip_tags($texto, $tags_permitidas);
+}
+
+// NOVA: Função para formatar badge do lote
+function formatarBadgeLote($ingresso) {
+    if (empty($ingresso['lote_nome'])) {
+        return '';
+    }
+    
+    $badge_text = htmlspecialchars($ingresso['lote_nome']);
+    
+    // Se o lote é por data e deve divulgar critério
+    if ($ingresso['divulgar_criterio'] == 1 && !empty($ingresso['lote_data_fim'])) {
+        $data_fim = new DateTime($ingresso['lote_data_fim']);
+        $data_fim_formatada = $data_fim->format('d/m/Y');
+        $badge_text .= " - até " . $data_fim_formatada;
+    }
+    
+    return $badge_text;
+}
+
+// NOVA: Função para processar conteúdo do combo
+function processarConteudoCombo($conteudo_combo) {
+    if (empty($conteudo_combo)) {
+        return null;
+    }
+    
+    $combo_data = json_decode($conteudo_combo, true);
+    
+    if (!$combo_data || !isset($combo_data['ingressos'])) {
+        return null;
+    }
+    
+    return $combo_data['ingressos'];
 }
 
 // Função para truncar texto
@@ -162,15 +257,12 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
     <meta property="og:description" content="<?php echo truncarTexto($evento['descricao'], 160); ?>">
     <meta property="og:type" content="website">
     <?php if (!empty($evento['imagem_capa'])): ?>
-        <?php 
-        $imagem_meta = normalizarCaminhoImagem($evento['imagem_capa']);
-        ?>
-    <meta property="og:image" content="<?php echo htmlspecialchars($imagem_meta); ?>">>
+    <meta property="og:image" content="<?php echo htmlspecialchars($evento['imagem_capa']); ?>">    
     <?php endif; ?>
 
     <meta name="twitter:card" content="summary_large_image">
     <?php if (!empty($evento['imagem_capa'])): ?>
-    <meta name="twitter:image" content="<?php echo htmlspecialchars($imagem_meta); ?>">
+    <meta name="twitter:image" content="<?php echo htmlspecialchars($evento['imagem_capa']); ?>">
     <?php endif; ?>
 
     <!-- Bootstrap CSS -->
@@ -593,16 +685,30 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
                                     <?php echo $data_inicio['data']; ?> • <?php echo $data_inicio['hora']; ?> > <?php echo $data_fim['data']; ?> • <?php echo $data_fim['hora']; ?>
                                 <?php endif; ?>
                             </span>
-                            <span class="badge bg-success rounded-pill px-3 py-2 ms-2">
-                                <i class="fas fa-<?php echo $evento['tipo_local'] == 'online' ? 'video' : 'map-marker-alt'; ?> me-1"></i>
+                            <?php if ($evento['tipo_local'] == 'online'): ?>
+                                <span class="badge bg-success rounded-pill px-3 py-2 ms-2">
+                                    <i class="fas fa-video me-1"></i>
+                                    Evento Online
+                                </span>
+                            <?php else: ?>
                                 <?php 
-                                if ($evento['tipo_local'] == 'online') {
-                                    echo 'Evento Online';
-                                } else {
-                                    echo htmlspecialchars($nomelocal ?: 'Local a definir');
-                                }
+                                // Montar endereço para Google Maps (para o badge)
+                                $endereco_badge_maps = urlencode(implode(', ', array_filter([
+                                    $evento['nome_local'],
+                                    $evento['rua'] . ($evento['numero'] ? ', ' . $evento['numero'] : ''),
+                                    $evento['bairro'],
+                                    $evento['cidade'],
+                                    $evento['estado'],
+                                    $evento['pais']
+                                ])));
                                 ?>
-                            </span>
+                                <a href="https://www.google.com/maps/search/?api=1&query=<?php echo $endereco_badge_maps; ?>" 
+                                   target="_blank" 
+                                   class="badge bg-success rounded-pill px-3 py-2 ms-2 text-decoration-none text-white">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    <?php echo htmlspecialchars($nomelocal ?: 'Local a definir'); ?>
+                                </a>
+                            <?php endif; ?>
                         </div>
                         <h1 class="display-4 fw-bold mb-4">
                             <?php if (!empty($evento['logo_evento'])): ?>
@@ -651,14 +757,11 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
                 </div>
                 <div class="col-lg-4">
                     <?php if (!empty($evento['imagem_capa'])): ?>
-                        <?php 
-                        $imagem_src = normalizarCaminhoImagem($evento['imagem_capa']);
-                        ?>
                         <img 
-                            src="<?php echo htmlspecialchars($imagem_src); ?>" 
+                            src="<?php echo htmlspecialchars($evento['imagem_capa']); ?>" 
                             alt="<?php echo htmlspecialchars($evento['nome']); ?>" 
                             class="img-fluid event-image w-100 <?php echo !empty($evento['imagem_fundo']) ? 'shadow-lg' : ''; ?>"
-                            style="<?php echo !empty($evento['imagem_fundo']) ? 'border: 3px solid rgba(255,255,255,0.8); border-radius: 15px;' : ''; ?>"
+                            style="<?php echo !empty($evento['imagem_fundo']) ? 'border: 3px solid rgba(255,255,255,0.8); border-radius: 15px;' : ''; ?>">
                         >
                     <?php else: ?>
                         <img 
@@ -1042,14 +1145,14 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
          
            
             <div class="text-center">
-                <small class="text-white">&copy; <?php echo date('Y'); ?> Any Summit. Todos os direitos reservados.</small>
+                <small class="text-white">&copy; 2025 AnySummit é uma solução da suíte <a href="https://www.anysolutions.ai" target="_blank" rel="noopener noreferrer" class="text-white">AnySolutions.ai</a> da Caderno Virtual Ltda. Todos os Direitos reservados.</small>
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/functions-evento.js"></script>
+    <script src="js/functions-evento-modified.js"></script>
     <!-- DEBUG TEMPORÁRIO PARA MOBILE -->
     <script src="debug-forcar-botao.js"></script>
     
@@ -1071,16 +1174,44 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
                 const preco = parseFloat(ingresso.preco || 0);
                 const taxa = parseFloat(ingresso.taxa_plataforma || 0);
                 
+                // NOVO: Processar informações do lote
+                let badgeLote = '';
+                if (<?php echo $mostrar_badge_lote ? 'true' : 'false'; ?> && ingresso.lote_nome) {
+                    badgeLote = ingresso.lote_nome;
+                    if (ingresso.divulgar_criterio == 1 && ingresso.lote_data_fim) {
+                        const dataFim = new Date(ingresso.lote_data_fim);
+                        badgeLote += " - até " + dataFim.toLocaleDateString('pt-BR');
+                    }
+                }
+                
+                // NOVO: Processar conteúdo do combo
+                let comboItens = null;
+                if (ingresso.tipo === 'combo' && ingresso.conteudo_combo) {
+                    try {
+                        const comboData = JSON.parse(ingresso.conteudo_combo);
+                        if (comboData && comboData.ingressos) {
+                            comboItens = comboData.ingressos;
+                        }
+                    } catch (e) {
+                        console.warn('Erro ao processar combo:', e);
+                    }
+                }
+                
                 return {
                     id: ingresso.id.toString(),
                     name: ingresso.titulo,
-                    originalPrice: preco, // Apenas o preço base
-                    currentPrice: preco,  // Apenas o preço base
+                    originalPrice: preco,
+                    currentPrice: preco,
                     installments: preco > 0 ? `em até 12x R$ ${(preco / 12).toFixed(2).replace('.', ',')}` : '',
                     quantity: 0,
                     maxQuantity: Math.min(disponivel, ingresso.limite_max || disponivel),
                     available: disponivel > 0 && ingresso.ativo == 1,
-                    taxa_plataforma: taxa // Manter taxa separada se precisar mostrar depois
+                    taxa_plataforma: taxa,
+                    // NOVOS CAMPOS
+                    tipo: ingresso.tipo,
+                    badgeLote: badgeLote,
+                    comboItens: comboItens,
+                    descricao: ingresso.descricao || ''
                 };
             });
 

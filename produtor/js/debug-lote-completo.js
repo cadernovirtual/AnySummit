@@ -6,6 +6,14 @@
     window.debugLoteIngressoCompleto = function() {
         console.log('\n========== DEBUG COMPLETO ==========');
         
+        // Função getCookie local
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+        
         // 1. Ver o que tem no cookie principal
         console.log('\n📦 COOKIE eventoWizard:');
         const saved = getCookie('eventoWizard');

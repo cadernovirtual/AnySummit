@@ -17,6 +17,20 @@ if (!$evento_id) {
 $contratante_id = $_COOKIE['contratanteid'] ?? 0;
 $usuario_id = $_COOKIE['usuarioid'] ?? 0;
 
+// Buscar dados do usuário para o header
+$usuario = null;
+if ($usuario_id) {
+    $sql_usuario = "SELECT id, nome, email, foto_perfil FROM usuarios WHERE id = ?";
+    $stmt_usuario = mysqli_prepare($con, $sql_usuario);
+    if ($stmt_usuario) {
+        mysqli_stmt_bind_param($stmt_usuario, "i", $usuario_id);
+        mysqli_stmt_execute($stmt_usuario);
+        $result_usuario = mysqli_stmt_get_result($stmt_usuario);
+        $usuario = mysqli_fetch_assoc($result_usuario);
+        mysqli_stmt_close($stmt_usuario);
+    }
+}
+
 // Verificar se o evento pertence ao usuário
 $sql_evento = "SELECT e.*, 
                      COALESCE(cat.nome, 'Sem categoria') as categoria_nome
@@ -514,8 +528,18 @@ $total_pages = ceil($total_count / $limit);
                 <div class="hamburger-line"></div>
             </div>
             <div class="user-menu">
-                <div class="user-icon" onClick="toggleUserDropdown()">👤</div>
+                <div class="user-icon" onClick="toggleUserDropdown()">
+                    <?php if ($usuario && !empty($usuario['foto_perfil'])): ?>
+                        <img src="/uploads/capas/<?php echo htmlspecialchars($usuario['foto_perfil']); ?>" 
+                             alt="Foto do usuário" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    <?php else: ?>
+                        👤
+                    <?php endif; ?>
+                </div>
                 <div class="user-dropdown" id="userDropdown">
+                    <div class="dropdown-item" onClick="window.location.href='perfil.php'">
+                        👤 Perfil
+                    </div>
                     <div class="dropdown-item" onClick="logout()">
                         🚪 Sair
                     </div>

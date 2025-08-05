@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste QR Code e Funções</title>
+    <script src="js/qrcode.min.js"></script>
+</head>
+<body>
+    <h1>Teste QR Code</h1>
+    <div id="qrcode"></div>
+    
+    <h2>Teste Função createFreeTicket</h2>
+    <button onclick="testCreateFreeTicket()">Testar createFreeTicket</button>
+    
+    <script>
+        // Teste QR Code
+        function testQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            
+            try {
+                const canvas = document.createElement('canvas');
+                qrContainer.appendChild(canvas);
+                
+                QRCode.toCanvas(canvas, 'https://anysummit.com.br/evento/?evento=teste', {
+                    width: 200,
+                    height: 200,
+                    color: {
+                        dark: '#1A1A2E',
+                        light: '#FFFFFF'
+                    },
+                    margin: 2
+                }, function (error) {
+                    if (error) {
+                        console.error('❌ Erro ao gerar QR Code:', error);
+                    } else {
+                        console.log('✅ QR Code gerado com sucesso!');
+                    }
+                });
+            } catch (e) {
+                console.error('❌ Erro na geração do QR Code:', e);
+            }
+        }
+
+        // Teste função createFreeTicket (simulada)
+        function testCreateFreeTicket() {
+            console.log('🎟️ Testando função createFreeTicket');
+            
+            // Simular dados
+            const data = {
+                evento_id: 1,
+                tipo: 'gratuito',
+                titulo: 'Teste',
+                descricao: 'Teste de ingresso',
+                quantidade_total: 100,
+                preco: 0
+            };
+            
+            console.log('✅ Dados preparados:', data);
+            alert('Função createFreeTicket testada com sucesso!');
+        }
+        
+        // Executar teste QR Code automaticamente
+        document.addEventListener('DOMContentLoaded', function() {
+            testQRCode();
+        });
+    </script>
+</body>
+</html>

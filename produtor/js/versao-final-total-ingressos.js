@@ -56,12 +56,11 @@ const MODAL_FIELDS = {
         lote_id: '#editFreeTicketLote'
     },
     editComboTicketModal: {
-        titulo: '#editComboTicketTitle',
-        descricao: '#editComboTicketDescription',
-        quantidade_total: '#editComboTicketQuantity',
-        preco: '#editComboTicketPrice',
-        taxa_plataforma: '#editComboTicketTaxaValor',
-        valor_receber: '#editComboTicketReceive',
+        titulo: '#editComboTitle',
+        descricao: '#editComboDescription',
+        preco: '#editComboPrice',
+        taxa_plataforma: '#editComboTaxaValor',
+        valor_receber: '#editComboReceive',
         lote_id: '#editComboTicketLote',
         conteudo_combo: null
     }

@@ -1,0 +1,34 @@
+# CORREÇÃO URGENTE - Erro createPaidTicket
+
+## SOLUÇÃO RÁPIDA
+
+Adicione APENAS esta linha ao final do arquivo novoevento.php, antes do </body>:
+
+```html
+<script src="js/urgent-ticket-fix.js"></script>
+```
+
+## Exemplo de onde adicionar:
+
+```html
+     <script src="js/complete-fixes.js"></script>
+     <script src="js/urgent-ticket-fix.js"></script>  <!-- ADICIONE ESTA LINHA -->
+    
+</body>
+</html>
+```
+
+## O que isso faz:
+- Define todas as funções necessárias (createPaidTicket, createFreeTicket, etc.)
+- Corrige automaticamente os botões dos modais
+- Adiciona validação básica
+- Permite criar e remover ingressos
+
+## Teste:
+1. Salve o arquivo
+2. Limpe o cache (Ctrl+F5)
+3. Vá para etapa 6
+4. Clique em "Tipo de Ingresso Pago"
+5. Preencha e clique em "Criar"
+
+Pronto! Deve funcionar agora.

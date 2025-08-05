@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Completo de Navegação</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .info {
+            color: blue;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Teste Completo de Navegação do Wizard</h1>
+        
+        <h2>1. Verificação de Funções</h2>
+        <button onclick="checkFunctions()">Verificar Funções Disponíveis</button>
+        <div id="function-check"></div>
+        
+        <h2>2. Teste de Navegação</h2>
+        <button onclick="testNextStep()">Testar nextStep()</button>
+        <button onclick="testPrevStep()">Testar prevStep()</button>
+        <button onclick="testCurrentStep()">Ver Step Atual</button>
+        <div id="navigation-test"></div>
+        
+        <h2>3. Teste de Persistência</h2>
+        <button onclick="testPersistence()">Testar Salvamento de Dados</button>
+        <button onclick="testRecovery()">Testar Recuperação de Dados</button>
+        <button onclick="clearData()">Limpar Dados</button>
+        <div id="persistence-test"></div>
+        
+        <h2>4. Console de Debug</h2>
+        <pre id="console-output"></pre>
+    </div>
+
+    <!-- Carregando os scripts necessários -->
+    <script src="js/criaevento.js"></script>
+    <script src="js/wizard-interceptor/wizard-data-collector.js"></script>
+    
+    <script>
+        const output = document.getElementById('console-output');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+        
+        function checkFunctions() {
+            const result = document.getElementById('function-check');
+            let html = '<h3>Status das Funções:</h3><ul>';
+            
+            const functions = [
+                'nextStep',
+                'prevStep',
+                'getCurrentStep',
+                'setCurrentStep',
+                'updateStepDisplay',
+                'validateStep',
+                'saveWizardData',
+                'checkAndRestoreWizardData',
+                'clearAllWizardData'
+            ];
+            
+            functions.forEach(func => {
+                const exists = typeof window[func] === 'function';
+                const status = exists ? '✅' : '❌';
+                const className = exists ? 'success' : 'error';
+                html += `<li class="${className}">${status} window.${func}: ${typeof window[func]}</li>`;
+            });
+            
+            // Verificar objetos
+            html += '<li>' + (window.wizardState ? '✅' : '❌') + ' window.wizardState: ' + (window.wizardState ? JSON.stringify(window.wizardState) : 'undefined') + '</li>';
+            html += '<li>' + (window.WizardDataCollector ? '✅' : '❌') + ' window.WizardDataCollector: ' + (typeof window.WizardDataCollector) + '</li>';
+            
+            html += '</ul>';
+            result.innerHTML = html;
+            log('Verificação de funções concluída', 'success');
+        }
+        
+        function testNextStep() {
+            log('Testando nextStep()...');
+            try {
+                if (typeof window.nextStep === 'function') {
+                    const currentBefore = window.getCurrentStep ? window.getCurrentStep() : 'N/A';
+                    log(`Step atual antes: ${currentBefore}`);
+                    
+                    window.nextStep();
+                    
+                    const currentAfter = window.getCurrentStep ? window.getCurrentStep() : 'N/A';
+                    log(`Step atual depois: ${currentAfter}`, 'success');
+                    
+                    document.getElementById('navigation-test').innerHTML = 
+                        `<p class="success">✅ nextStep() executado! Step: ${currentBefore} → ${currentAfter}</p>`;
+                } else {
+                    throw new Error('nextStep não está definido');
+                }
+            } catch (e) {
+                log('Erro ao executar nextStep: ' + e.message, 'error');
+                document.getElementById('navigation-test').innerHTML = 
+                    `<p class="error">❌ Erro: ${e.message}</p>`;
+            }
+        }
+        
+        function testPrevStep() {
+            log('Testando prevStep()...');
+            try {
+                if (typeof window.prevStep === 'function') {
+                    const currentBefore = window.getCurrentStep ? window.getCurrentStep() : 'N/A';
+                    log(`Step atual antes: ${currentBefore}`);
+                    
+                    window.prevStep();
+                    
+                    const currentAfter = window.getCurrentStep ? window.getCurrentStep() : 'N/A';
+                    log(`Step atual depois: ${currentAfter}`, 'success');
+                    
+                    document.getElementById('navigation-test').innerHTML = 
+                        `<p class="success">✅ prevStep() executado! Step: ${currentBefore} → ${currentAfter}</p>`;
+                } else {
+                    throw new Error('prevStep não está definido');
+                }
+            } catch (e) {
+                log('Erro ao executar prevStep: ' + e.message, 'error');
+                document.getElementById('navigation-test').innerHTML = 
+                    `<p class="error">❌ Erro: ${e.message}</p>`;
+            }
+        }
+        
+        function testCurrentStep() {
+            try {
+                const current = window.getCurrentStep ? window.getCurrentStep() : 'N/A';
+                const state = window.wizardState ? JSON.stringify(window.wizardState) : 'N/A';
+                
+                document.getElementById('navigation-test').innerHTML = 
+                    `<p class="info">Step atual: ${current}<br>wizardState: ${state}</p>`;
+                log(`Step atual: ${current}`, 'info');
+            } catch (e) {
+                log('Erro ao obter step atual: ' + e.message, 'error');
+            }
+        }
+        
+        function testPersistence() {
+            log('Testando salvamento de dados...');
+            try {
+                if (window.WizardDataCollector) {
+                    window.WizardDataCollector.collectData({
+                        test: true,
+                        timestamp: new Date().toISOString(),
+                        message: 'Teste de persistência'
+                    });
+                    log('Dados salvos com sucesso!', 'success');
+                    
+                    const savedData = localStorage.getItem('wizardCollectedData');
+                    document.getElementById('persistence-test').innerHTML = 
+                        `<p class="success">✅ Dados salvos no localStorage:<br><pre>${savedData}</pre></p>`;
+                } else {
+                    throw new Error('WizardDataCollector não está disponível');
+                }
+            } catch (e) {
+                log('Erro ao salvar dados: ' + e.message, 'error');
+                document.getElementById('persistence-test').innerHTML = 
+                    `<p class="error">❌ Erro: ${e.message}</p>`;
+            }
+        }
+        
+        function testRecovery() {
+            log('Testando recuperação de dados...');
+            try {
+                if (window.checkAndRestoreWizardData) {
+                    window.checkAndRestoreWizardData();
+                    log('Função de recuperação executada!', 'success');
+                    
+                    const savedData = localStorage.getItem('wizardCollectedData');
+                    document.getElementById('persistence-test').innerHTML = 
+                        `<p class="info">Dados no localStorage:<br><pre>${savedData || 'Nenhum dado encontrado'}</pre></p>`;
+                } else {
+                    throw new Error('checkAndRestoreWizardData não está disponível');
+                }
+            } catch (e) {
+                log('Erro ao recuperar dados: ' + e.message, 'error');
+            }
+        }
+        
+        function clearData() {
+            log('Limpando dados do wizard...');
+            try {
+                if (window.clearAllWizardData) {
+                    window.clearAllWizardData();
+                }
+                localStorage.removeItem('wizardCollectedData');
+                localStorage.removeItem('eventoWizard');
+                log('Dados limpos com sucesso!', 'success');
+                document.getElementById('persistence-test').innerHTML = 
+                    '<p class="success">✅ Todos os dados foram limpos!</p>';
+            } catch (e) {
+                log('Erro ao limpar dados: ' + e.message, 'error');
+            }
+        }
+        
+        // Executar verificação inicial
+        window.addEventListener('load', () => {
+            log('Página carregada. Executando verificação inicial...', 'info');
+            setTimeout(checkFunctions, 500);
+        });
+    </script>
+</body>
+</html>

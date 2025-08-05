@@ -1,0 +1,39 @@
+# Correção - Edição de Ingressos e Combo
+
+## Problema
+1. Edição de ingressos mostra "será implementado" mas já estava funcionando
+2. Select de tipos de ingresso no combo está vazio
+
+## Solução
+Adicione esta linha ao final do arquivo novoevento.php:
+
+```html
+<script src="js/edit-combo-fixes.js"></script>
+```
+
+## Onde adicionar:
+Logo após o urgent-ticket-fix.js:
+
+```html
+     <script src="js/urgent-ticket-fix.js"></script>
+     <script src="js/edit-combo-fixes.js"></script>  <!-- ADICIONE ESTA LINHA -->
+    
+</body>
+</html>
+```
+
+## O que isso corrige:
+1. ✅ Restaura função de edição de ingressos (pagos e gratuitos)
+2. ✅ Popular modais de edição com dados corretos
+3. ✅ Corrige populateComboTicketSelect para mostrar ingressos do lote
+4. ✅ Adiciona listener para atualizar select quando muda o lote
+5. ✅ Implementa funções updatePaidTicket e updateFreeTicket
+
+## Como testar:
+1. Crie um lote na etapa 5
+2. Na etapa 6, crie alguns ingressos
+3. Clique no ✏️ para editar - deve abrir modal com dados
+4. Crie um combo - o select deve mostrar os ingressos do lote selecionado
+
+## Observação:
+Este arquivo complementa o urgent-ticket-fix.js, não o substitui.

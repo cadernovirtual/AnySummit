@@ -1,0 +1,172 @@
+// Correções FORÇADAS para combos - executar após todos os outros scripts
+(function() {
+    'use strict';
+    
+    console.log('🔧 Iniciando correções forçadas de combo...');
+    
+    // Aguardar um pouco para garantir que todos os scripts carregaram
+    setTimeout(function() {
+        console.log('🎯 Aplicando correções de combo...');
+        
+        // FORÇAR sobrescrita da função addComboToList
+        window.addComboToList = function(title, quantity, price, comboData, totalItems, description, loteId, loteNome, startDate, endDate) {
+            console.log('✅ Usando função addComboToList CORRIGIDA');
+            
+            if (!window.ticketCount) window.ticketCount = 0;
+            window.ticketCount++;
+            
+            const ticketList = document.getElementById('ticketList');
+            if (!ticketList) {
+                console.error('Lista de ingressos não encontrada!');
+                return;
+            }
+
+            const cleanPrice = parseFloat(price.replace(/[R$\s\.]/g, '').replace(',', '.'));
+            const taxaServico = comboData.taxaServico !== false;
+            const tax = taxaServico ? (cleanPrice * 0.1) : 0;
+            const totalPrice = cleanPrice + tax;
+            
+            // Formatação de valores
+            const totalFormatted = `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
+            const taxFormatted = `R$ ${tax.toFixed(2).replace('.', ',')}`;
+            const receiveFormatted = `R$ ${cleanPrice.toFixed(2).replace('.', ',')}`;
+            
+            // Formatar datas
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('pt-BR') + ' ' + 
+                       date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+            };
+            
+            // Extrair informações do lote
+            let tipoLote = 'Por Data';
+            let loteInfo = loteNome || 'lote 1';
+            
+            const ticketItem = document.createElement('div');
+            ticketItem.className = 'ticket-item';
+            ticketItem.dataset.ticketId = window.ticketCount;
+            ticketItem.dataset.loteId = loteId;
+            ticketItem.dataset.comboData = JSON.stringify(comboData);
+            
+            // IMPORTANTE: Não incluir "Inclui:" na descrição
+            // Verificar se já tem uma descrição personalizada
+            let hasCustomDescription = false;
+            let cleanDescription = '';
+            
+            if (description && description.trim() !== '') {
+                // Remover "Inclui:" se estiver no início
+                cleanDescription = description.replace(/^Inclui:\s*/i, '').trim();
+                
+                // Se após remover "Inclui:" ainda sobrar algo diferente dos itens, é descrição customizada
+                const itemsText = comboData.itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ');
+                if (cleanDescription && cleanDescription !== itemsText) {
+                    hasCustomDescription = true;
+                }
+            }
+            
+            // HTML do ticket - FORMATO IDÊNTICO AO INGRESSO PAGO
+            ticketItem.innerHTML = `
+                <div class="ticket-header">
+                    <div class="ticket-title">
+                        <span class="ticket-name">${title}</span>
+                        <span class="ticket-type-badge combo" style="background: #9C27B0; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: normal;">
+                            (Combo)
+                        </span>
+                        <span class="ticket-lote-info" style="font-size: 11px; color: #666; margin-left: 10px;">
+                            ${loteInfo} - ${tipoLote} (${formatDate(startDate)} até ${formatDate(endDate)})
+                        </span>
+                    </div>
+                    <div class="ticket-actions">
+                        <button class="btn-icon" onclick="editTicket(${window.ticketCount})" title="Editar">✏️</button>
+                        <button class="btn-icon" onclick="removeTicket(${window.ticketCount})" title="Remover">🗑️</button>
+                    </div>
+                </div>
+                <div class="ticket-details">
+                    <div class="ticket-info">
+                        <span>Quantidade: <strong>${quantity}</strong></span>
+                        <span>Preço: <strong class="ticket-buyer-price">${totalFormatted}</strong></span>
+                        <span>Taxa: <strong>${taxFormatted}</strong></span>
+                        <span>Você recebe: <strong>${receiveFormatted}</strong></span>
+                    </div>
+                    
+                    ${hasCustomDescription ? `
+                    <div class="ticket-description" style="margin-top: 10px; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 13px; color: #666;">
+                        ${cleanDescription}
+                    </div>
+                    ` : ''}
+                    
+                    <div class="combo-items" style="margin-top: 10px; padding: 8px 12px; background: #f0f4ff; border-radius: 6px; border-left: 3px solid #9C27B0; font-size: 13px;">
+                        <strong style="color: #9C27B0;">Inclui:</strong>
+                        <span style="color: #555; margin-left: 5px;">
+                            ${comboData.itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            ticketList.appendChild(ticketItem);
+            
+            // Armazenar dados para edição
+            ticketItem.ticketData = {
+                type: 'combo',
+                title: title,
+                quantity: quantity,
+                price: cleanPrice,
+                description: hasCustomDescription ? cleanDescription : '',
+                comboData: comboData,
+                saleStart: startDate,
+                saleEnd: endDate,
+                loteId: loteId,
+                loteName: loteNome,
+                taxaServico: taxaServico
+            };
+            
+            console.log('✅ Combo adicionado com formatação CORRETA');
+        };
+        
+        // Também corrigir quando o combo é criado
+        const originalCreateCombo = window.createComboTicket;
+        window.createComboTicket = function() {
+            console.log('🎯 Interceptando criação de combo...');
+            
+            // Pegar a descrição antes de criar
+            const descField = document.getElementById('comboTicketDescription');
+            if (descField && descField.value) {
+                // Limpar "Inclui:" se existir
+                descField.value = descField.value.replace(/^Inclui:\s*/i, '').trim();
+            }
+            
+            // Chamar função original
+            if (originalCreateCombo) {
+                originalCreateCombo.call(this);
+            }
+        };
+        
+        console.log('✅ Correções de combo aplicadas com sucesso!');
+        
+    }, 500); // Aguardar meio segundo para garantir que tudo carregou
+    
+})();
+
+// Executar também quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 DOM carregado - reaplicando correções de combo...');
+    
+    // Reexecutar as correções para garantir
+    setTimeout(function() {
+        // Se ainda houver combos com formato errado, corrigi-los
+        const combos = document.querySelectorAll('.ticket-item[data-combo-data]');
+        combos.forEach(combo => {
+            const hasDoubleInclui = combo.innerHTML.includes('Inclui:') && 
+                                   combo.innerHTML.includes('<div class="ticket-description">Inclui:');
+            if (hasDoubleInclui) {
+                console.log('🔧 Corrigindo combo com "Inclui:" duplicado');
+                const description = combo.querySelector('.ticket-description');
+                if (description && description.textContent.trim().startsWith('Inclui:')) {
+                    description.remove();
+                }
+            }
+        });
+    }, 1000);
+});

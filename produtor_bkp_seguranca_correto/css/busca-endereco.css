@@ -1,0 +1,419 @@
+/* Estilos para busca incremental de endereços - TEMA ESCURO */
+
+/* Campo de busca - seguindo padrão da aplicação */
+#addressSearch {
+    width: 100% !important;
+    min-height: 45px !important;
+    font-size: 16px !important;
+    padding: 12px 16px !important;
+    background: rgba(15, 15, 35, 0.8) !important;
+    border: 1px solid rgba(184, 197, 209, 0.2) !important;
+    border-radius: 12px !important;
+    color: #E1E5F2 !important;
+    font-family: 'Inter', sans-serif !important;
+    transition: all 0.3s ease;
+}
+
+#addressSearch:focus {
+    outline: none !important;
+    border-color: #00C2FF !important;
+    box-shadow: 0 0 0 3px rgba(0, 194, 255, 0.1) !important;
+    background: rgba(15, 15, 35, 0.9) !important;
+}
+
+#addressSearch::placeholder {
+    color: #8B95A7 !important;
+}
+
+/* Container do campo de busca */
+.address-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Dropdown de sugestões - TEMA ESCURO */
+.address-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 35, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 194, 255, 0.3) !important;
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    display: none;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.address-suggestions.show {
+    display: block;
+}
+
+/* Cabeçalho das sugestões (lista expandida) - TEMA ESCURO */
+.suggestions-header {
+    background: linear-gradient(135deg, rgba(114, 94, 255, 0.2) 0%, rgba(0, 194, 255, 0.1) 100%);
+    border-bottom: 1px solid rgba(114, 94, 255, 0.2);
+    font-size: 14px;
+    font-weight: 600;
+    color: #E1E5F2 !important;
+    padding: 12px 15px;
+}
+
+/* Item de sugestão - TEMA ESCURO */
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(114, 94, 255, 0.1);
+    transition: all 0.2s ease;
+    gap: 12px;
+    min-height: 60px;
+    color: #E1E5F2 !important;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+    background: linear-gradient(135deg, rgba(0, 194, 255, 0.1) 0%, rgba(114, 94, 255, 0.05) 100%) !important;
+    border-left: 4px solid #00C2FF;
+    padding-left: 11px; /* Compensar border */
+    transform: translateX(2px);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+    border-radius: 0 0 12px 12px;
+}
+
+/* Ícone da sugestão */
+.suggestion-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* Conteúdo da sugestão */
+.suggestion-content {
+    flex: 1;
+    min-width: 0; /* Para permitir text overflow */
+}
+
+.suggestion-main {
+    font-weight: 600;
+    color: #E1E5F2 !important;
+    margin-bottom: 4px;
+    font-size: 15px;
+    line-height: 1.3;
+}
+
+.suggestion-details {
+    font-size: 13px;
+    color: #8B95A7 !important;
+    line-height: 1.4;
+    /* Limitar a 2 linhas */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Seta da sugestão */
+.suggestion-arrow {
+    color: #8B95A7;
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.suggestion-item:hover .suggestion-arrow,
+.suggestion-item.selected .suggestion-arrow {
+    color: #00C2FF;
+    transform: translateX(3px);
+}
+
+/* Mensagem sem resultados - TEMA ESCURO */
+.no-results {
+    text-align: center;
+    padding: 30px 20px;
+    color: #8B95A7;
+}
+
+.no-results-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.no-results-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #E1E5F2 !important;
+}
+
+.no-results-hint {
+    font-size: 13px;
+    color: #8B95A7 !important;
+    line-height: 1.4;
+}
+
+/* Loading - TEMA ESCURO */
+.address-loading {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 35, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 194, 255, 0.3);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 15px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #E1E5F2 !important;
+}
+
+.address-loading.active {
+    display: flex;
+}
+
+/* Spinner - cores da aplicação */
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(114, 94, 255, 0.2);
+    border-top: 3px solid #00C2FF;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Botão buscar - seguindo padrão da aplicação */
+.btn-buscar-endereco {
+    min-width: 160px !important;
+    height: 45px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: linear-gradient(135deg, #00C2FF 0%, #725EFF 100%) !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 194, 255, 0.3) !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+.btn-buscar-endereco:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(0, 194, 255, 0.4) !important;
+    background: linear-gradient(135deg, #725EFF 0%, #00C2FF 100%) !important;
+}
+
+.btn-buscar-endereco:active {
+    transform: translateY(0) !important;
+}
+
+/* Container flex para campo + botão */
+.address-input-group {
+    display: flex !important;
+    gap: 15px !important;
+    align-items: flex-start !important;
+}
+
+.address-input-wrapper {
+    flex: 1 !important;
+    position: relative;
+}
+
+/* Scrollbar personalizada para dropdown - TEMA ESCURO */
+.address-suggestions::-webkit-scrollbar {
+    width: 6px;
+}
+
+.address-suggestions::-webkit-scrollbar-track {
+    background: rgba(15, 15, 35, 0.5);
+    border-radius: 3px;
+}
+
+.address-suggestions::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #00C2FF 0%, #725EFF 100%);
+    border-radius: 3px;
+}
+
+.address-suggestions::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #725EFF 0%, #00C2FF 100%);
+}
+
+/* Estados visuais do campo */
+.address-input-wrapper.searching #addressSearch {
+    border-color: #00C2FF;
+    background: rgba(15, 15, 35, 0.9);
+}
+
+.address-input-wrapper.has-results #addressSearch {
+    border-radius: 12px 12px 0 0;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .address-input-group {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .btn-buscar-endereco {
+        width: 100% !important;
+        min-width: auto !important;
+    }
+    
+    #addressSearch {
+        font-size: 16px !important; /* Evita zoom no iOS */
+    }
+    
+    .address-suggestions {
+        max-height: 300px;
+    }
+    
+    .suggestion-item {
+        padding: 15px 12px;
+        min-height: 70px;
+    }
+    
+    .suggestion-main {
+        font-size: 14px;
+    }
+    
+    .suggestion-details {
+        font-size: 12px;
+    }
+}
+
+/* Animação de entrada das sugestões */
+.suggestion-item {
+    animation: fadeInUp 0.3s ease-out;
+    animation-fill-mode: both;
+}
+
+.suggestion-item:nth-child(1) { animation-delay: 0.05s; }
+.suggestion-item:nth-child(2) { animation-delay: 0.1s; }
+.suggestion-item:nth-child(3) { animation-delay: 0.15s; }
+.suggestion-item:nth-child(4) { animation-delay: 0.2s; }
+.suggestion-item:nth-child(5) { animation-delay: 0.25s; }
+.suggestion-item:nth-child(6) { animation-delay: 0.3s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Destaque quando há muitos resultados */
+.suggestions-header + .suggestion-item:first-of-type {
+    border-top: 2px solid rgba(114, 94, 255, 0.1);
+}
+
+/* Melhor contraste para texto selecionado */
+.suggestion-item.selected .suggestion-main {
+    color: #FFFFFF !important;
+}
+
+.suggestion-item.selected .suggestion-details {
+    color: #B0C4DE !important;
+}
+
+/* Efeito glassmorphism no dropdown */
+.address-suggestions {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Loading com melhor contraste */
+.address-loading {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    font-weight: 500;
+}
+
+/* Estilos para o mapa integrado */
+.map-container {
+    margin-top: 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(114, 94, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.map-container:hover {
+    border-color: rgba(0, 194, 255, 0.5);
+    box-shadow: 0 6px 20px rgba(0, 194, 255, 0.1);
+}
+
+/* Controles do mapa com tema escuro */
+.gm-style-iw {
+    background: rgba(15, 15, 35, 0.95) !important;
+    color: #E1E5F2 !important;
+    border-radius: 8px !important;
+}
+
+.gm-style-iw-d {
+    color: #E1E5F2 !important;
+}
+
+/* Indicador de localização encontrada */
+.location-found-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+    color: #22C55E;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 8px;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.location-found-indicator::before {
+    content: "✓";
+    font-weight: bold;
+}
+

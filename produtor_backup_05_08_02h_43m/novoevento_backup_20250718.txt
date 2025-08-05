@@ -1,0 +1,17 @@
+BACKUP CRIADO EM 18/07/2025 - ANTES DA IMPLEMENTAÇÃO DE LOTES
+
+Este arquivo é um backup do arquivo original novoevento.php antes das modificações
+para implementação da nova etapa de lotes.
+
+Arquivo original: /produtor/novoevento.php
+Data: 18/07/2025 13:XX:XX
+
+Para restaurar:
+1. Renomear este arquivo para novoevento.php
+2. Sobrescrever o arquivo atual
+
+Modificações planejadas:
+- Adicionar nova etapa "Lotes" antes da etapa 5 atual
+- Implementar dois quadros: Lotes por Data e Lotes por Percentual
+- Adicionar validações e switch iPhone-style
+- Manter lógica de wizard com cookies

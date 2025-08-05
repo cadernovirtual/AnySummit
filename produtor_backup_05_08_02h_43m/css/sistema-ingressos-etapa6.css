@@ -1,0 +1,282 @@
+/**
+ * ESTILOS PARA SISTEMA DE INGRESSOS ETAPA 6 - UNIFORMIZADO
+ * 
+ * Layout consistente para todos os ingressos:
+ * - Recém-cadastrados
+ * - Recuperados do banco
+ * - Todos os tipos (pago, gratuito, combo)
+ */
+
+/* Container principal da lista de ingressos */
+#ticketList {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Item individual de ingresso - layout uniforme */
+.ticket-item {
+    background: transparent; /* Remover fundo branco */
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.ticket-item:hover {
+    border-color: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+}
+
+/* Header do ingresso */
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.ticket-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #00C2FF; /* Azul do layout */
+    flex: 1;
+}
+
+.ticket-type-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ticket-type-badge.type-pago {
+    background: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #4caf50;
+}
+
+.ticket-type-badge.type-gratuito {
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #2196f3;
+}
+
+.ticket-type-badge.type-combo {
+    background: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ff9800;
+}
+
+/* Corpo do ingresso */
+.ticket-body {
+    margin-bottom: 12px;
+}
+
+.ticket-info {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    flex-direction: column; /* Empilhar verticalmente para mais espaço */
+    gap: 5px;
+}
+
+.ticket-info > div {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ticket-quantity,
+.ticket-price,
+.ticket-batch,
+.ticket-lote-info {
+    font-size: 14px;
+    color: #ffffff; /* Branco em vez de cinza */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ticket-quantity::before {
+    content: "📊";
+}
+
+.ticket-price::before {
+    content: "💰";
+}
+
+.ticket-batch::before {
+    content: "📦";
+}
+
+.ticket-price {
+    font-weight: 600;
+    color: #ffffff; /* Branco em vez de verde */
+}
+
+.ticket-description {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    color: #ffffff; /* Branco em vez de cinza */
+    line-height: 1.4;
+    font-style: italic;
+}
+
+/* Ações do ingresso */
+.ticket-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-icon {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: #666;
+}
+
+.btn-icon:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-icon.btn-edit:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #1976d2;
+}
+
+.btn-icon.btn-delete:hover {
+    background: #ffebee;
+    border-color: #f44336;
+    color: #d32f2f;
+}
+
+/* Estado vazio */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    background: #f9f9f9;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+}
+
+.empty-state p {
+    margin: 8px 0;
+}
+
+.empty-state p:first-child {
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+}
+
+/* Mensagens de status */
+.datas-readonly-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 8px 0;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+}
+
+/* Campos readonly no modal - APENAS nos modais de ingresso de EDIÇÃO */
+.modal input[readonly]:not([type="hidden"]),
+.modal select[disabled]:not([type="hidden"]) {
+    cursor: not-allowed !important;
+    color: #666 !important;
+    border-color: #ccc !important;
+}
+
+/* CORREÇÃO ESPECÍFICA PARA OS 3 CAMPOS PROBLEMÁTICOS */
+#comboTicketTitle {
+    background-color: transparent !important;
+}
+
+#comboTicketLote option,
+#paidTicketLote option,
+#freeTicketLote option {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+#comboTicketTypeSelect option {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* Garantir que campos normais não sejam afetados */
+.modal input:not([readonly]):not([disabled]),
+.modal select:not([readonly]):not([disabled]),
+.modal textarea:not([readonly]):not([disabled]) 
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .ticket-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .ticket-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .ticket-actions {
+        justify-content: center;
+        margin-top: 15px;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ticket-item {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Indicador de carregamento */
+.loading-ingressos {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.loading-ingressos::before {
+    content: "⏳";
+    margin-right: 8px;
+}

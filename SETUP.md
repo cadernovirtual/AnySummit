@@ -117,3 +117,34 @@ Antes do chat acabar:
 - Nunca expor dados sensíveis em logs
 
 Este setup permite continuidade entre sessões. Sempre que iniciar novo chat, incluir SETUP.md e STATUS.md no contexto.
+
+---
+
+## INVESTIGAÇÃO ATUAL - Exclusão de Lotes
+
+### Problema Identificado
+- **Sistema:** Exclusão de lotes não funciona devido a múltiplos interceptadores de clique
+- **Sintomas:** Botão chama "recarregar rascunho" em vez de excluir lote
+- **Análise:** 128 funções relacionadas a lotes encontradas, múltiplos `addEventListener('click')` conflitantes
+
+### Funções Principais Identificadas
+- ✅ `excluirLoteDataInterface(loteId)` - Interface principal 
+- ✅ `excluirLoteQuantidadeInterface(loteId)` - Interface quantidade
+- ✅ `excluirLoteData(loteId)` - Função por data
+- ✅ `excluirLotePercentual(loteId)` - Função por percentual
+
+### Interceptadores Conflitantes
+- `versao-final-completa-combos.js` - intercepta `[onclick*="Modal"]`
+- `validacao-exclusao-ingressos.js` - intercepta botões de exclusão
+- 50+ outros arquivos com `addEventListener('click')`
+
+### Estratégia Atual
+- Debug agressivo com prioridade máxima (capture phase)
+- Prevenção de outros interceptadores (`stopImmediatePropagation`)
+- Execução direta da função via `eval(onclick)`
+
+### Backend Verificado
+- ✅ Ação `excluir_lote` existe em `wizard_evento.php`
+- ✅ Função `excluirLote($con, $usuario_id)` implementada
+- ✅ Função `renomearLotesPorTipo()` corrigida (mysqli procedural)
+- ✅ Logs detalhados para debug

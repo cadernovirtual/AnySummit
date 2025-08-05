@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Navegação</title>
+</head>
+<body>
+    <h1>Teste de Navegação do Wizard</h1>
+    
+    <button onclick="testNextStep()">Testar nextStep()</button>
+    <button onclick="testPrevStep()">Testar prevStep()</button>
+    <button onclick="checkFunctions()">Verificar Funções</button>
+    
+    <div id="output" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;">
+        <h3>Console Output:</h3>
+        <pre id="console-output"></pre>
+    </div>
+
+    <script>
+        const output = document.getElementById('console-output');
+        
+        function log(msg) {
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+        
+        function testNextStep() {
+            log('Testando nextStep...');
+            if (typeof window.nextStep === 'function') {
+                log('✓ nextStep está disponível!');
+                try {
+                    window.nextStep();
+                    log('✓ nextStep executado com sucesso!');
+                } catch (e) {
+                    log('✗ Erro ao executar nextStep: ' + e.message);
+                }
+            } else {
+                log('✗ nextStep não está definido. Tipo: ' + typeof window.nextStep);
+            }
+        }
+        
+        function testPrevStep() {
+            log('Testando prevStep...');
+            if (typeof window.prevStep === 'function') {
+                log('✓ prevStep está disponível!');
+                try {
+                    window.prevStep();
+                    log('✓ prevStep executado com sucesso!');
+                } catch (e) {
+                    log('✗ Erro ao executar prevStep: ' + e.message);
+                }
+            } else {
+                log('✗ prevStep não está definido. Tipo: ' + typeof window.prevStep);
+            }
+        }
+        
+        function checkFunctions() {
+            log('\n=== Verificando funções disponíveis ===');
+            log('window.nextStep: ' + typeof window.nextStep);
+            log('window.prevStep: ' + typeof window.prevStep);
+            log('window.wizardState: ' + typeof window.wizardState);
+            log('window.getCurrentStep: ' + typeof window.getCurrentStep);
+            log('window.setCurrentStep: ' + typeof window.setCurrentStep);
+            
+            if (window.wizardState) {
+                log('wizardState.currentStep: ' + window.wizardState.currentStep);
+                log('wizardState.totalSteps: ' + window.wizardState.totalSteps);
+            }
+        }
+    </script>
+    
+    <!-- Carregando apenas o criaevento.js -->
+    <script src="js/criaevento.js"></script>
+    
+    <script>
+        // Verificar automaticamente após carregar
+        setTimeout(() => {
+            log('\n=== Verificação automática após carregamento ===');
+            checkFunctions();
+        }, 1000);
+    </script>
+</body>
+</html>

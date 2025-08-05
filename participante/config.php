@@ -62,6 +62,9 @@ if ($stmt_dados) {
             <div class="user-menu">
                 <div class="user-icon" onClick="toggleUserDropdown()">👤</div>
                 <div class="user-dropdown" id="userDropdown">
+                    <div class="dropdown-item" onClick="window.location.href='perfil.php'">
+                        👤 Perfil
+                    </div>
                     <div class="dropdown-item" onClick="logout()">
                         🚪 Sair
                     </div>

@@ -1,4 +1,11 @@
 <?php
+// Debug - garantir que não há saída antes dos headers
+ob_start();
+
+// Ativar exibição de erros para debug
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 include("check_login.php");
 include("conm/conn.php");
 
@@ -11,30 +18,50 @@ if (!$evento_id) {
     exit();
 }
 
+// Debug - log da operação
+error_log("evento-publicado.php - Carregando evento ID: $evento_id para usuário: " . $_SESSION['usuarioid']);
+
 // Buscar dados do evento
 $sql = "SELECT e.*, c.nome as categoria_nome 
         FROM eventos e 
-        LEFT JOIN categorias c ON e.categoria_id = c.id 
+        LEFT JOIN categorias_evento c ON e.categoria_id = c.id 
         WHERE e.id = ? AND e.usuario_id = ?";
 $stmt = mysqli_prepare($con, $sql);
+
+if (!$stmt) {
+    error_log("evento-publicado.php - Erro ao preparar consulta: " . mysqli_error($con));
+    die("Erro interno do servidor");
+}
+
 mysqli_stmt_bind_param($stmt, "ii", $evento_id, $_SESSION['usuarioid']);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 $evento = mysqli_fetch_assoc($result);
 
 if (!$evento) {
+    error_log("evento-publicado.php - Evento não encontrado ou usuário sem permissão. ID: $evento_id, Usuario: " . $_SESSION['usuarioid']);
     header("Location: meuseventos.php");
     exit();
 }
 
+error_log("evento-publicado.php - Evento carregado com sucesso: " . $evento['nome']);
+
 // Buscar quantidade de ingressos
 $sql_ing = "SELECT COUNT(*) as total FROM ingressos WHERE evento_id = ?";
 $stmt_ing = mysqli_prepare($con, $sql_ing);
+
+if (!$stmt_ing) {
+    error_log("evento-publicado.php - Erro ao preparar consulta de ingressos: " . mysqli_error($con));
+    die("Erro interno do servidor");
+}
+
 mysqli_stmt_bind_param($stmt_ing, "i", $evento_id);
 mysqli_stmt_execute($stmt_ing);
 $result_ing = mysqli_stmt_get_result($stmt_ing);
 $row_ing = mysqli_fetch_assoc($result_ing);
 $total_ingressos = $row_ing['total'];
+
+error_log("evento-publicado.php - Total de ingressos: $total_ingressos");
 
 ?>
 <!DOCTYPE html>
@@ -303,4 +330,5 @@ $total_ingressos = $row_ing['total'];
 </html>
 <?php
 mysqli_close($con);
+ob_end_flush(); // Finalizar buffer de saída
 ?>
