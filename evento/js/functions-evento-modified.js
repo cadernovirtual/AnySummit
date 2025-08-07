@@ -66,7 +66,7 @@
         function updateQuantity(ticketId, change) {
             const ticket = tickets.find(t => t.id === ticketId);
             if (ticket) {
-                const newQuantity = Math.max(0, Math.min(ticket.maxQuantity, ticket.quantity + change));
+                const newQuantity = Math.max(0, ticket.maxQuantity > 0 ? Math.min(ticket.maxQuantity, ticket.quantity + change) : ticket.quantity + change);
                 ticket.quantity = newQuantity;
                 renderTickets();
                 updateSummary();
@@ -259,7 +259,6 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div>
                             <span class="h5 text-primary fw-bold">R$ ${formatPrice(ticket.currentPrice)}</span>
-                            ${ticket.installments ? `<br><small class="text-muted">${ticket.installments}</small>` : ''}
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <button 
@@ -274,7 +273,7 @@
                             <button 
                                 class="btn btn-outline-secondary btn-sm" 
                                 onclick="updateQuantity('${ticket.id}', 1)"
-                                ${ticket.quantity >= ticket.maxQuantity ? 'disabled' : ''}
+                                ${ticket.maxQuantity > 0 && ticket.quantity >= ticket.maxQuantity ? 'disabled' : ''}
                                 style="width: 32px; height: 32px; padding: 0; border-radius: 50%;"
                             >
                                 <i class="fas fa-plus"></i>
@@ -284,10 +283,12 @@
                     
                     ${renderComboContent(ticket.comboItens)}
                     
+                    ${ticket.maxQuantity > 0 ? `
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
                         Máximo ${ticket.maxQuantity} ingressos por pessoa
                     </small>
+                    ` : ''}
                 </div>
             `).join('');
 

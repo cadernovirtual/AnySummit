@@ -5,8 +5,8 @@ class AsaasAPI {
     private $access_token;
     
     public function __construct($environment = 'production') {
-		$this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjNhYzk1MzI5LWRkZGMtNDRmMy04ODY1LWJmMTA0ZGIxNTVlZTo6JGFhY2hfNjBlYzlkNzktZTEyZS00Njg0LTkxZTAtZTVlZTMzZTlkMjZk';
-        //$this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjBhNWVjYzRhLTM1NDEtNDc5Yy1iODFmLTJkMTM0MDA4OTIzMDo6JGFhY2hfOGIzZDhhOTctMTJiYS00YThiLWJhYjMtMDRiZDZkZDlmYTlk';
+	//	$this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjNhYzk1MzI5LWRkZGMtNDRmMy04ODY1LWJmMTA0ZGIxNTVlZTo6JGFhY2hfNjBlYzlkNzktZTEyZS00Njg0LTkxZTAtZTVlZTMzZTlkMjZk';
+        $this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjcyYmVjMTY3LTE1ZjAtNGU4NS04OGVhLTQ3YjYxZmY1ZjAzYjo6JGFhY2hfMTZmYzFlODQtMzYyZi00ZGE3LTgzYzYtZTQxMTFmN2Y1Mzg5';
 		
 		
         

@@ -187,14 +187,14 @@ function enviarEmailBoasVindas($email, $nome) {
     </html>';
     
     // ========================================
-    // OPÇÃO 1: LOCAWEB SMTP (Configurado)
+    // OPÇÃO 1: ANYSUMMIT SMTP (Configurado)
     // ========================================
-    // Configurações SMTP da Locaweb
-    $smtp_host = 'email-ssl.com.br';              // Servidor SMTP da Locaweb
-    $smtp_port = 465;                             // Porta SSL da Locaweb
-    $smtp_user = 'noreply@anysummit.com.br';      // Seu email da Locaweb
-    $smtp_pass = 'Swko15357523@#';                // Sua senha
-    $from_email = 'noreply@anysummit.com.br';     // Seu email da Locaweb
+    // Configurações SMTP do AnySummit
+    $smtp_host = 'mail.anysummit.com.br';         // Servidor SMTP
+    $smtp_port = 465;                             // Porta SSL
+    $smtp_user = 'ingressos@anysummit.com.br';    // Email SMTP
+    $smtp_pass = 'Miran@Janyne@Gustavo';          // Senha SMTP
+    $from_email = 'ingressos@anysummit.com.br';   // Email remetente
     $from_name = 'Any Summit';
     
     return enviarEmailSMTPLocaweb($to, $subject, $html, $smtp_host, $smtp_port, $smtp_user, $smtp_pass, $from_email, $from_name);
@@ -727,60 +727,142 @@ try {
         // ========================================
         
         // Buscar dados do tipo de ingresso
-        $sql_ingresso_info = "SELECT titulo FROM ingressos WHERE id = $ingresso_id";
+        $sql_ingresso_info = "SELECT titulo, tipo, conteudo_combo FROM ingressos WHERE id = $ingresso_id";
         $result_ingresso = $con->query($sql_ingresso_info);
         $ingresso_info = $result_ingresso->fetch_assoc();
         $titulo_ingresso = mysqli_real_escape_string($con, $ingresso_info['titulo']);
+        $tipo_ingresso = $ingresso_info['tipo'];
+        $conteudo_combo = $ingresso_info['conteudo_combo'];
         
-        // Gerar ingressos individuais conforme a quantidade
-        for ($i = 1; $i <= $quantidade; $i++) {
-            // Gerar código único do ingresso mais curto e amigável
-            // Caracteres permitidos (sem 0, O, I, 1 para evitar confusão)
-            $chars = '23456789ABCDEFGHIJKLMNPQRSTUVWXYZ';
-            $codigo_ingresso = '';
-            for ($j = 0; $j < 8; $j++) {
-                $codigo_ingresso .= $chars[rand(0, strlen($chars) - 1)];
-            }
+        // Verificar se é um combo
+        if ($tipo_ingresso === 'combo' && !empty($conteudo_combo)) {
+            // Decodificar JSON do combo
+            $itens_combo = json_decode($conteudo_combo, true);
             
-            // Verificar se o código já existe (improvável, mas por segurança)
-            $check_codigo = "SELECT id FROM tb_ingressos_individuais WHERE codigo_ingresso = '$codigo_ingresso'";
-            $result_check = $con->query($check_codigo);
-            
-            // Se já existir, adicionar sufixo numérico
-            $tentativa = 1;
-            while ($result_check && $result_check->num_rows > 0) {
-                $tentativa++;
-                $codigo_ingresso_temp = $codigo_ingresso . sprintf('%02d', $tentativa);
-                $check_codigo = "SELECT id FROM tb_ingressos_individuais WHERE codigo_ingresso = '$codigo_ingresso_temp'";
-                $result_check = $con->query($check_codigo);
-                if (!$result_check || $result_check->num_rows == 0) {
-                    $codigo_ingresso = $codigo_ingresso_temp;
-                    break;
+            if ($itens_combo && is_array($itens_combo)) {
+                // Para cada unidade do combo comprada
+                for ($combo_unidade = 1; $combo_unidade <= $quantidade; $combo_unidade++) {
+                    // Para cada item dentro do combo
+                    foreach ($itens_combo as $item_combo) {
+                        $combo_ingresso_id = intval($item_combo['ingresso_id']);
+                        $combo_quantidade = intval($item_combo['quantidade']);
+                        
+                        // Buscar título do ingresso do combo
+                        $sql_combo_titulo = "SELECT titulo FROM ingressos WHERE id = $combo_ingresso_id";
+                        $result_combo_titulo = $con->query($sql_combo_titulo);
+                        $combo_titulo_info = $result_combo_titulo->fetch_assoc();
+                        $combo_titulo_original = $combo_titulo_info['titulo'];
+                        
+                        // Gerar ingressos individuais para este item do combo
+                        for ($combo_seq = 1; $combo_seq <= $combo_quantidade; $combo_seq++) {
+                            // Gerar código único do ingresso
+                            $chars = '23456789ABCDEFGHIJKLMNPQRSTUVWXYZ';
+                            $codigo_ingresso = '';
+                            for ($j = 0; $j < 8; $j++) {
+                                $codigo_ingresso .= $chars[rand(0, strlen($chars) - 1)];
+                            }
+                            
+                            // Verificar se o código já existe
+                            $check_codigo = "SELECT id FROM tb_ingressos_individuais WHERE codigo_ingresso = '$codigo_ingresso'";
+                            $result_check = $con->query($check_codigo);
+                            
+                            // Se já existir, adicionar sufixo numérico
+                            $tentativa = 1;
+                            while ($result_check && $result_check->num_rows > 0) {
+                                $tentativa++;
+                                $codigo_ingresso_temp = $codigo_ingresso . sprintf('%02d', $tentativa);
+                                $check_codigo = "SELECT id FROM tb_ingressos_individuais WHERE codigo_ingresso = '$codigo_ingresso_temp'";
+                                $result_check = $con->query($check_codigo);
+                                if (!$result_check || $result_check->num_rows == 0) {
+                                    $codigo_ingresso = $codigo_ingresso_temp;
+                                    break;
+                                }
+                            }
+                            
+                            // Gerar hash de validação
+                            $hash_validacao = hash('sha256', $codigo_ingresso . $pedidoid . $eventoid . time());
+                            
+                            // Título do ingresso combo (ex: "Associado - Combo(3)")
+                            $titulo_combo_final = $combo_titulo_original . " - Combo(" . $combo_seq . ")";
+                            $titulo_combo_escaped = mysqli_real_escape_string($con, $titulo_combo_final);
+                            
+                            // Dados para QR Code (JSON) - usar ingresso_id do item, não do combo
+                            $qr_data = json_encode([
+                                'codigo' => $codigo_ingresso,
+                                'pedido' => $pedidoid,
+                                'evento' => $eventoid,
+                                'ingresso' => $combo_ingresso_id, // ID do item, não do combo
+                                'hash' => $hash_validacao
+                            ]);
+                            
+                            // Inserir ingresso individual do combo
+                            $sql_ingresso_individual = "INSERT INTO tb_ingressos_individuais (
+                                pedidoid, eventoid, ingresso_id, compradorid, codigo_ingresso,
+                                titulo_ingresso, preco_unitario, qr_code_data, hash_validacao
+                            ) VALUES (
+                                $pedidoid, $eventoid, $combo_ingresso_id, $compradorid, '$codigo_ingresso',
+                                '$titulo_combo_escaped', $preco_unitario, '" . mysqli_real_escape_string($con, $qr_data) . "', '$hash_validacao'
+                            )";
+                            
+                            if (!$con->query($sql_ingresso_individual)) {
+                                throw new Exception('Erro ao gerar ingresso individual do combo: ' . $con->error);
+                            }
+                        }
+                    }
                 }
             }
-            
-            // Gerar hash de validação
-            $hash_validacao = hash('sha256', $codigo_ingresso . $pedidoid . $eventoid . time());
-            
-            // Dados para QR Code (JSON)
-            $qr_data = json_encode([
-                'codigo' => $codigo_ingresso,
-                'pedido' => $pedidoid,
-                'evento' => $eventoid,
-                'ingresso' => $ingresso_id,
-                'hash' => $hash_validacao
-            ]);
-            
-            $sql_ingresso_individual = "INSERT INTO tb_ingressos_individuais (
-                pedidoid, eventoid, ingresso_id, compradorid, codigo_ingresso,
-                titulo_ingresso, preco_unitario, qr_code_data, hash_validacao
-            ) VALUES (
-                $pedidoid, $eventoid, $ingresso_id, $compradorid, '$codigo_ingresso',
-                '$titulo_ingresso', $preco_unitario, '" . mysqli_real_escape_string($con, $qr_data) . "', '$hash_validacao'
-            )";
-            
-            if (!$con->query($sql_ingresso_individual)) {
-                throw new Exception('Erro ao gerar ingresso individual: ' . $con->error);
+        } else {
+            // Ingresso normal (não combo) - comportamento original
+            // Gerar ingressos individuais conforme a quantidade
+            for ($i = 1; $i <= $quantidade; $i++) {
+                // Gerar código único do ingresso mais curto e amigável
+                // Caracteres permitidos (sem 0, O, I, 1 para evitar confusão)
+                $chars = '23456789ABCDEFGHIJKLMNPQRSTUVWXYZ';
+                $codigo_ingresso = '';
+                for ($j = 0; $j < 8; $j++) {
+                    $codigo_ingresso .= $chars[rand(0, strlen($chars) - 1)];
+                }
+                
+                // Verificar se o código já existe (improvável, mas por segurança)
+                $check_codigo = "SELECT id FROM tb_ingressos_individuais WHERE codigo_ingresso = '$codigo_ingresso'";
+                $result_check = $con->query($check_codigo);
+                
+                // Se já existir, adicionar sufixo numérico
+                $tentativa = 1;
+                while ($result_check && $result_check->num_rows > 0) {
+                    $tentativa++;
+                    $codigo_ingresso_temp = $codigo_ingresso . sprintf('%02d', $tentativa);
+                    $check_codigo = "SELECT id FROM tb_ingressos_individuais WHERE codigo_ingresso = '$codigo_ingresso_temp'";
+                    $result_check = $con->query($check_codigo);
+                    if (!$result_check || $result_check->num_rows == 0) {
+                        $codigo_ingresso = $codigo_ingresso_temp;
+                        break;
+                    }
+                }
+                
+                // Gerar hash de validação
+                $hash_validacao = hash('sha256', $codigo_ingresso . $pedidoid . $eventoid . time());
+                
+                // Dados para QR Code (JSON)
+                $qr_data = json_encode([
+                    'codigo' => $codigo_ingresso,
+                    'pedido' => $pedidoid,
+                    'evento' => $eventoid,
+                    'ingresso' => $ingresso_id,
+                    'hash' => $hash_validacao
+                ]);
+                
+                $sql_ingresso_individual = "INSERT INTO tb_ingressos_individuais (
+                    pedidoid, eventoid, ingresso_id, compradorid, codigo_ingresso,
+                    titulo_ingresso, preco_unitario, qr_code_data, hash_validacao
+                ) VALUES (
+                    $pedidoid, $eventoid, $ingresso_id, $compradorid, '$codigo_ingresso',
+                    '$titulo_ingresso', $preco_unitario, '" . mysqli_real_escape_string($con, $qr_data) . "', '$hash_validacao'
+                )";
+                
+                if (!$con->query($sql_ingresso_individual)) {
+                    throw new Exception('Erro ao gerar ingresso individual: ' . $con->error);
+                }
             }
         }
     }

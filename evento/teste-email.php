@@ -129,11 +129,11 @@ function testarEnvioEmail($email, $nome) {
     // ========================================
     // CONFIGURAÇÃO LOCAWEB (mesma do sistema principal)
     // ========================================
-    $smtp_host = 'email-ssl.com.br';
+    $smtp_host = 'mail.anysummit.com.br';
     $smtp_port = 465;
-    $smtp_user = 'noreply@anysummit.com.br';
-    $smtp_pass = 'Swko15357523@#';
-    $from_email = 'noreply@anysummit.com.br';
+    $smtp_user = 'ingressos@anysummit.com.br';
+    $smtp_pass = 'Miran@Janyne@Gustavo';
+    $from_email = 'ingressos@anysummit.com.br';
     $from_name = 'Any Summit - Teste';
     
     return enviarEmailSMTPLocaweb($to, $subject, $html, $smtp_host, $smtp_port, $smtp_user, $smtp_pass, $from_email, $from_name);

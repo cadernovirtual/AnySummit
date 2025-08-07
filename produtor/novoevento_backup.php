@@ -786,9 +786,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         // Dados da sessão PHP para JavaScript
         window.sessionData = {
             usuarioId: <?php echo json_encode($_SESSION['usuarioid'] ?? null); ?>,
-            contratanteId: <?php echo json_encode($_SESSION['contratanteid'] ?? null); ?>,
             usuarioNome: <?php echo json_encode($_SESSION['usuario_nome'] ?? ''); ?>,
             usuarioEmail: <?php echo json_encode($_SESSION['usuario_email'] ?? ''); ?>
+            // Removido contratanteId pois não existe mais na tabela usuarios
         };
         
         // PROBLEMA 1: Dados do evento para carregar estado do checkbox
@@ -810,7 +810,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
     <!-- Header -->
     <header class="header">
         <div class="logo-section">
-          <img src="img/logohori.png" style="width:100%; max-width:200px;">
+          <img src="img/anysummitlogo.png" style="width:100%; max-width:200px;">
         </div>
         
         <div class="header-right">
@@ -877,7 +877,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 </div>
                 <div class="step" data-step="7">
                     <div class="step-number"><span>7</span></div>
-                    <div class="step-title">Produtor</div>
+                    <div class="step-title">Organizador</div>
                 </div>
                 <div class="step" data-step="8">
                     <div class="step-number"><span>8</span></div>
@@ -1352,46 +1352,51 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                     <div class="section-header">
                         <div class="section-number">7</div>
                         <div>
-                            <div class="section-title">🧑‍💼 Sobre o produtor</div>
+                            <div class="section-title">🧑‍💼 Sobre o organizador</div>
                             <div class="section-subtitle">Informações sobre quem está organizando o evento</div>
                         </div>
                     </div>
 
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="producer">Selecionar produtor</label>
-                            <select id="producer">
-                                <option value="current">Você (<?php echo isset($_SESSION['usuario_nome']) ? htmlspecialchars($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>)</option>
-                                <option value="new">Novo produtor</option>
+                            <label for="contratante">Selecionar organizador</label>
+                            <select id="contratante">
+                                <option value="">Selecione o organizador...</option>
+                                <?php
+                                // Buscar contratantes ativos do usuário logado
+                                $usuario_id = $_SESSION['usuarioid'];
+                                $sql_contratantes = "SELECT id, nome_fantasia FROM contratantes WHERE ativo = 1 AND usuario_id = ? ORDER BY nome_fantasia";
+                                $stmt_contratantes = mysqli_prepare($con, $sql_contratantes);
+                                mysqli_stmt_bind_param($stmt_contratantes, "i", $usuario_id);
+                                mysqli_stmt_execute($stmt_contratantes);
+                                $result_contratantes = mysqli_stmt_get_result($stmt_contratantes);
+                                
+                                // Verificar se está editando evento para pré-selecionar
+                                $contratante_selecionado = 0;
+                                if ($evento_id > 0) {
+                                    $usuario_id = $_SESSION['usuarioid'];
+                                    $sql_evento_contratante = "SELECT contratante_id FROM eventos WHERE id = ? AND usuario_id = ?";
+                                    $stmt_contratante = mysqli_prepare($con, $sql_evento_contratante);
+                                    mysqli_stmt_bind_param($stmt_contratante, "ii", $evento_id, $usuario_id);
+                                    mysqli_stmt_execute($stmt_contratante);
+                                    $result_contratante = mysqli_stmt_get_result($stmt_contratante);
+                                    if ($row_contratante = mysqli_fetch_assoc($result_contratante)) {
+                                        $contratante_selecionado = $row_contratante['contratante_id'];
+                                    }
+                                }
+                                
+                                // Listar contratantes
+                                while ($row = mysqli_fetch_assoc($result_contratantes)) {
+                                    $selected = ($contratante_selecionado == $row['id']) ? 'selected' : '';
+                                    echo '<option value="' . $row['id'] . '" ' . $selected . '>' . htmlspecialchars($row['nome_fantasia']) . '</option>';
+                                }
+                                ?>
                             </select>
                         </div>
                     </div>
-
-                    <div class="conditional-section" id="newProducerFields" style="display: none;">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="producerName">Nome do produtor <span class="required">*</span></label>
-                                <input type="text" id="producerName" placeholder="Nome completo ou empresa">
-                            </div>
-                            <div class="form-group">
-                                <label for="displayName">Nome de exibição</label>
-                                <input type="text" id="displayName" placeholder="Como aparecerá no evento">
-                            </div>
-                        </div>
-                        <div class="form-group full-width">
-                            <label for="producerDescription">Descrição do produtor (opcional)</label>
-                            <textarea id="producerDescription" rows="4" placeholder="Conte um pouco sobre você ou sua empresa..."></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Passar dados do usuário para JavaScript -->
-                    <script>
-                        window.currentUserName = '<?php echo isset($_SESSION['usuario_nome']) ? addslashes($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>';
-                        window.currentUserId = '<?php echo isset($_SESSION['usuarioid']) ? $_SESSION['usuarioid'] : ''; ?>';
-                    </script>
                     
                     <div class="validation-message" id="validation-step-7">
-                        Por favor, preencha todos os campos obrigatórios.
+                        Por favor, selecione um organizador.
                     </div>
 
                     <div class="step-navigation">

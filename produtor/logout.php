@@ -3,11 +3,12 @@
 session_start();
 
 // Opcional: Salvar log de logout antes de limpar dados
-if (isset($_COOKIE['contratanteid'])) {
+// Removido log baseado em contratanteid pois não existe mais
+if (isset($_SESSION['usuarioid'])) {
     include_once("conm/conn.php");
-    $contratante_id = $_COOKIE['contratanteid'] ?? 0;
+    $usuario_id = $_SESSION['usuarioid'] ?? 0;
     if (function_exists('salvarLog')) {
-        salvarLog($con, "Logout realizado", $contratante_id, "Usuário fez logout do sistema");
+        salvarLog($con, "Logout realizado", $usuario_id, "Usuário fez logout do sistema");
     }
 }
 
@@ -25,7 +26,7 @@ $cookies_to_clear = [
     'usuarioid', 
     'usuario_nome',
     'usuario_email',
-    'contratanteid',
+    // Removido 'contratanteid' pois não existe mais
     'participante_logado',
     'participanteid',
     'login_token',

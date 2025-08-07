@@ -5,7 +5,7 @@ AnySummit é uma plataforma de gestão de eventos em PHP/MySQL com módulos para
 
 ## Localização do Projeto
 - **Pasta Principal**: `D:\Dropbox\DESENVOLVIMENTO\AnySummit\public_html`
-- **Banco de Dados**: MySQL hospedado no Supabase (anysubd.mysql.dbaas.com.br)
+- **Banco de Dados**: MySQL hospedado no AnySummit (anysummit.com.br)
 
 ## Estrutura de Pastas
 ```

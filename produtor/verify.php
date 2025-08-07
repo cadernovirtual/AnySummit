@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     
-    // Consulta no banco de dados
-    $sql = "SELECT id, nome, email, senha_hash, contratante_id FROM usuarios WHERE email = ? AND ativo = 1 LIMIT 1";
+    // Consulta no banco de dados - removido contratante_id pois não existe mais na tabela usuarios
+    $sql = "SELECT id, nome, email, senha_hash FROM usuarios WHERE email = ? AND ativo = 1 LIMIT 1";
     $stmt = mysqli_prepare($con, $sql);
     
     if ($stmt) {
@@ -88,14 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['usuarioid'] = $row['id'];
                 $_SESSION['usuario_nome'] = $row['nome'];
                 $_SESSION['usuario_email'] = $row['email'];
-                $_SESSION['contratanteid'] = $row['contratante_id'];
+                // Removido contratanteid pois não existe mais na tabela usuarios
                 
                 // Definir cookies
                 setCookieForever('usuario_logado', '1');
                 setCookieForever('usuarioid', $row['id']);
                 setCookieForever('usuario_nome', $row['nome']);
                 setCookieForever('usuario_email', $row['email']);
-                setCookieForever('contratanteid', $row['contratante_id']);
+                // Removido contratanteid pois não existe mais na tabela usuarios
                 
                 // Redirecionar
                 header("Location: meuseventos.php");

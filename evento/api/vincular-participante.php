@@ -32,9 +32,11 @@ try {
     $email = trim($input['participante_email']);
     $documento = trim($input['participante_documento'] ?? '');
     $celular = trim($input['participante_celular'] ?? '');
+    $dados_adicionais = $input['dados_adicionais'] ?? [];
     
     // Log dos dados processados
     error_log("Processando: ID=$ingresso_id, Nome=$nome, Email=$email");
+    error_log("Dados adicionais: " . json_encode($dados_adicionais));
     
     // Validar dados obrigatórios
     if (!$ingresso_id || !$nome || !$email) {
@@ -70,22 +72,33 @@ try {
     
     // Buscar ou criar participante
     $participanteid = null;    
-    // Primeiro, verificar se já existe participante com este email
-    $sql_buscar = "SELECT participanteid FROM participantes WHERE email = ? LIMIT 1";
+    // Primeiro, verificar se já existe participante com este email para este evento
+    $sql_buscar = "SELECT participanteid FROM participantes WHERE email = ? AND eventoid = ? LIMIT 1";
     $stmt_buscar = $con->prepare($sql_buscar);
-    $stmt_buscar->bind_param("s", $email);
+    $stmt_buscar->bind_param("si", $email, $eventoid);
     $stmt_buscar->execute();
     $result_buscar = $stmt_buscar->get_result();
     
+    // Preparar JSON dos dados adicionais
+    $dados_adicionais_json = !empty($dados_adicionais) ? json_encode($dados_adicionais, JSON_UNESCAPED_UNICODE) : null;
+    
     if ($result_buscar && $result_buscar->num_rows > 0) {
-        // Participante já existe
+        // Participante já existe - atualizar dados
         $participanteid = $result_buscar->fetch_assoc()['participanteid'];
         error_log("Participante existente encontrado: ID = $participanteid");
+        
+        // Atualizar dados do participante existente
+        $sql_atualizar = "UPDATE participantes SET Nome = ?, celular = ?, CPF = ?, dados_adicionais = ? WHERE participanteid = ?";
+        $stmt_atualizar = $con->prepare($sql_atualizar);
+        $stmt_atualizar->bind_param("ssssi", $nome, $celular, $documento, $dados_adicionais_json, $participanteid);
+        $stmt_atualizar->execute();
+        error_log("Dados do participante atualizados");
+        
     } else {
         // Criar novo participante
-        $sql_criar = "INSERT INTO participantes (Nome, email, celular, eventoid) VALUES (?, ?, ?, ?)";
+        $sql_criar = "INSERT INTO participantes (Nome, email, celular, CPF, eventoid, dados_adicionais) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt_criar = $con->prepare($sql_criar);
-        $stmt_criar->bind_param("sssi", $nome, $email, $celular, $eventoid);
+        $stmt_criar->bind_param("ssssis", $nome, $email, $celular, $documento, $eventoid, $dados_adicionais_json);
         
         if ($stmt_criar->execute()) {
             $participanteid = $con->insert_id;
@@ -94,7 +107,7 @@ try {
             error_log("Erro ao criar participante: " . $con->error);
             // Tentar buscar novamente (pode ter sido criado por outro processo)
             $stmt_buscar2 = $con->prepare($sql_buscar);
-            $stmt_buscar2->bind_param("s", $email);
+            $stmt_buscar2->bind_param("si", $email, $eventoid);
             $stmt_buscar2->execute();
             $result_buscar2 = $stmt_buscar2->get_result();
             

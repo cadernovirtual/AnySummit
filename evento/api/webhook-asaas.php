@@ -4,6 +4,8 @@ header('Content-Type: application/json');
 
 include("../conm/conn.php");
 include("AsaasAPI.php");
+include("enviar-email-confirmacao.php");
+include("notificar-organizador.php");
 
 // Log da requisição para debug
 $input = file_get_contents('php://input');
@@ -112,18 +114,36 @@ try {
 }
 
 function processarPagamentoAprovado($pedidoid, $pedido, $con) {
-    // Aqui você pode adicionar lógica para:
+    error_log("Iniciando processamento pós-aprovação para pedido: $pedidoid");
     
     // 1. Enviar email de confirmação
-    // enviarEmailConfirmacao($pedido);
+    try {
+        $email_enviado = enviarEmailConfirmacao($pedidoid, $con);
+        if ($email_enviado) {
+            error_log("Email de confirmação enviado com sucesso para pedido: $pedidoid");
+        } else {
+            error_log("Falha ao enviar email de confirmação para pedido: $pedidoid");
+        }
+    } catch (Exception $e) {
+        error_log("Erro ao enviar email de confirmação: " . $e->getMessage());
+    }
     
-    // 2. Gerar QR codes dos ingressos
+    // 2. Gerar QR codes dos ingressos (implementar se necessário)
     // gerarIngressos($pedidoid);
     
     // 3. Notificar o organizador do evento
-    // notificarOrganizador($pedido['eventoid']);
+    try {
+        $notificacao_enviada = notificarOrganizadorCompra($pedidoid, $con);
+        if ($notificacao_enviada === true) {
+            error_log("Notificação do organizador enviada com sucesso para pedido: $pedidoid");
+        } else {
+            error_log("Falha ao enviar notificação do organizador para pedido: $pedidoid - " . $notificacao_enviada);
+        }
+    } catch (Exception $e) {
+        error_log("Erro ao enviar notificação do organizador: " . $e->getMessage());
+    }
     
-    // 4. Atualizar estatísticas
+    // 4. Atualizar estatísticas (implementar se necessário)
     // atualizarEstatisticas($pedido['eventoid']);
     
     error_log("Processamento pós-aprovação executado para pedido $pedidoid");

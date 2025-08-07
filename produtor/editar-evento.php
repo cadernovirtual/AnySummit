@@ -1,74 +1,49 @@
 <?php
-// Debug inicial
-error_log("=== EDITAR EVENTO - INÍCIO ===");
-error_log("REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'undefined'));
-error_log("GET params: " . print_r($_GET, true));
-
 include("check_login.php");
 include("conm/conn.php");
 
-// Buscar dados do usuário para o header
-$usuario = null;
-$usuario_id = $_SESSION['usuarioid'];
-if ($usuario_id) {
-    $sql_usuario = "SELECT id, nome, email, foto_perfil FROM usuarios WHERE id = ?";
-    $stmt_usuario = mysqli_prepare($con, $sql_usuario);
-    if ($stmt_usuario) {
-        mysqli_stmt_bind_param($stmt_usuario, "i", $usuario_id);
-        mysqli_stmt_execute($stmt_usuario);
-        $result_usuario = mysqli_stmt_get_result($stmt_usuario);
-        $usuario = mysqli_fetch_assoc($result_usuario);
-        mysqli_stmt_close($stmt_usuario);
-    }
+// Pegar ID do evento da URL
+$evento_id = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['evento_id']) ? intval($_GET['evento_id']) : 0);
+$usuario_id = $_COOKIE['usuarioid'] ?? 0;
+
+if (!$evento_id || !$usuario_id) {
+    header('Location: meuseventos.php');
+    exit();
 }
 
-// Debug - verificar parâmetros da URL
-error_log("=== DEBUG EDITAR EVENTO ===");
-error_log("GET parameters: " . print_r($_GET, true));
-error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
+// Buscar dados completos do evento
+$sql = "SELECT 
+            e.*,
+            ce.nome as categoria_nome
+        FROM eventos e
+        LEFT JOIN categorias_evento ce ON e.categoria_id = ce.id
+        WHERE e.id = ? AND e.usuario_id = ?";
 
-// Verificar se está editando um evento existente
-$evento_id = isset($_GET['evento_id']) ? intval($_GET['evento_id']) : 0;
-$dados_evento = null;
+$stmt = $con->prepare($sql);
+$stmt->bind_param("ii", $evento_id, $usuario_id);
+$stmt->execute();
+$dados_evento = $stmt->get_result()->fetch_assoc();
 
-error_log("Evento ID capturado: $evento_id");
-error_log("Usuario ID da sessão: $usuario_id");
-
-if ($evento_id > 0) {
-    // Verificar se o evento pertence ao usuário
-    $sql_evento = "SELECT * FROM eventos WHERE id = ? AND usuario_id = ?";
-    $stmt = mysqli_prepare($con, $sql_evento);
-    mysqli_stmt_bind_param($stmt, "ii", $evento_id, $usuario_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    
-    if ($row = mysqli_fetch_assoc($result)) {
-        $dados_evento = $row;
-        error_log("✅ Evento encontrado: " . $row['nome']);
-    } else {
-        error_log("❌ Evento não encontrado ou sem permissão");
-        
-        // Verificar se evento existe (debug)
-        $sql_check = "SELECT id, nome, usuario_id FROM eventos WHERE id = ?";
-        $stmt_check = mysqli_prepare($con, $sql_check);
-        mysqli_stmt_bind_param($stmt_check, "i", $evento_id);
-        mysqli_stmt_execute($stmt_check);
-        $result_check = mysqli_stmt_get_result($stmt_check);
-        
-        if ($row_check = mysqli_fetch_assoc($result_check)) {
-            error_log("Evento existe mas pertence ao usuário: " . $row_check['usuario_id']);
-        } else {
-            error_log("Evento não existe no banco de dados");
-        }
-        
-        // Redirecionar com mensagem de erro
-        header("Location: /produtor/meuseventos.php?erro=evento_nao_encontrado");
-        exit();
-    }
-} else {
-    error_log("❌ ID do evento não fornecido na URL");
-    header("Location: /produtor/meuseventos.php?erro=id_obrigatorio");
+if (!$dados_evento) {
+    header('Location: meuseventos.php');
     exit();
+}
+
+// Buscar dados do usuário
+$stmt = $con->prepare("SELECT * FROM usuarios WHERE id = ?");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$usuario = $stmt->get_result()->fetch_assoc();
+
+// Buscar contratantes do usuário
+$sql_contratantes = "SELECT id, razao_social FROM contratantes WHERE usuario_id = ? ORDER BY razao_social";
+$stmt_contratantes = $con->prepare($sql_contratantes);
+$stmt_contratantes->bind_param("i", $usuario_id);
+$stmt_contratantes->execute();
+$result_contratantes = $stmt_contratantes->get_result();
+$contratantes = [];
+while ($row = mysqli_fetch_assoc($result_contratantes)) {
+    $contratantes[] = $row;
 }
 
 // Buscar categorias ativas
@@ -84,260 +59,209 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Evento - Anysummit</title>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-1-0-0.css">
-    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-painel-1-0-0.css">
+    <title>Editar Evento - Painel Produtor - Anysummit</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/produtor/css/criaevento.css" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-1-0-0.css">
+    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-painel-1-0-0.css">
     <link rel="stylesheet" type="text/css" href="/produtor/css/busca-endereco.css" />
     <link rel="stylesheet" type="text/css" href="/produtor/css/iphone-switch.css" />
     <link rel="stylesheet" type="text/css" href="/produtor/css/custom-dialogs.css" />
     <link rel="stylesheet" type="text/css" href="/produtor/css/combo-styles.css" />
     <link rel="stylesheet" type="text/css" href="/produtor/css/form-alignment.css" />
     <link rel="stylesheet" type="text/css" href="/produtor/css/sistema-ingressos-etapa6.css" />
-  
+    
     <style>
-        .btn-cancel {
-            background: #6b7280 !important;
-            color: white !important;
-        }
-        
-        .btn-cancel:hover {
-            background: #4b5563 !important;
-        }
-        
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 51px;
-            height: 31px;
-        }
-        
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .slider {
-            position: absolute;
-            cursor: pointer;
+        /* Loading Spinner com backdrop */
+        .loading-overlay {
+            position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 15, 35, 0.85); /* Backdrop escuro semi-transparente */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(8px); /* Efeito de desfoque no fundo */
         }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 27px;
-            width: 27px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-        }
-        
-        input:checked + .slider {
-            background-color: #4CD964;
-        }
-        
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-        
-        .slider.round {
-            border-radius: 31px;
-        }
-        
-        .slider.round:before {
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #00C2FF;
             border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            color: #fff; /* Texto branco no backdrop escuro */
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .loading-subtext {
+            font-size: 14px;
+            color: #B8B8C8; /* Texto acinzentado claro */
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Progress bar com 4 etapas */
+        .step-indicators .step-indicator:nth-child(n+5) {
+            display: none;
+        }
+
+        /* Botão salvar estilo especial */
+        .btn-save {
+            background: #00C2FF !important;
+            color: white !important;
+            border: none !important;
+        }
+
+        .btn-save:hover {
+            background: #0098CC !important;
+        }
+
+        .btn-save:disabled {
+            background: #ccc !important;
+            cursor: not-allowed !important;
         }
         
-        .form-group + .form-group {
-            margin-top: 10px;
+        /* Garantir compatibilidade com layout original */
+        /* Remover definições do body que conflitam */
+        
+        .main-layout {
+            display: flex;
+            min-height: calc(100vh - 80px);
         }
         
-        .modal .form-group label {
-            margin-bottom: 3px;
-        }
-        
-        .error-field {
-            border: 2px solid #ef4444 !important;
-            animation: shake 0.3s ease-in-out;
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        
-        .upload-area.small {
-            min-height: 150px;
+        .content-area {
+            flex: 1;
             padding: 20px;
         }
         
-        .preview-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .preview-container img {
-            max-width: 100%;
-            max-height: 120px;
-            object-fit: contain;
-            margin-bottom: 10px;
-        }
-        
-        .images-section h3 {
-            color: #1f2937;
-            font-weight: 600;
-        }
-        
-        .btn-clear-image {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ddd;
-            color: #666;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            z-index: 10;
-        }
-        
-        .btn-clear-image:hover {
-            background: #ff4444;
-            color: white;
-            border-color: #ff4444;
-            transform: scale(1.1);
-        }
-        
-        .upload-area {
+        /* Progress Bar - sempre no topo */
+        .progress-container {
             position: relative;
+            top: 0;
+            max-width: 1000px;
+            margin: 0 auto 40px;
+            padding: 0 20px;
         }
         
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            align-items: start;
-        }
-        
-        .form-grid .form-group {
-            margin-bottom: 0;
-        }
-        
-        [data-step-content="5"] .form-grid {
-            row-gap: 35px;
-        }
-        
-        [data-step-content="5"] .conditional-section {
-            margin-top: 30px;
-        }
-        
-        [data-step-content="5"] .form-group.full-width {
-            margin-top: 20px;
-        }
-        
-        .color-picker-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .color-picker-wrapper {
-            position: relative;
-            width: 60px;
-            height: 40px;
-        }
-        
-        #corFundo {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-        
-        .color-preview {
-            width: 100%;
-            height: 100%;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            background-color: #000000;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .color-preview:hover {
-            border-color: #00C2FF;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-        
-        .color-hex-input {
-            width: 100px;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        
-        .color-hint {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .upload-preview-main {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        .upload-preview-main img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        
-        .preview-image {
-            width: 426px;
-            height: 200px;
+        .container {
+            max-width: 1400px;
             margin: 0 auto;
-            border-radius: 8px;
+            padding-top: 0; /* Remove padding superior para evitar acúmulo */
+        }
+        
+        /* Ajustar o header do wizard para não conflitar com o header principal */
+        .header.wizard-header {
+            display: block !important;
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            margin-bottom: 30px !important;
+            border-radius: 20px !important;
+            background: rgba(42, 42, 56, 0.6) !important;
+            backdrop-filter: blur(10px) !important;
+            padding: 30px 20px !important;
+            box-shadow: none !important;
+        }
+        
+        .header.wizard-header h1 {
+            background: linear-gradient(135deg, #00C2FF 0%, #725EFF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        /* Forçar todas as etapas sempre no topo */
+        .main-content {
+            position: relative;
+            z-index: 5;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        .section-card {
+            position: relative;
+            z-index: 5;
+            background: rgba(26, 26, 46, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        
+        /* Forçar container principal sem acúmulo de espaçamento */
+        .form-container {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        /* Todas as etapas devem ter a mesma altura de topo */
+        .section-card[data-step-content] {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            margin: 0 !important;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .section-card[data-step-content].active {
+            position: relative !important;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Garantir que particles fiquem atrás de tudo */
+        .particle {
+            z-index: -1 !important;
+            position: fixed !important;
+            pointer-events: none !important;
+        }
+        
+        /* Preview Card - Dimensões corretas do novoevento.php */
+        .preview-image {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 200px; /* Altura correta do novoevento */
+            min-height: 200px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin: 15px auto 20px auto; /* Centralizar e espaçamento igual ao novoevento */
+            background: transparent !important; /* Remover background que estava sobrepondo */
         }
         
         .hero-section-mini {
             position: relative;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            border-radius: 8px;
         }
         
+        /* Background da section */
         .hero-mini-background {
             position: absolute;
             top: 0;
@@ -350,6 +274,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             opacity: 1;
         }
         
+        /* Container principal */
         .hero-mini-container {
             position: relative;
             width: 100%;
@@ -360,6 +285,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             background: transparent;
         }
         
+        /* Row com as duas colunas */
         .hero-mini-row {
             width: 100%;
             height: 100%;
@@ -368,6 +294,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             gap: 15px;
         }
         
+        /* Coluna esquerda - 66% (8/12) */
         .hero-mini-left {
             flex: 0 0 66%;
             height: 100%;
@@ -376,6 +303,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             padding-right: 10px;
         }
         
+        /* Área da logo */
         .hero-mini-logo-area {
             width: 100%;
             height: 60px;
@@ -389,6 +317,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             object-fit: contain;
         }
         
+        /* Coluna direita - 33% (4/12) */
         .hero-mini-right {
             flex: 0 0 33%;
             height: 100%;
@@ -397,6 +326,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             justify-content: flex-end;
         }
         
+        /* Imagem capa */
         .hero-mini-capa {
             width: 100%;
             max-width: 120px;
@@ -406,42 +336,164 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         
-        .editor-separator {
-            width: 1px;
-            height: 20px;
-            background: #ddd;
-            margin: 0 5px;
-            display: inline-block;
-            vertical-align: middle;
+        /* Color Picker Styles */
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
         }
         
-        .rich-editor {
-            resize: vertical !important;
-            overflow: auto !important;
-            min-height: 200px !important;
-            max-height: 500px !important;
+        .color-picker-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
         }
         
-        body .main-content {
+        #corFundo {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+        }
+        
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            margin-left: 8px;
+            cursor: pointer; /* Indicar que é clicável */
+            transition: border-color 0.3s ease;
+        }
+        
+        .color-preview:hover {
+            border-color: #00C2FF;
+        }
+        
+        .color-hex-input {
+            width: 100px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-family: monospace;
+        }
+        
+        .color-hint {
+            font-size: 12px;
+            color: #8B95A7;
+            margin-left: 10px;
+        }
+        
+        /* Controlar especificamente as imagens do preview */
+        .hero-section-mini {
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+        
+        .hero-mini-background,
+        .hero-mini-container,
+        .hero-mini-row,
+        .hero-mini-left,
+        .hero-mini-right {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero-mini-logo,
+        .hero-mini-capa {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Garantir que preview não vaze para fora do card */
+        .preview-card {
+            overflow: hidden !important;
+            position: relative !important;
+            z-index: 5 !important;
+            max-width: 100% !important;
+        }
+        
+        /* FORÇAR contenção da preview-image */
+        .preview-image {
+            position: relative !important;
+            z-index: 1 !important;
+            overflow: hidden !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 150px !important;
+        }
+        
+        /* TODOS os elementos filhos da preview devem respeitar os limites */
+        .preview-image * {
+            position: relative !important;
+            z-index: 1 !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+        
+        /* Forçar contenção de imagens específicas */
+        #heroLogo,
+        #heroCapa,
+        .hero-mini-logo,
+        .hero-mini-capa {
+            position: relative !important;
+            z-index: 1 !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            object-fit: contain !important;
+        }
+        
+        /* Forçar z-index correto em todos os elementos principais */
+        .content-area {
+            position: relative;
+            z-index: 3;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 4;
+        }
+        
+        .section-card {
+            position: relative;
+            z-index: 5;
+            background: rgba(26, 26, 46, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+        }
+        
+        .preview-card {
+            position: relative;
+            z-index: 5;
+            background: rgba(26, 26, 46, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+            width: 100%;
+            max-width: 460px; /* Largura correta do novoevento */
+            padding: 5px !important; /* Padding reduzido igual ao novoevento */
+            position: sticky;
+            top: 0px; /* Começar no topo igual aos section-cards */
+            margin-top: 0 !important; /* Sem margin superior */
+        }
+        
+        /* Layout grid para acomodar preview maior */
+        .main-content {
             display: grid !important;
             grid-template-columns: 1fr 460px !important;
             gap: 40px !important;
             align-items: start !important;
-            width: 100% !important;
-            max-width: 100% !important;
         }
         
-        body .form-container {
-            grid-column: 1 !important;
-            width: 100% !important;
-            min-width: 0 !important;
-        }
-        
-        body .preview-card {
-            grid-column: 2 !important;
-            width: 100% !important;
-            position: sticky !important;
-            top: 20px !important;
+        @media (min-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr 460px !important;
+            }
         }
         
         @media (max-width: 1199px) {
@@ -449,87 +501,37 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 grid-template-columns: 1fr !important;
                 gap: 30px !important;
             }
-        }
-        
-        .preview-card {
-            width: 100%;
-            max-width: 460px;
-            padding: 5px !important;
-            position: sticky;
-            top: 20px;
-        }
-        
-        .form-container {
-            width: 100%;
-        }
-        
-        .preview-image {
-            margin: 15px auto 20px auto;
-            background: transparent !important;
-        }
-        
-        .btn-secondary {
-            background: #6b7280 !important;
-            color: white !important;
-            border: 1px solid #4b5563 !important;
-        }
-        
-        .btn-secondary:hover {
-            background: #4b5563 !important;
+            
+            .preview-image {
+                max-width: 100%;
+                height: auto;
+                min-height: 200px;
+            }
+            
+            .hero-section-mini {
+                transform: scale(0.9);
+                transform-origin: center;
+            }
         }
     </style>
-    
-    <script>
-        // Dados da sessão PHP para JavaScript
-        window.sessionData = {
-            usuarioId: <?php echo json_encode($_SESSION['usuarioid'] ?? null); ?>,
-            contratanteId: <?php echo json_encode($_SESSION['contratanteid'] ?? null); ?>,
-            usuarioNome: <?php echo json_encode($_SESSION['usuario_nome'] ?? ''); ?>,
-            usuarioEmail: <?php echo json_encode($_SESSION['usuario_email'] ?? ''); ?>
-        };
-        
-        // Dados do evento para carregar estado
-        window.dadosEvento = {
-            id: <?php echo json_encode($evento_id); ?>,
-            controlarLimiteVendas: <?php echo json_encode($dados_evento ? intval($dados_evento['controlar_limite_vendas'] ?? 0) : 0); ?>,
-            limiteVendas: <?php echo json_encode($dados_evento ? intval($dados_evento['limite_vendas'] ?? 0) : 0); ?>,
-            status: <?php echo json_encode($dados_evento ? $dados_evento['status'] : 'rascunho'); ?>,
-            termosAceitos: <?php echo json_encode($dados_evento ? intval($dados_evento['termos_aceitos'] ?? 0) : 0); ?>
-        };
-        
-        // Configurar para modo edição
-        window.isEditMode = true;
-        window.maxSteps = 5;
-        
-        console.log('📋 Dados da sessão:', window.sessionData);
-        console.log('🎯 Dados do evento:', window.dadosEvento);
-        
-        // Debug adicional
-        console.log('🔍 URL atual:', window.location.href);
-        console.log('🔍 URL parameters:', new URLSearchParams(window.location.search).toString());
-        console.log('🔍 Evento ID do JavaScript:', window.dadosEvento.id);
-        
-        // Verificar se URL tem parâmetro
-        const urlParams = new URLSearchParams(window.location.search);
-        const eventoIdUrl = urlParams.get('evento_id');
-        console.log('🔍 Evento ID da URL:', eventoIdUrl);
-        
-        if (!window.dadosEvento.id && eventoIdUrl) {
-            console.warn('⚠️ Evento ID não foi passado do PHP para JavaScript, mas existe na URL');
-            window.dadosEvento.id = parseInt(eventoIdUrl);
-            console.log('🔧 Corrigido evento ID:', window.dadosEvento.id);
-        }
-    </script>
 </head>
 <body>
+    <!-- Particles Background (atrás de tudo) -->
     <div class="particle"></div>
     <div class="particle"></div>
     <div class="particle"></div>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Carregando dados do evento...</div>
+        <div class="loading-subtext">Aguarde enquanto carregamos as informações</div>
+    </div>
+
     <!-- Header -->
     <header class="header">
         <div class="logo-section">
-          <img src="/produtor/img/logohori.png" style="width:100%; max-width:200px;">
+            <img src="/img/logohori.png" style="width:100%; max-width:200px;" alt="AnySummit">
         </div>
         
         <div class="header-right">
@@ -565,17 +567,18 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
     <!-- Main Layout -->
     <div class="main-layout">
         <!-- Sidebar -->
-        <?php include 'menu.php'?>
+        <?php include 'menu.php'; ?>
 
         <!-- Content Area -->
         <main class="content-area">
-     <div class="container">
-      <div class="header" style="display: block; position: relative; z-index: 8; text-align: center; margin-bottom: 25px; border-radius: 20px;">
-            <p>Editar evento</p>
-        </div>
+         <div class="container">
+          <div class="header wizard-header">
+               <h1 style="font-size: 2.5rem; font-weight: 700; margin: 0; color: #fff;">Editar Evento</h1>
+               <p style="color: #8B95A7; margin-top: 8px; font-size: 1.1rem;">Modifique as informações do seu evento</p>
+          </div>
 
-        <!-- Progress Bar (apenas 5 etapas agora) -->
-        <div class="progress-container">
+          <!-- Progress Bar -->
+          <div class="progress-container">
             <div class="progress-bar">
                 <div class="progress-line" id="progressLine"></div>
                 <div class="step active" data-step="1">
@@ -596,432 +599,449 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 </div>
                 <div class="step" data-step="5">
                     <div class="step-number"><span>5</span></div>
-                    <div class="step-title">Produtor</div>
+                    <div class="step-title">Organizador</div>
                 </div>
             </div>
-        </div>
+          </div>
 
-        <div class="main-content">
-            <div class="form-container">
-                <!-- Step 1: Informações Básicas -->
-                <div class="section-card active" data-step-content="1">
-                    <div class="section-header">
-                        <div class="section-number">1</div>
-                        <div>
-                            <div class="section-title">📦 Informações básicas</div>
-                            <div class="section-subtitle">Adicione as principais informações do evento</div>
-                        </div>
-                    </div>
+            <div class="main-content">
+                <div class="form-container">
                     
-                    <div class="form-group full-width">
-                        <label for="eventName">Nome do evento <span class="required">*</span></label>
-                        <input type="text" id="eventName" placeholder="Ex: Summit de Tecnologia 2025" required>
-                    </div>
-
-                    <!-- Imagens do evento -->
-                    <div class="images-section" style="margin-top: 30px;">
+                    <!-- Step 1: Informações Básicas -->
+                    <div class="section-card active" data-step-content="1">
+                        <div class="section-header">
+                            <div class="section-number">1</div>
+                            <div>
+                                <div class="section-title">📦 Informações básicas</div>
+                                <div class="section-subtitle">Adicione as principais informações do evento</div>
+                            </div>
+                        </div>
                         
-                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
-                            <!-- Logo do Evento -->
-                            <div class="form-group">
-                                <label>Logo do Evento</label>
-                                <div class="upload-area small" onClick="document.getElementById('logoUpload').click()" style="min-height: 150px; position: relative;">
-                                    <div id="logoPreviewContainer" class="preview-container">
-                                        <div class="upload-icon">🎨</div>
-                                        <div class="upload-text">Adicionar logo</div>
-                                        <div class="upload-hint">800x200px • Fundo transparente</div>
-                                    </div>
-                                    <button class="btn-clear-image" id="clearLogo" style="display: none;" onclick="clearImage('logo', event)" title="Remover imagem">
-                                        <span style="font-size: 12px;">✕</span>
-                                    </button>
-                                </div>
-                                <input type="file" id="logoUpload" accept="image/*" style="display: none;">
-                            </div>
-
-                            <!-- Imagem de Capa Quadrada -->
-                            <div class="form-group">
-                                <label>Imagem de Capa (Quadrada)</label>
-                                <div class="upload-area small" onClick="document.getElementById('capaUpload').click()" style="min-height: 150px; position: relative;">
-                                    <div id="capaPreviewContainer" class="preview-container">
-                                        <div class="upload-icon">🖼️</div>
-                                        <div class="upload-text">Adicionar capa</div>
-                                        <div class="upload-hint">450x450px • Fundo transparente</div>
-                                    </div>
-                                    <button class="btn-clear-image" id="clearCapa" style="display: none;" onclick="clearImage('capa', event)" title="Remover imagem">
-                                        <span style="font-size: 12px;">✕</span>
-                                    </button>
-                                </div>
-                                <input type="file" id="capaUpload" accept="image/*" style="display: none;">
-                            </div>
-                        </div>
-
-                        <!-- Imagem de Fundo -->
-                        <div class="form-group full-width" style="margin-top: 20px;">
-                            <label>Imagem de Fundo</label>
-                            <div class="upload-area" onClick="document.getElementById('fundoUpload').click()" style="position: relative;">
-                                <div id="fundoPreviewMain" class="upload-preview-main">
-                                    <div class="upload-icon">🌄</div>
-                                    <div class="upload-text">Clique para adicionar imagem de fundo</div>
-                                    <div class="upload-hint">PNG, JPG até 5MB • Tamanho ideal: 1920x640px</div>
-                                </div>
-                                <button class="btn-clear-image" id="clearFundo" style="display: none;" onclick="clearImage('fundo', event)" title="Remover imagem">
-                                    <span style="font-size: 14px;">✕</span>
-                                </button>
-                            </div>
-                            <input type="file" id="fundoUpload" accept="image/*" style="display: none;">
-                        </div>
-                    </div>
-
-                    <!-- Cor de Fundo Alternativa -->
-                    <div class="form-group" style="margin-top: 20px;">
-                            <label for="corFundo">Cor de Fundo Alternativa</label>
-                            <div class="color-picker-container">
-                                <div class="color-picker-wrapper">
-                                    <input type="color" id="corFundo" value="#000000">
-                                    <div class="color-preview" id="colorPreview"></div>
-                                </div>
-                                <input type="text" id="corFundoHex" placeholder="#000000" maxlength="7" class="color-hex-input">
-                                <span class="color-hint">Cor usada quando não houver imagem de fundo</span>
-                            </div>
-                        </div>
-
-                    <div class="validation-message" id="validation-step-1">
-                        Por favor, preencha todos os campos obrigatórios.
-                    </div>
-                    
-                    <!-- Botão de teste para debug -->
-                    <div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border: 1px solid #007bff; border-radius: 5px;">
-                        <h4 style="color: #007bff; margin: 0 0 10px 0;">🔧 Debug Tools</h4>
-                        <button type="button" onclick="testarCarregamento()" style="margin-right: 10px; padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">
-                            📡 Testar Carregamento
-                        </button>
-                        <button type="button" onclick="testarSalvamento()" style="margin-right: 10px; padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
-                            💾 Testar Salvamento
-                        </button>
-                        <button type="button" onclick="verificarDados()" style="padding: 8px 15px; background: #ffc107; color: black; border: none; border-radius: 3px; cursor: pointer;">
-                            🔍 Verificar Dados
-                        </button>
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="nav-btn btn-back" disabled>← Voltar</button>
-                        <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
-                        <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
-                    </div>
-                </div>
-                <!-- Step 2: Data e Horário -->
-                <div class="section-card" data-step-content="2">
-                    <div class="section-header">
-                        <div class="section-number">2</div>
-                        <div>
-                            <div class="section-title">📅 Data e horário</div>
-                            <div class="section-subtitle">Defina quando seu evento irá acontecer</div>
-                        </div>
-                    </div>
-
-                    <!-- Classificação e Categoria -->
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="classification">Classificação do evento <span class="required">*</span></label>
-                            <select id="classification">
-                                <option value="">Selecione uma classificação</option>
-                                <option value="livre">Livre</option>
-                                <option value="10">10 anos</option>
-                                <option value="12">12 anos</option>
-                                <option value="14">14 anos</option>
-                                <option value="16">16 anos</option>
-                                <option value="18">18 anos</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="category">Categoria <span class="required">*</span></label>
-                            <select id="category">
-                                <option value="">Selecione uma categoria</option>
-                                <?php if (empty($categorias)): ?>
-                                    <option value="1">Geral</option>
-                                <?php else: ?>
-                                    <?php foreach ($categorias as $categoria): ?>
-                                        <option value="<?php echo $categoria['id']; ?>"><?php echo htmlspecialchars($categoria['nome']); ?></option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="datetime-grid">
-                        <div class="form-group">
-                            <label for="startDateTime">Data e hora de início <span class="required">*</span></label>
-                            <input type="datetime-local" id="startDateTime" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="endDateTime">Data e hora de término</label>
-                            <input type="datetime-local" id="endDateTime">
-                        </div>
-                    </div>
-
-                    <div class="validation-message" id="validation-step-2">
-                        Por favor, defina a data e hora de início do evento.
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
-                        <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
-                        <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Descrição do Evento -->
-                <div class="section-card" data-step-content="3">
-                    <div class="section-header">
-                        <div class="section-number">3</div>
-                        <div>
-                            <div class="section-title">📝 Descrição do evento</div>
-                            <div class="section-subtitle">Conte sobre o seu evento, inclua detalhes e formatação</div>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Descrição completa</label>
-                        <div class="editor-toolbar">
-                            <button type="button" class="editor-btn" data-command="bold" title="Negrito">
-                                <strong>B</strong>
-                            </button>
-                            <button type="button" class="editor-btn" data-command="italic" title="Itálico">
-                                <em>I</em>
-                            </button>
-                            <button type="button" class="editor-btn" data-command="underline" title="Sublinhado">
-                                <u>U</u>
-                            </button>
-                            <div class="editor-separator"></div>
-                            <button type="button" class="editor-btn" data-command="justifyLeft" title="Alinhar à esquerda">
-                                ◀
-                            </button>
-                            <button type="button" class="editor-btn" data-command="justifyCenter" title="Centralizar">
-                                ▬
-                            </button>
-                            <button type="button" class="editor-btn" data-command="justifyRight" title="Alinhar à direita">
-                                ▶
-                            </button>
-                            <button type="button" class="editor-btn" data-command="justifyFull" title="Justificar">
-                                ☰
-                            </button>
-                            <div class="editor-separator"></div>
-                            <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Lista">
-                                •
-                            </button>
-                            <button type="button" class="editor-btn" data-command="createLink" title="Inserir link">
-                                🔗
-                            </button>
-                        </div>
-                        <div id="eventDescription" class="rich-editor" contenteditable="true" placeholder="Descreva detalhadamente seu evento, inclua agenda, palestrantes, benefícios..." style="resize: vertical; overflow: auto; min-height: 200px;"></div>
-                        <div class="char-counter" id="charCounter">0 caracteres</div>
-                    </div>
-                    
-                    <div class="validation-message" id="validation-step-3">
-                        Por favor, preencha todos os campos obrigatórios.
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
-                        <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
-                        <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
-                    </div>
-                </div>
-
-                <!-- Step 4: Localização -->
-                <div class="section-card" data-step-content="4">
-                    <div class="section-header">
-                        <div class="section-number">4</div>
-                        <div>
-                            <div class="section-title">📍 Onde o seu evento vai acontecer</div>
-                            <div class="section-subtitle">Local físico ou plataforma online</div>
-                        </div>
-                    </div>
-
-                    <div class="switch-container">
-                        <div class="switch active" id="locationTypeSwitch">
-                            <div class="switch-handle"></div>
-                        </div>
-                        <label>Evento presencial</label>
-                    </div>
-
-                    <div class="conditional-section show" id="presentialLocation">
                         <div class="form-group full-width">
-                            <label for="addressSearch">Buscar endereço</label>
-                            <div class="address-input-group">
-                                <div class="address-input-wrapper">
-                                    <input type="text" 
-                                           id="addressSearch" 
-                                           placeholder="Ex: Av Paulista 1000, São Paulo" 
-                                           autocomplete="off"
-                                           spellcheck="false">
-                                    <div id="addressSuggestions" class="address-suggestions"></div>
-                                    <div class="address-loading" id="addressLoading">
-                                        <div class="spinner"></div>
-                                        <span>Buscando endereços...</span>
+                            <label for="eventName">Nome do evento <span class="required">*</span></label>
+                            <input type="text" id="eventName" placeholder="Ex: Summit de Tecnologia 2025" required>
+                        </div>
+
+                        <!-- Imagens do evento -->
+                        <div class="images-section" style="margin-top: 30px;">
+                            
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+                                <!-- Logo do Evento -->
+                                <div class="form-group">
+                                    <label>Logo do Evento</label>
+                                    <div class="upload-area small" onClick="document.getElementById('logoUpload').click()" style="min-height: 150px; position: relative;">
+                                        <div id="logoPreviewContainer" class="preview-container">
+                                            <div class="upload-icon">🎨</div>
+                                            <div class="upload-text">Adicionar logo</div>
+                                            <div class="upload-hint">800x200px • Fundo transparente</div>
+                                        </div>
+                                        <button class="btn-clear-image" id="clearLogo" style="display: none;" onclick="clearImage('logo', event)" title="Remover imagem">
+                                            <span style="font-size: 12px;">✕</span>
+                                        </button>
                                     </div>
+                                    <input type="file" id="logoUpload" accept="image/*" style="display: none;">
                                 </div>
-                                <button type="button" 
-                                        class="btn btn-primary btn-buscar-endereco" 
-                                        onclick="searchAddressManual()">
-                                    🔍 Buscar
-                                </button>
+
+                                <!-- Imagem de Capa Quadrada -->
+                                <div class="form-group">
+                                    <label>Imagem de Capa (Quadrada)</label>
+                                    <div class="upload-area small" onClick="document.getElementById('capaUpload').click()" style="min-height: 150px; position: relative;">
+                                        <div id="capaPreviewContainer" class="preview-container">
+                                            <div class="upload-icon">🖼️</div>
+                                            <div class="upload-text">Adicionar capa</div>
+                                            <div class="upload-hint">450x450px • Fundo transparente</div>
+                                        </div>
+                                        <button class="btn-clear-image" id="clearCapa" style="display: none;" onclick="clearImage('capa', event)" title="Remover imagem">
+                                            <span style="font-size: 12px;">✕</span>
+                                        </button>
+                                    </div>
+                                    <input type="file" id="capaUpload" accept="image/*" style="display: none;">
+                                </div>
+                            </div>
+
+                            <!-- Imagem de Fundo -->
+                            <div class="form-group full-width" style="margin-top: 20px;">
+                                <label>Imagem de Fundo</label>
+                                <div class="upload-area" onClick="document.getElementById('fundoUpload').click()" style="position: relative;">
+                                    <div id="fundoPreviewMain" class="upload-preview-main">
+                                        <div class="upload-icon">🌄</div>
+                                        <div class="upload-text">Clique para adicionar imagem de fundo</div>
+                                        <div class="upload-hint">PNG, JPG até 5MB • Tamanho ideal: 1920x640px</div>
+                                    </div>
+                                    <button class="btn-clear-image" id="clearFundo" style="display: none;" onclick="clearImage('fundo', event)" title="Remover imagem">
+                                        <span style="font-size: 14px;">✕</span>
+                                    </button>
+                                </div>
+                                <input type="file" id="fundoUpload" accept="image/*" style="display: none;">
                             </div>
                         </div>
-                        
-                        <div class="location-grid address-fields" id="addressFields" style="margin-top: 20px;">
-                            <div class="form-group" style="margin-top: 15px;">
-                                <label for="venueName">Nome do Local <span class="required">*</span></label>
-                                <input type="text" id="venueName" placeholder="Ex: Centro de Convenções Anhembi">
+
+                        <!-- Cor de Fundo Alternativa -->
+                        <div class="form-group" style="margin-top: 20px;">
+                                <label for="corFundo">Cor de Fundo Alternativa</label>
+                                <div class="color-picker-container">
+                                    <div class="color-picker-wrapper">
+                                        <input type="color" id="corFundo" value="#000000">
+                                        <div class="color-preview" id="colorPreview"></div>
+                                    </div>
+                                    <input type="text" id="corFundoHex" placeholder="#000000" maxlength="7" class="color-hex-input">
+                                    <span class="color-hint">Cor usada quando não houver imagem de fundo</span>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="cep">CEP</label>
-                                <input type="text" id="cep" placeholder="00000-000" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="street">Rua</label>
-                                <input type="text" id="street" placeholder="Nome da rua" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="number">Número</label>
-                                <input type="text" id="number" placeholder="123">
-                            </div>
-                            <div class="form-group">
-                                <label for="complement">Complemento</label>
-                                <input type="text" id="complement" placeholder="Sala, andar...">
-                            </div>
-                            <div class="form-group">
-                                <label for="neighborhood">Bairro</label>
-                                <input type="text" id="neighborhood" placeholder="Nome do bairro" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="city">Cidade</label>
-                                <input type="text" id="city" placeholder="Nome da cidade" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="state">Estado</label>
-                                <input type="text" id="state" placeholder="Estado" readonly>
-                            </div>
+
+                        <div class="validation-message" id="validation-step-1">
+                            Por favor, preencha todos os campos obrigatórios.
                         </div>
-                        
-                        <!-- Campos hidden para latitude/longitude -->
-                        <input type="hidden" id="latitude" value="">
-                        <input type="hidden" id="longitude" value="">
-                        
-                        <div id="map" class="map-container" style="display:none;"></div>
-                    </div>
 
-                    <div class="conditional-section" id="onlineLocation">
-                        <div class="form-group">
-                            <label for="eventLink">Link do evento <span class="required">*</span></label>
-                            <input type="url" id="eventLink" placeholder="https://zoom.us/j/123456789">
-                        </div>
-                    </div>
-
-                    <div class="validation-message" id="validation-step-4">
-                        Por favor, informe o local do evento.
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
-                        <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
-                        <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
-                    </div>
-                </div>
-
-                <!-- Step 5: Sobre o Produtor (renumerado de 7 para 5) -->
-                <div class="section-card" data-step-content="5">
-                    <div class="section-header">
-                        <div class="section-number">5</div>
-                        <div>
-                            <div class="section-title">🧑‍💼 Sobre o produtor</div>
-                            <div class="section-subtitle">Informações sobre quem está organizando o evento</div>
+                        <div class="step-navigation">
+                            <button class="nav-btn btn-back" disabled>← Voltar</button>
+                            <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
+                            <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
                         </div>
                     </div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="producer">Selecionar produtor</label>
-                            <select id="producer">
-                                <option value="current">Você (<?php echo isset($_SESSION['usuario_nome']) ? htmlspecialchars($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>)</option>
-                                <option value="new">Novo produtor</option>
-                            </select>
+                    <!-- Step 2: Data e Horário -->
+                    <div class="section-card" data-step-content="2">
+                        <div class="section-header">
+                            <div class="section-number">2</div>
+                            <div>
+                                <div class="section-title">📅 Data e horário</div>
+                                <div class="section-subtitle">Defina quando seu evento irá acontecer</div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="conditional-section" id="newProducerFields" style="display: none;">
+                        <!-- Classificação e Categoria -->
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="producerName">Nome do produtor <span class="required">*</span></label>
-                                <input type="text" id="producerName" placeholder="Nome completo ou empresa">
+                                <label for="classification">Classificação do evento <span class="required">*</span></label>
+                                <select id="classification">
+                                    <option value="">Selecione uma classificação</option>
+                                    <option value="livre">Livre</option>
+                                    <option value="10">10 anos</option>
+                                    <option value="12">12 anos</option>
+                                    <option value="14">14 anos</option>
+                                    <option value="16">16 anos</option>
+                                    <option value="18">18 anos</option>
+                                </select>
                             </div>
                             <div class="form-group">
-                                <label for="displayName">Nome de exibição</label>
-                                <input type="text" id="displayName" placeholder="Como aparecerá no evento">
+                                <label for="category">Categoria <span class="required">*</span></label>
+                                <select id="category">
+                                    <option value="">Selecione uma categoria</option>
+                                    <?php if (empty($categorias)): ?>
+                                        <option value="1">Geral</option>
+                                    <?php else: ?>
+                                        <?php foreach ($categorias as $categoria): ?>
+                                            <option value="<?php echo $categoria['id']; ?>"><?php echo htmlspecialchars($categoria['nome']); ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
                             </div>
                         </div>
-                        <div class="form-group full-width">
-                            <label for="producerDescription">Descrição do produtor (opcional)</label>
-                            <textarea id="producerDescription" rows="4" placeholder="Conte um pouco sobre você ou sua empresa..."></textarea>
+
+                        <div class="datetime-grid">
+                            <div class="form-group">
+                                <label for="startDateTime">Data e hora de início <span class="required">*</span></label>
+                                <input type="datetime-local" id="startDateTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="endDateTime">Data e hora de término</label>
+                                <input type="datetime-local" id="endDateTime">
+                            </div>
+                        </div>
+
+                        <div class="validation-message" id="validation-step-2">
+                            Por favor, defina a data e hora de início do evento.
+                        </div>
+
+                        <div class="step-navigation">
+                            <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                            <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
+                            <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
                         </div>
                     </div>
-                    
-                    <div class="validation-message" id="validation-step-5">
-                        Por favor, preencha todos os campos obrigatórios.
+
+                    <!-- Step 3: Descrição do Evento -->
+                    <div class="section-card" data-step-content="3">
+                        <div class="section-header">
+                            <div class="section-number">3</div>
+                            <div>
+                                <div class="section-title">📝 Descrição do evento</div>
+                                <div class="section-subtitle">Conte sobre o seu evento, inclua detalhes e formatação</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Descrição completa</label>
+                            <div class="editor-toolbar">
+                                <button type="button" class="editor-btn" data-command="bold" title="Negrito">
+                                    <strong>B</strong>
+                                </button>
+                                <button type="button" class="editor-btn" data-command="italic" title="Itálico">
+                                    <em>I</em>
+                                </button>
+                                <button type="button" class="editor-btn" data-command="underline" title="Sublinhado">
+                                    <u>U</u>
+                                </button>
+                                <div class="editor-separator"></div>
+                                <button type="button" class="editor-btn" data-command="justifyLeft" title="Alinhar à esquerda">
+                                    ◀
+                                </button>
+                                <button type="button" class="editor-btn" data-command="justifyCenter" title="Centralizar">
+                                    ▬
+                                </button>
+                                <button type="button" class="editor-btn" data-command="justifyRight" title="Alinhar à direita">
+                                    ▶
+                                </button>
+                                <button type="button" class="editor-btn" data-command="justifyFull" title="Justificar">
+                                    ☰
+                                </button>
+                                <div class="editor-separator"></div>
+                                <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Lista">
+                                    •
+                                </button>
+                                <button type="button" class="editor-btn" data-command="createLink" title="Inserir link">
+                                    🔗
+                                </button>
+                            </div>
+                            <div id="eventDescription" class="rich-editor" contenteditable="true" placeholder="Descreva detalhadamente seu evento, inclua agenda, palestrantes, benefícios..." style="resize: vertical; overflow: auto; min-height: 200px;"></div>
+                            <div class="char-counter" id="charCounter">0 caracteres</div>
+                        </div>
+                        
+                        <div class="validation-message" id="validation-step-3">
+                            Por favor, preencha todos os campos obrigatórios.
+                        </div>
+
+                        <div class="step-navigation">
+                            <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                            <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
+                            <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
+                        </div>
                     </div>
 
-                    <div class="step-navigation">
-                        <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
-                        <button class="nav-btn btn-secondary" onClick="salvarEvento()">
-                            💾 Salvar Alterações
-                        </button>
-                        <button class="nav-btn btn-continue" onClick="salvarEvento()">
-                            ✓ Salvar evento
-                        </button>
-                    </div>
-                </div>
-            </div>
+                    <!-- Step 4: Localização -->
+                    <div class="section-card" data-step-content="4">
+                        <div class="section-header">
+                            <div class="section-number">4</div>
+                            <div>
+                                <div class="section-title">📍 Onde o seu evento vai acontecer</div>
+                                <div class="section-subtitle">Local físico ou plataforma online</div>
+                            </div>
+                        </div>
 
-            <!-- Preview Card -->
-            <div class="preview-card">
-                <div class="preview-title">
-                    👁️ Prévia do Evento
+                        <div class="switch-container">
+                            <div class="switch active" id="locationTypeSwitch">
+                                <div class="switch-handle"></div>
+                            </div>
+                            <label>Evento presencial</label>
+                        </div>
+
+                        <div class="conditional-section show" id="presentialLocation">
+                            <div class="form-group full-width">
+                                <label for="addressSearch">Buscar endereço</label>
+                                <div class="address-input-group">
+                                    <div class="address-input-wrapper">
+                                        <input type="text" 
+                                               id="addressSearch" 
+                                               placeholder="Ex: Av Paulista 1000, São Paulo" 
+                                               autocomplete="off"
+                                               spellcheck="false">
+                                        <div id="addressSuggestions" class="address-suggestions"></div>
+                                        <div class="address-loading" id="addressLoading">
+                                            <div class="spinner"></div>
+                                            <span>Buscando endereços...</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" 
+                                            class="btn btn-primary btn-buscar-endereco" 
+                                            onclick="searchAddressManual()">
+                                        🔍 Buscar
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="location-grid address-fields" id="addressFields" style="margin-top: 20px;">
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label for="venueName">Nome do Local <span class="required">*</span> - Digite um nome conhecido para o local. Ex: Estádio do Maracanã</label>
+                                    <input type="text" id="venueName" placeholder="Ex: Centro de Convenções Anhembi">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cep">CEP</label>
+                                    <input type="text" id="cep" placeholder="00000-000" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="street">Rua</label>
+                                    <input type="text" id="street" placeholder="Nome da rua" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="number">Número</label>
+                                    <input type="text" id="number" placeholder="123">
+                                </div>
+                                <div class="form-group">
+                                    <label for="complement">Complemento</label>
+                                    <input type="text" id="complement" placeholder="Sala, andar...">
+                                </div>
+                                <div class="form-group">
+                                    <label for="neighborhood">Bairro</label>
+                                    <input type="text" id="neighborhood" placeholder="Nome do bairro" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="city">Cidade</label>
+                                    <input type="text" id="city" placeholder="Nome da cidade" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="state">Estado</label>
+                                    <input type="text" id="state" placeholder="Estado" readonly>
+                                </div>
+                            </div>
+                            
+                            <!-- Campos hidden para latitude/longitude -->
+                            <input type="hidden" id="latitude" value="">
+                            <input type="hidden" id="longitude" value="">
+                            
+                            <div id="map" class="map-container" style="display:none;"></div>
+                        </div>
+
+                        <div class="conditional-section" id="onlineLocation">
+                            <div class="form-group">
+                                <label for="eventLink">Link do evento <span class="required">*</span></label>
+                                <input type="url" id="eventLink" placeholder="https://zoom.us/j/123456789">
+                            </div>
+                        </div>
+
+                        <div class="validation-message" id="validation-step-4">
+                            Por favor, informe o local do evento.
+                        </div>
+
+                        <div class="step-navigation">
+                            <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                            <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
+                            <button class="nav-btn btn-continue" onClick="nextStep()">Avançar →</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Organizador e Configurações -->
+                    <div class="section-card" data-step-content="5">
+                        <div class="section-header">
+                            <div class="section-number">5</div>
+                            <div>
+                                <div class="section-title">🏢 Organizador e Configurações</div>
+                                <div class="section-subtitle">Defina o organizador responsável e configurações do evento</div>
+                            </div>
+                        </div>
+
+                        <!-- Organizador -->
+                        <div class="form-group">
+                            <label for="contratante">Organizador Responsável <span class="required">*</span></label>
+                            <select id="contratante" required>
+                                <option value="">Selecione o organizador</option>
+                                <?php foreach ($contratantes as $contratante): ?>
+                                    <option value="<?php echo $contratante['id']; ?>"><?php echo htmlspecialchars($contratante['razao_social']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Visibilidade -->
+                        <div class="form-group">
+                            <label for="visibilidade">Visibilidade do Evento <span class="required">*</span></label>
+                            <select id="visibilidade" required>
+                                <option value="">Selecione a visibilidade</option>
+                                <option value="publico">Público</option>
+                                <option value="privado">Privado</option>
+                            </select>
+                            <div class="form-hint">
+                                <strong>Eventos privados</strong> não terão página pública para compra de ingressos. 
+                                A página de venda somente será acessível via link privado.
+                            </div>
+                        </div>
+
+                        <!-- Aceite de Termos (apenas para rascunhos) -->
+                        <?php if ($dados_evento['status'] === 'rascunho'): ?>
+                        <div class="form-group" style="margin-top: 30px;">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="aceitarTermos" <?php echo !empty($dados_evento['dados_aceite']) ? 'checked disabled' : ''; ?>>
+                                <label for="aceitarTermos">
+                                    Aceito os <a href="/termos" target="_blank">Termos de Uso</a> e 
+                                    <a href="/privacidade" target="_blank">Políticas de Privacidade</a>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Status do Evento (apenas se termos aceitos) -->
+                        <div class="form-group" id="statusContainer" style="<?php echo empty($dados_evento['dados_aceite']) ? 'display: none;' : ''; ?>">
+                            <label for="statusEvento">Situação do Evento</label>
+                            <select id="statusEvento">
+                                <option value="rascunho" <?php echo $dados_evento['status'] === 'rascunho' ? 'selected' : ''; ?>>Rascunho</option>
+                                <option value="publicado" <?php echo $dados_evento['status'] === 'publicado' ? 'selected' : ''; ?>>Publicado</option>
+                                <option value="pausado" <?php echo $dados_evento['status'] === 'pausado' ? 'selected' : ''; ?>>Pausado</option>
+                                <option value="cancelado" <?php echo $dados_evento['status'] === 'cancelado' ? 'selected' : ''; ?>>Cancelado</option>
+                                <option value="finalizado" <?php echo $dados_evento['status'] === 'finalizado' ? 'selected' : ''; ?>>Finalizado</option>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="validation-message" id="validation-step-5">
+                            Por favor, preencha todos os campos obrigatórios.
+                        </div>
+
+                        <div class="step-navigation">
+                            <button class="nav-btn btn-back" onClick="prevStep()">← Voltar</button>
+                            <button class="nav-btn btn-cancel" onClick="window.location.href='/produtor/meuseventos.php'">Cancelar</button>
+                            <button class="nav-btn btn-save" id="saveButton" onClick="saveEventData()" disabled>💾 Salvar Alterações</button>
+                        </div>
+                    </div>
+
                 </div>
-                <div class="preview-image" id="previewImage">
-                    <div class="hero-section-mini">
-                        <div class="hero-mini-background" id="heroBackground"></div>
-                        <div class="hero-mini-container">
-                            <div class="hero-mini-row">
-                                <div class="hero-mini-left">
-                                    <div class="hero-mini-logo-area">
-                                        <img id="heroLogo" class="hero-mini-logo" src="" alt="Logo" style="display: none;">
+
+                <!-- Preview Card -->
+                <div class="preview-card">
+                    <div class="preview-title">
+                        👁️ Prévia do Evento
+                    </div>
+                    <div class="preview-image" id="previewImage">
+                        <!-- Preview Proporcional da Section -->
+                        <div class="hero-section-mini">
+                            <!-- Background -->
+                            <div class="hero-mini-background" id="heroBackground"></div>
+                            
+                            <!-- Container com padding proporcional -->
+                            <div class="hero-mini-container">
+                                <div class="hero-mini-row">
+                                    <!-- Coluna esquerda (66% - similar a col-lg-8) -->
+                                    <div class="hero-mini-left">
+                                        <!-- Logo do evento -->
+                                        <div class="hero-mini-logo-area">
+                                            <img id="heroLogo" class="hero-mini-logo" src="" alt="Logo" style="display: none; position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Coluna direita (33% - similar a col-lg-4) -->
+                                    <div class="hero-mini-right">
+                                        <!-- Imagem capa -->
+                                        <img id="heroCapa" class="hero-mini-capa" src="" alt="Capa" style="display: none; position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain;">
                                     </div>
                                 </div>
-                                <div class="hero-mini-right">
-                                    <img id="heroCapa" class="hero-mini-capa" src="" alt="Capa" style="display: none;">
-                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="preview-content">
+                    <div class="preview-content">
                         <div class="preview-event-title" id="previewTitle">Nome do evento</div>
                         <div class="preview-description" id="previewDescription">Descrição do evento aparecerá aqui...</div>
                         <div class="preview-details">
                             <div class="preview-detail">
-                                <div class="detail-icon"></div>
+                                <div class="detail-icon">📅</div>
                                 <span id="previewDate">Data não definida</span>
                             </div>
                             <div class="preview-detail">
-                                <div class="detail-icon"></div>
+                                <div class="detail-icon">📍</div>
                                 <span id="previewLocation">Local não definido</span>
                             </div>
                             <div class="preview-detail">
-                                <div class="detail-icon"></div>
+                                <div class="detail-icon">🏷️</div>
                                 <span id="previewCategory">Categoria não definida</span>
                             </div>
                             <div class="preview-detail">
-                                <div class="detail-icon"></div>
+                                <div class="detail-icon">🌐</div>
                                 <span id="previewType">Presencial</span>
                             </div>
                         </div>
@@ -1029,817 +1049,1197 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 </div>
             </div>
         </div>
-    </main>
     </div>
-    
+
+    <!-- JavaScript Integrado -->
     <script>
-        // Dados do usuário para JavaScript
-        window.currentUserName = '<?php echo isset($_SESSION['usuario_nome']) ? addslashes($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>';
-        window.currentUserId = '<?php echo isset($_SESSION['usuarioid']) ? $_SESSION['usuarioid'] : ''; ?>';
+        // ========================================
+        // CONFIGURAÇÕES GLOBAIS
+        // ========================================
         
-        // Navegação entre etapas
         let currentStep = 1;
+        const maxSteps = 5;
+        const evento_id = <?php echo $evento_id; ?>;
+        let eventData = <?php echo json_encode($dados_evento); ?>;
+        let isLoading = false;
+        let isSaving = false;
+        let isInitialLoad = true; // ✅ Flag para evitar auto-save durante carregamento
         
-        function getCurrentStep() {
-            return currentStep;
+        // Dados da sessão PHP
+        window.sessionData = {
+            usuarioId: <?php echo json_encode($usuario_id); ?>,
+            usuarioNome: <?php echo json_encode($usuario['nome'] ?? ''); ?>,
+            usuarioEmail: <?php echo json_encode($usuario['email'] ?? ''); ?>
+        };
+
+        // Debug do valor original da classificacao
+        console.log('=== DEBUG CLASSIFICACAO ===');
+        console.log('Valor raw do PHP:', <?php echo json_encode($dados_evento['classificacao'] ?? 'NULL'); ?>);
+        console.log('Tipo do valor:', typeof <?php echo json_encode($dados_evento['classificacao'] ?? 'NULL'); ?>);
+        console.log('========================');
+
+        // ========================================
+        // SISTEMA DE LOADING
+        // ========================================
+        
+        function showLoading(text = 'Carregando...', subtext = '') {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = overlay.querySelector('.loading-text');
+            const subText = overlay.querySelector('.loading-subtext');
+            
+            loadingText.textContent = text;
+            subText.textContent = subtext;
+            overlay.style.display = 'flex';
+            isLoading = true;
         }
         
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = 'none';
+            isLoading = false;
+        }
+        
+        // ========================================
+        // FUNÇÕES DE TIMEZONE
+        // ========================================
+        
+        function convertUTCToLocal(utcDateString) {
+            if (!utcDateString) return '';
+            
+            // Criar data UTC
+            const utcDate = new Date(utcDateString + 'Z'); // Força UTC
+            
+            // Converter para timezone local e formatar para datetime-local
+            const year = utcDate.getFullYear();
+            const month = String(utcDate.getMonth() + 1).padStart(2, '0');
+            const day = String(utcDate.getDate()).padStart(2, '0');
+            const hours = String(utcDate.getHours()).padStart(2, '0');
+            const minutes = String(utcDate.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        function convertLocalToUTC(localDateString) {
+            if (!localDateString) return '';
+            
+            // Criar date local e converter para UTC
+            const localDate = new Date(localDateString);
+            
+            // Retornar no formato UTC para o servidor
+            return localDate.toISOString().slice(0, 19).replace('T', ' ');
+        }
+        
+        // ========================================
+        // CARREGAMENTO DE DADOS (DIRETO DO PHP)
+        // ========================================
+        
+        function loadEventData() {
+            console.log('Carregando dados do evento do PHP:', eventData);
+            console.log('Campo logo_evento:', eventData.logo_evento);
+            console.log('Campo imagem_capa:', eventData.imagem_capa);
+            console.log('Campo classificacao ORIGINAL:', eventData.classificacao);
+            
+            // Dados já estão carregados do PHP
+            populateFormFields();
+            updatePreview();
+            enableSaveButton();
+            
+            // Liberar auto-save após carregamento
+            setTimeout(() => {
+                isInitialLoad = false;
+                console.log('Auto-save liberado após carregamento inicial');
+            }, 2000);
+        }
+        
+        // ========================================
+        // POPULAÇÃO DOS CAMPOS DO FORMULÁRIO
+        // ========================================
+        
+        function getImageUrl(imagePath) {
+            if (!imagePath) return null;
+            
+            // Se já começa com /uploads/, usar diretamente
+            if (imagePath.startsWith('/uploads/')) {
+                return imagePath;
+            }
+            
+            // Se já começa com uploads/, adicionar apenas /
+            if (imagePath.startsWith('uploads/')) {
+                return '/' + imagePath;
+            }
+            
+            // Caso contrário, é apenas o nome do arquivo
+            return `/uploads/eventos/${imagePath}`;
+        }
+
+        function populateFormFields() {
+            // Etapa 1 - Informações básicas
+            setFieldValue('eventName', eventData.nome);
+            setFieldValue('corFundo', eventData.cor_fundo || '#000000');
+            setFieldValue('corFundoHex', eventData.cor_fundo || '#000000');
+            
+            // Imagens - usando função auxiliar para URL
+            if (eventData.logo_evento) {
+                const logoUrl = getImageUrl(eventData.logo_evento);
+                console.log('Logo URL montada:', logoUrl);
+                showImagePreview('logo', logoUrl, eventData.logo_evento);
+            }
+            if (eventData.imagem_capa) {
+                const capaUrl = getImageUrl(eventData.imagem_capa);
+                console.log('Capa URL montada:', capaUrl);
+                showImagePreview('capa', capaUrl, eventData.imagem_capa);
+            }
+            if (eventData.imagem_fundo) {
+                const fundoUrl = getImageUrl(eventData.imagem_fundo);
+                console.log('Fundo URL montada:', fundoUrl);
+                showImagePreview('fundo', fundoUrl, eventData.imagem_fundo);
+            }
+            
+            // Etapa 2 - Data e horário (com conversão de timezone)
+            console.log('Valor classificacao do BD:', eventData.classificacao);
+            setFieldValue('classification', eventData.classificacao);
+            setFieldValue('category', eventData.categoria_id);
+            
+            if (eventData.data_inicio) {
+                const localStartDate = convertUTCToLocal(eventData.data_inicio);
+                console.log('Data início UTC:', eventData.data_inicio, '-> Local:', localStartDate);
+                setFieldValue('startDateTime', localStartDate);
+            }
+            if (eventData.data_fim) {
+                const localEndDate = convertUTCToLocal(eventData.data_fim);
+                console.log('Data fim UTC:', eventData.data_fim, '-> Local:', localEndDate);
+                setFieldValue('endDateTime', localEndDate);
+            }
+            
+            // Etapa 3 - Descrição
+            const descElement = document.getElementById('eventDescription');
+            if (descElement && eventData.descricao) {
+                descElement.innerHTML = eventData.descricao;
+                updateCharCounter();
+            }
+            
+            // Etapa 4 - Localização
+            if (eventData.tipo_local === 'online') {
+                switchToOnlineMode();
+                setFieldValue('eventLink', eventData.link_online);
+            } else {
+                switchToPresentialMode();
+                setFieldValue('venueName', eventData.nome_local);
+                setFieldValue('cep', eventData.cep);
+                setFieldValue('street', eventData.rua);
+                setFieldValue('number', eventData.numero);
+                setFieldValue('complement', eventData.complemento);
+                setFieldValue('neighborhood', eventData.bairro);
+                setFieldValue('city', eventData.cidade);
+                setFieldValue('state', eventData.estado);
+                setFieldValue('latitude', eventData.latitude);
+                setFieldValue('longitude', eventData.longitude);
+            }
+            
+            // Etapa 5 - Organizador e Configurações
+            setFieldValue('contratante', eventData.contratante_id);
+            setFieldValue('visibilidade', eventData.visibilidade);
+            setFieldValue('statusEvento', eventData.status);
+            
+            // Checkbox de termos (se dados_aceite preenchido)
+            const aceitarTermosCheckbox = document.getElementById('aceitarTermos');
+            if (aceitarTermosCheckbox && eventData.dados_aceite) {
+                aceitarTermosCheckbox.checked = true;
+                aceitarTermosCheckbox.disabled = true;
+            }
+            
+            console.log('Campos preenchidos com dados do evento');
+        }
+        
+        // ========================================
+        // FUNÇÕES AUXILIARES
+        // ========================================
+        
+        function setFieldValue(fieldId, value) {
+            const field = document.getElementById(fieldId);
+            if (field && value !== null && value !== undefined && value !== '') {
+                // Tratamento especial para classificacao
+                if (fieldId === 'classification') {
+                    console.log('Definindo classificacao:', value, 'tipo:', typeof value);
+                    // Garantir que apenas valores válidos sejam usados
+                    const validValues = ['livre', '10', '12', '14', '16', '18'];
+                    if (!validValues.includes(value.toString())) {
+                        console.warn('Valor inválido para classificacao:', value, 'usando "livre"');
+                        value = 'livre';
+                    }
+                }
+                
+                field.value = value;
+                
+                // NÃO disparar auto-save durante carregamento inicial
+                if (!isInitialLoad) {
+                    // Trigger change event para atualizar preview
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            } else {
+                console.log(`Campo ${fieldId}: valor null/undefined/vazio ignorado:`, value);
+            }
+        }
+        
+        function formatDateTimeLocal(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toISOString().slice(0, 16);
+        }
+        
+        function showImagePreview(type, url, filename) {
+            console.log(`showImagePreview chamada com: type=${type}, url=${url}, filename=${filename}`);
+            
+            // Verificar se URL é válida (não null, não vazia)
+            if (!url || url === 'null' || url === 'undefined' || url === '') {
+                console.log(`URL inválida para ${type}, ignorando`);
+                return;
+            }
+            
+            const container = document.getElementById(`${type}PreviewContainer`);
+            const clearBtn = document.getElementById(`clear${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            
+            if (container && url) {
+                // Debug da URL final
+                console.log(`URL final da imagem ${type}:`, url);
+                
+                if (type === 'fundo') {
+                    container.innerHTML = `<img src="${url}" alt="${filename || 'Imagem'}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="console.error('Erro ao carregar imagem:', this.src)">`;
+                } else {
+                    container.innerHTML = `<img src="${url}" alt="${filename || 'Imagem'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" onerror="console.error('Erro ao carregar imagem:', this.src)">`;
+                }
+                
+                if (clearBtn) {
+                    clearBtn.style.display = 'block';
+                }
+                
+                // Atualizar preview
+                if (type === 'logo') {
+                    updateHeroLogo(url);
+                } else if (type === 'capa') {
+                    updateHeroCapa(url);
+                } else if (type === 'fundo') {
+                    updateHeroBackground(url);
+                }
+            }
+        }
+        
+        function enableSaveButton() {
+            const saveBtn = document.getElementById('saveButton');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+            }
+        }
+        
+        // ========================================
+        // SISTEMA DE NAVEGAÇÃO
+        // ========================================
+        
         function nextStep() {
-            if (validateCurrentStep() && currentStep < 5) {
-                currentStep++;
-                showStep(currentStep);
-                updateProgressBar();
+            if (validateCurrentStep() && currentStep < maxSteps) {
+                saveEventData().then(() => {
+                    currentStep++;
+                    showStep(currentStep);
+                });
             }
         }
         
         function prevStep() {
             if (currentStep > 1) {
-                currentStep--;
-                showStep(currentStep);
-                updateProgressBar();
+                saveEventData().then(() => {
+                    currentStep--;
+                    showStep(currentStep);
+                });
             }
         }
         
         function showStep(step) {
-            document.querySelectorAll('.section-card').forEach(card => {
-                card.classList.remove('active');
+            // Esconder todas as etapas
+            document.querySelectorAll('[data-step-content]').forEach(el => {
+                el.classList.remove('active');
             });
             
-            const currentCard = document.querySelector('[data-step-content="' + step + '"]');
-            if (currentCard) {
-                currentCard.classList.add('active');
+            // Mostrar etapa atual
+            const currentStepEl = document.querySelector(`[data-step-content="${step}"]`);
+            if (currentStepEl) {
+                currentStepEl.classList.add('active');
             }
             
+            // Atualizar indicadores de progresso
+            updateProgressBar();
+            updateStepIndicators();
+            
+            // Atualizar botões de navegação
             updateNavigationButtons();
         }
         
         function updateProgressBar() {
-            document.querySelectorAll('.step').forEach(step => {
-                step.classList.remove('active', 'completed');
-            });
-            
-            for (let i = 1; i <= 5; i++) {
-                const stepElement = document.querySelector('[data-step="' + i + '"]');
-                if (stepElement) {
-                    if (i < currentStep) {
-                        stepElement.classList.add('completed');
-                    } else if (i === currentStep) {
-                        stepElement.classList.add('active');
-                    }
-                }
-            }
-            
             const progressLine = document.getElementById('progressLine');
-            const progressPercent = ((currentStep - 1) / 4) * 100;
-            progressLine.style.width = progressPercent + '%';
+            if (progressLine) {
+                const percentage = ((currentStep - 1) / (maxSteps - 1)) * 100;
+                progressLine.style.width = percentage + '%';
+            }
+        }
+        
+        function updateStepIndicators() {
+            document.querySelectorAll('.step').forEach((step, index) => {
+                const stepNum = index + 1;
+                step.classList.remove('active', 'completed');
+                
+                if (stepNum < currentStep) {
+                    step.classList.add('completed');
+                } else if (stepNum === currentStep) {
+                    step.classList.add('active');
+                }
+            });
         }
         
         function updateNavigationButtons() {
-            const backBtn = document.querySelector('.nav-btn.btn-back');
-            const continueBtn = document.querySelector('.nav-btn.btn-continue');
+            // Botão voltar
+            document.querySelectorAll('.btn-back').forEach(btn => {
+                btn.disabled = currentStep === 1;
+            });
             
-            if (backBtn) {
-                backBtn.disabled = currentStep === 1;
-            }
-            
-            if (continueBtn) {
-                if (currentStep === 5) {
-                    continueBtn.textContent = '✓ Salvar evento';
-                    continueBtn.onclick = salvarEvento;
+            // Botão continuar vs salvar
+            document.querySelectorAll('.btn-continue').forEach(btn => {
+                if (currentStep === maxSteps) {
+                    btn.style.display = 'none';
                 } else {
-                    continueBtn.textContent = 'Avançar →';
-                    continueBtn.onclick = nextStep;
+                    btn.style.display = 'inline-block';
                 }
-            }
+            });
+            
+            document.querySelectorAll('.btn-save').forEach(btn => {
+                if (currentStep === maxSteps) {
+                    btn.style.display = 'inline-block';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
         }
         
-        // Validações básicas para cada etapa
+        // ========================================
+        // VALIDAÇÃO POR ETAPA
+        // ========================================
+        
         function validateCurrentStep() {
-            const step = getCurrentStep();
+            const validationMsg = document.getElementById(`validation-step-${currentStep}`);
+            let isValid = true;
+            let errorMessage = '';
             
-            switch(step) {
+            switch (currentStep) {
                 case 1:
-                    return validateStep1();
+                    const eventName = document.getElementById('eventName').value.trim();
+                    if (!eventName) {
+                        isValid = false;
+                        errorMessage = 'Por favor, preencha o nome do evento.';
+                    }
+                    break;
+                    
                 case 2:
-                    return validateStep2();
+                    const classification = document.getElementById('classification').value;
+                    const category = document.getElementById('category').value;
+                    const startDate = document.getElementById('startDateTime').value;
+                    
+                    if (!classification || !category || !startDate) {
+                        isValid = false;
+                        errorMessage = 'Por favor, preencha todos os campos obrigatórios.';
+                    }
+                    break;
+                    
                 case 3:
-                    return validateStep3();
+                    const description = document.getElementById('eventDescription').innerHTML.trim();
+                    if (!description || description === '<br>' || description === '') {
+                        isValid = false;
+                        errorMessage = 'Por favor, adicione uma descrição para o evento.';
+                    }
+                    break;
+                    
                 case 4:
-                    return validateStep4();
+                    const isOnline = !document.getElementById('locationTypeSwitch').classList.contains('active');
+                    if (isOnline) {
+                        const eventLink = document.getElementById('eventLink').value.trim();
+                        if (!eventLink) {
+                            isValid = false;
+                            errorMessage = 'Por favor, informe o link do evento online.';
+                        }
+                    } else {
+                        const venueName = document.getElementById('venueName').value.trim();
+                        if (!venueName) {
+                            isValid = false;
+                            errorMessage = 'Por favor, informe o nome do local.';
+                        }
+                    }
+                    break;
+                    
                 case 5:
-                    return validateStep5();
-                default:
-                    return true;
-            }
-        }
-        
-        function validateStep1() {
-            const eventName = document.getElementById('eventName').value.trim();
-            return eventName.length > 0;
-        }
-        
-        function validateStep2() {
-            const classification = document.getElementById('classification').value;
-            const category = document.getElementById('category').value;
-            const startDateTime = document.getElementById('startDateTime').value;
-            
-            return classification && category && startDateTime;
-        }
-        
-        function validateStep3() {
-            const description = document.getElementById('eventDescription').textContent.trim();
-            return description.length > 0;
-        }
-        
-        function validateStep4() {
-            const isPresential = document.getElementById('locationTypeSwitch').classList.contains('active');
-            
-            if (isPresential) {
-                const venueName = document.getElementById('venueName').value.trim();
-                return venueName.length > 0;
-            } else {
-                const eventLink = document.getElementById('eventLink').value.trim();
-                return eventLink.length > 0;
-            }
-        }
-        
-        function validateStep5() {
-            const producer = document.getElementById('producer').value;
-            
-            if (producer === 'new') {
-                const producerName = document.getElementById('producerName').value.trim();
-                return producerName.length > 0;
-            }
-            
-            return true;
-        }
-        
-        // Função para salvar evento
-        function salvarEvento() {
-            console.log('💾 Iniciando salvamento do evento...');
-            
-            if (!validateCurrentStep()) {
-                alert('Por favor, preencha todos os campos obrigatórios antes de salvar.');
-                return;
-            }
-            
-            if (!window.dadosEvento.id) {
-                alert('Erro: ID do evento não encontrado. Verifique se você acessou a página corretamente.');
-                return;
-            }
-            
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = 'Salvando...';
-            btn.disabled = true;
-            
-            const dadosEvento = coletarDadosFormulario();
-            console.log('📋 Dados coletados para salvamento:', dadosEvento);
-            
-            const payload = {
-                action: 'salvar_edicao',
-                evento_id: window.dadosEvento.id,
-                dados: JSON.stringify(dadosEvento)
-            };
-            
-            console.log('📡 Enviando payload:', payload);
-            
-            fetch('/produtor/ajax/wizard_evento.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams(payload)
-            })
-            .then(response => {
-                console.log('📡 Resposta do servidor:', response.status, response.statusText);
-                return response.text();
-            })
-            .then(text => {
-                console.log('📡 Resposta em texto:', text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.sucesso) {
-                        alert('Evento salvo com sucesso!');
-                        console.log('✅ Salvamento realizado:', data);
-                        window.location.href = '/produtor/meuseventos.php';
-                    } else {
-                        alert('Erro ao salvar evento: ' + (data.erro || 'Erro desconhecido'));
-                        console.error('❌ Erro no salvamento:', data);
+                    const contratante = document.getElementById('contratante').value;
+                    const visibilidade = document.getElementById('visibilidade').value;
+                    
+                    if (!contratante || !visibilidade) {
+                        isValid = false;
+                        errorMessage = 'Por favor, preencha o organizador e visibilidade.';
                     }
-                } catch (e) {
-                    console.error('❌ Erro ao fazer parse JSON:', e);
-                    console.log('❌ Resposta que causou erro:', text);
-                    alert('Erro ao processar resposta do servidor');
-                }
-            })
-            .catch(error => {
-                console.error('❌ Erro na requisição:', error);
-                alert('Erro ao salvar evento. Tente novamente.');
-            })
-            .finally(() => {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            });
-        }
-        
-        // Função para coletar dados do formulário
-        function coletarDadosFormulario() {
-            const isPresential = document.getElementById('locationTypeSwitch').classList.contains('active');
-            const producerType = document.getElementById('producer').value;
+                    break;
+            }
             
-            return {
-                nome: document.getElementById('eventName').value.trim(),
-                logo: window.uploadedImages && window.uploadedImages.logo ? window.uploadedImages.logo : '',
-                capa: window.uploadedImages && window.uploadedImages.capa ? window.uploadedImages.capa : '',
-                fundo: window.uploadedImages && window.uploadedImages.fundo ? window.uploadedImages.fundo : '',
-                cor_fundo: document.getElementById('corFundo').value || '#000000',
-                classificacao: document.getElementById('classification').value,
-                categoria_id: document.getElementById('category').value,
-                data_inicio: document.getElementById('startDateTime').value,
-                data_fim: document.getElementById('endDateTime').value || null,
-                descricao: document.getElementById('eventDescription').innerHTML,
-                tipo_local: isPresential ? 'presencial' : 'online',
-                nome_local: isPresential ? document.getElementById('venueName').value.trim() : null,
-                cep: isPresential ? document.getElementById('cep').value : null,
-                endereco: isPresential ? document.getElementById('street').value : null,
-                numero: isPresential ? document.getElementById('number').value : null,
-                complemento: isPresential ? document.getElementById('complement').value : null,
-                bairro: isPresential ? document.getElementById('neighborhood').value : null,
-                cidade: isPresential ? document.getElementById('city').value : null,
-                estado: isPresential ? document.getElementById('state').value : null,
-                latitude: isPresential ? document.getElementById('latitude').value : null,
-                longitude: isPresential ? document.getElementById('longitude').value : null,
-                link_evento: !isPresential ? document.getElementById('eventLink').value.trim() : null,
-                tipo_produtor: producerType,
-                nome_produtor: producerType === 'new' ? document.getElementById('producerName').value.trim() : null,
-                nome_exibicao: producerType === 'new' ? document.getElementById('displayName').value.trim() : null,
-                descricao_produtor: producerType === 'new' ? document.getElementById('producerDescription').value.trim() : null
-            };
+            // Mostrar/esconder mensagem de validação
+            if (validationMsg) {
+                if (!isValid) {
+                    validationMsg.textContent = errorMessage;
+                    validationMsg.style.display = 'block';
+                } else {
+                    validationMsg.style.display = 'none';
+                }
+            }
+            
+            return isValid;
         }
         
-        // Função para carregar dados do evento existente (baseada em criaevento.js)
-        function carregarDadosEvento() {
-            if (!window.dadosEvento.id) {
-                console.warn('❌ ID do evento não disponível para carregamento');
+        // ========================================
+        // FUNÇÃO SALVAR DADOS
+        // ========================================
+        
+        async function saveEventData() {
+            if (isSaving || isInitialLoad) {
+                console.log('Salvamento cancelado - isSaving:', isSaving, 'isInitialLoad:', isInitialLoad);
                 return;
             }
             
-            console.log('📡 Carregando dados do evento ID:', window.dadosEvento.id);
-            
-            fetch('/produtor/ajax/wizard_evento.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    action: 'carregar_dados_edicao',
-                    evento_id: window.dadosEvento.id
-                })
-            })
-            .then(response => {
-                console.log('📡 Resposta recebida:', response.status, response.statusText);
-                return response.text();
-            })
-            .then(text => {
-                console.log('📡 Resposta em texto:', text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.sucesso && data.evento) {
-                        console.log('✅ Dados do evento carregados:', data.evento);
-                        preencherFormularioCompleto(data.evento);
-                    } else {
-                        console.error('❌ Erro ao carregar dados:', data.erro || 'Dados não encontrados');
-                        console.log('❌ Dados completos da resposta:', data);
-                    }
-                } catch (e) {
-                    console.error('❌ Erro ao fazer parse JSON:', e);
-                    console.log('❌ Resposta que causou erro:', text);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Erro ao carregar dados do evento:', error);
-            });
-        }
-        
-        // Função para preencher formulário com dados existentes (baseada em restoreWizardData)
-        function preencherFormularioCompleto(dados) {
-            console.log('📝 Preenchendo formulário com dados:', dados);
-            
-            // Etapa 1 - Informações básicas
-            if (dados.nome) {
-                document.getElementById('eventName').value = dados.nome;
-            }
-            
-            if (dados.cor_fundo_alternativa) {
-                const corFundo = dados.cor_fundo_alternativa;
-                document.getElementById('corFundo').value = corFundo;
-                document.getElementById('corFundoHex').value = corFundo;
-                document.getElementById('colorPreview').style.backgroundColor = corFundo;
-            }
-            
-            // Carregar imagens
-            if (dados.logo_path) carregarImagemExistente('logo', dados.logo_path);
-            if (dados.capa_path) carregarImagemExistente('capa', dados.capa_path);
-            if (dados.fundo_path) carregarImagemExistente('fundo', dados.fundo_path);
-            
-            // Etapa 2 - Data e horário
-            if (dados.classificacao_etaria) {
-                document.getElementById('classification').value = dados.classificacao_etaria;
-            }
-            if (dados.categoria_id) {
-                document.getElementById('category').value = dados.categoria_id;
-            }
-            if (dados.data_inicio) {
-                // Converter formato de data para datetime-local
-                const dataInicio = new Date(dados.data_inicio);
-                document.getElementById('startDateTime').value = formatDateTimeLocal(dataInicio);
-            }
-            if (dados.data_fim) {
-                const dataFim = new Date(dados.data_fim);
-                document.getElementById('endDateTime').value = formatDateTimeLocal(dataFim);
-            }
-            
-            // Etapa 3 - Descrição
-            if (dados.descricao) {
-                document.getElementById('eventDescription').innerHTML = dados.descricao;
-            }
-            
-            // Etapa 4 - Localização
-            if (dados.link_transmissao) {
-                // Evento online
-                document.getElementById('locationTypeSwitch').classList.remove('active');
-                document.getElementById('presentialLocation').classList.remove('show');
-                document.getElementById('onlineLocation').classList.add('show');
-                document.getElementById('eventLink').value = dados.link_transmissao;
-            } else {
-                // Evento presencial (padrão)
-                if (dados.nome_local) document.getElementById('venueName').value = dados.nome_local;
-                if (dados.cep) document.getElementById('cep').value = dados.cep;
-                if (dados.endereco) document.getElementById('street').value = dados.endereco;
-                if (dados.numero) document.getElementById('number').value = dados.numero;
-                if (dados.complemento) document.getElementById('complement').value = dados.complemento;
-                if (dados.bairro) document.getElementById('neighborhood').value = dados.bairro;
-                if (dados.cidade) document.getElementById('city').value = dados.cidade;
-                if (dados.estado) document.getElementById('state').value = dados.estado;
-                if (dados.latitude) document.getElementById('latitude').value = dados.latitude;
-                if (dados.longitude) document.getElementById('longitude').value = dados.longitude;
-            }
-            
-            // Etapa 5 - Produtor
-            // Para eventos existentes, normalmente é o usuário atual
-            // Caso tenha dados específicos de produtor, implementar aqui
-            
-            // Atualizar preview após carregar dados
-            setTimeout(() => {
-                updatePreview();
-            }, 300);
-        }
-        
-        // Função auxiliar para formatar data para datetime-local
-        function formatDateTimeLocal(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            
-            return year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
-        }
-        
-        // Função para carregar imagem existente
-        function carregarImagemExistente(tipo, caminho) {
-            console.log('🖼️ Carregando imagem:', tipo, caminho);
-            
-            const container = document.getElementById(tipo + 'PreviewContainer');
-            const clearBtn = document.getElementById('clear' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
-            
-            if (container && caminho) {
-                container.innerHTML = '<img src="' + caminho + '" alt="' + tipo + '" style="max-width: 100%; max-height: 120px; object-fit: contain;">';
-                if (clearBtn) clearBtn.style.display = 'block';
+            try {
+                isSaving = true;
+                showLoading('Salvando alterações...', 'Aguarde enquanto atualizamos os dados');
                 
-                if (!window.uploadedImages) window.uploadedImages = {};
-                window.uploadedImages[tipo] = caminho;
+                const formData = new FormData();
+                formData.append('evento_id', evento_id);
+                formData.append('action', 'update_event');
+                
+                // Coletar dados de todos os campos (com validação para campos numéricos)
+                const fieldsToSave = [
+                    'eventName', 'classification', 'corFundo', 'venueName', 'cep', 'street', 'number', 'complement',
+                    'neighborhood', 'city', 'state', 'eventLink', 'visibilidade'
+                ];
+                
+                fieldsToSave.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field && field.value.trim() !== '') {
+                        console.log(`Campo ${fieldId}: "${field.value}"`);
+                        formData.append(fieldId, field.value);
+                    }
+                });
+                
+                // Campos numéricos - só enviar se preenchidos
+                const numericFields = [
+                    { id: 'category', name: 'category' },
+                    { id: 'contratante', name: 'contratante' },
+                    { id: 'latitude', name: 'latitude' },
+                    { id: 'longitude', name: 'longitude' }
+                ];
+                
+                numericFields.forEach(fieldInfo => {
+                    const field = document.getElementById(fieldInfo.id);
+                    if (field && field.value.trim() !== '' && !isNaN(field.value)) {
+                        console.log(`Campo numérico ${fieldInfo.name}: ${field.value}`);
+                        formData.append(fieldInfo.name, field.value);
+                    }
+                });
+                
+                // Status do evento (se disponível)
+                const statusEvento = document.getElementById('statusEvento');
+                if (statusEvento && statusEvento.value) {
+                    formData.append('statusEvento', statusEvento.value);
+                }
+                
+                // Aceite de termos (se marcado e ainda não foi salvo)
+                const aceitarTermos = document.getElementById('aceitarTermos');
+                if (aceitarTermos && aceitarTermos.checked && !aceitarTermos.disabled) {
+                    formData.append('aceitarTermos', '1');
+                }
+                
+                // Datas com conversão de timezone
+                const startDateTime = document.getElementById('startDateTime');
+                const endDateTime = document.getElementById('endDateTime');
+                
+                if (startDateTime && startDateTime.value) {
+                    const utcStart = convertLocalToUTC(startDateTime.value);
+                    console.log('Start DateTime Local:', startDateTime.value, '-> UTC:', utcStart);
+                    formData.append('startDateTime', utcStart);
+                }
+                
+                if (endDateTime && endDateTime.value) {
+                    const utcEnd = convertLocalToUTC(endDateTime.value);
+                    console.log('End DateTime Local:', endDateTime.value, '-> UTC:', utcEnd);
+                    formData.append('endDateTime', utcEnd);
+                }
+                
+                // Descrição do rich editor
+                const description = document.getElementById('eventDescription');
+                if (description) {
+                    formData.append('eventDescription', description.innerHTML);
+                }
+                
+                // Tipo de localização
+                const isOnline = !document.getElementById('locationTypeSwitch').classList.contains('active');
+                formData.append('locationType', isOnline ? 'online' : 'presencial');
+                
+                // Upload de imagens (se houver)
+                const uploadFields = ['logoUpload', 'capaUpload', 'fundoUpload'];
+                uploadFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field && field.files && field.files[0]) {
+                        formData.append(fieldId, field.files[0]);
+                    }
+                });
+                
+                const response = await fetch('/produtor/ajax/update_event.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Dados salvos com sucesso');
+                    
+                    // Atualizar URLs das imagens se necessário
+                    if (result.images) {
+                        if (result.images.logo) updateHeroLogo(result.images.logo);
+                        if (result.images.capa) updateHeroCapa(result.images.capa);
+                        if (result.images.fundo) updateHeroBackground(result.images.fundo);
+                    }
+                } else {
+                    throw new Error(result.message || 'Erro ao salvar');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                console.error('Stack trace:', error.stack);
+                alert('Erro ao salvar alterações: ' + error.message);
+            } finally {
+                isSaving = false;
+                hideLoading();
             }
         }
         
-        // Funções de upload de imagem
-        function clearImage(tipo, event) {
-            event.stopPropagation();
-            
-            const container = document.getElementById(tipo + 'PreviewContainer');
-            const clearBtn = document.getElementById('clear' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
-            const input = document.getElementById(tipo + 'Upload');
-            
-            const icons = {
-                logo: '🎨',
-                capa: '🖼️',
-                fundo: '🌄'
-            };
-            
-            const hints = {
-                logo: '800x200px • Fundo transparente',
-                capa: '450x450px • Fundo transparente',
-                fundo: 'PNG, JPG até 5MB • Tamanho ideal: 1920x640px'
-            };
-            
-            const texts = {
-                logo: 'Adicionar logo',
-                capa: 'Adicionar capa',
-                fundo: 'Clique para adicionar imagem de fundo'
-            };
-            
-            container.innerHTML = '<div class="upload-icon">' + icons[tipo] + '</div>' +
-                                '<div class="upload-text">' + texts[tipo] + '</div>' +
-                                '<div class="upload-hint">' + hints[tipo] + '</div>';
-            
-            clearBtn.style.display = 'none';
-            input.value = '';
-            
-            if (window.uploadedImages) {
-                delete window.uploadedImages[tipo];
-            }
-            
-            updatePreview();
-        }
+        // ========================================
+        // SISTEMA DE PREVIEW
+        // ========================================
         
-        // Preview do evento
         function updatePreview() {
-            const eventName = document.getElementById('eventName').value || 'Nome do evento';
-            const description = document.getElementById('eventDescription').textContent || 'Descrição do evento aparecerá aqui...';
+            updatePreviewTitle();
+            updatePreviewDescription();
+            updatePreviewDate();
+            updatePreviewLocation();
+            updatePreviewCategory();
+            updatePreviewType();
+            updateHeroPreview(); // Chamar a função completa de preview das imagens
+        }
+        
+        function updatePreviewTitle() {
+            const title = document.getElementById('eventName').value;
+            const previewTitle = document.getElementById('previewTitle');
+            if (previewTitle) {
+                previewTitle.textContent = title || 'Nome do evento';
+            }
+        }
+        
+        function updatePreviewDescription() {
+            const desc = document.getElementById('eventDescription').innerHTML;
+            const previewDesc = document.getElementById('previewDescription');
+            if (previewDesc) {
+                const plainText = desc.replace(/<[^>]*>/g, '').trim();
+                previewDesc.textContent = plainText || 'Descrição do evento aparecerá aqui...';
+            }
+        }
+        
+        function updatePreviewDate() {
+            const startDate = document.getElementById('startDateTime').value;
+            const previewDate = document.getElementById('previewDate');
+            if (previewDate) {
+                if (startDate) {
+                    const date = new Date(startDate);
+                    const options = { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    };
+                    previewDate.textContent = date.toLocaleString('pt-BR', options);
+                } else {
+                    previewDate.textContent = 'Data não definida';
+                }
+            }
+        }
+        
+        function updatePreviewLocation() {
+            const previewLocation = document.getElementById('previewLocation');
+            const isOnline = !document.getElementById('locationTypeSwitch').classList.contains('active');
             
-            document.getElementById('previewTitle').textContent = eventName;
-            document.getElementById('previewDescription').textContent = description;
-            
+            if (previewLocation) {
+                if (isOnline) {
+                    const link = document.getElementById('eventLink').value;
+                    previewLocation.textContent = link || 'Link não definido';
+                } else {
+                    const venueName = document.getElementById('venueName').value;
+                    const city = document.getElementById('city').value;
+                    
+                    if (venueName && city) {
+                        previewLocation.textContent = `${venueName}, ${city}`;
+                    } else if (venueName) {
+                        previewLocation.textContent = venueName;
+                    } else {
+                        previewLocation.textContent = 'Local não definido';
+                    }
+                }
+            }
+        }
+        
+        function updatePreviewCategory() {
+            const categorySelect = document.getElementById('category');
+            const previewCategory = document.getElementById('previewCategory');
+            if (previewCategory && categorySelect) {
+                const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+                previewCategory.textContent = selectedOption ? selectedOption.text : 'Categoria não definida';
+            }
+        }
+        
+        function updatePreviewType() {
+            const previewType = document.getElementById('previewType');
+            const isOnline = !document.getElementById('locationTypeSwitch').classList.contains('active');
+            if (previewType) {
+                previewType.textContent = isOnline ? 'Online' : 'Presencial';
+            }
+        }
+        
+        function updateHeroLogo(url) {
             const heroLogo = document.getElementById('heroLogo');
-            const heroCapa = document.getElementById('heroCapa');
-            const heroBackground = document.getElementById('heroBackground');
-            
-            if (window.uploadedImages && window.uploadedImages.logo) {
-                heroLogo.src = window.uploadedImages.logo;
+            if (heroLogo && url) {
+                console.log('✅ Logo aplicado:', url);
+                heroLogo.src = url;
                 heroLogo.style.display = 'block';
-            } else {
+            } else if (heroLogo) {
                 heroLogo.style.display = 'none';
             }
-            
-            if (window.uploadedImages && window.uploadedImages.capa) {
-                heroCapa.src = window.uploadedImages.capa;
+        }
+        
+        function updateHeroCapa(url) {
+            const heroCapa = document.getElementById('heroCapa');
+            if (heroCapa && url) {
+                console.log('✅ Capa aplicada:', url);
+                heroCapa.src = url;
                 heroCapa.style.display = 'block';
-            } else {
+            } else if (heroCapa) {
+                heroCapa.style.display = 'none';
+            }
+        }
+        
+        // Função para atualizar preview completo baseada no novoevento
+        function updateHeroPreview() {
+            console.log('🎨 Atualizando preview hero completo...');
+            
+            // Atualizar logo
+            const heroLogo = document.getElementById('heroLogo');
+            const logoImg = document.querySelector('#logoPreviewContainer img');
+            
+            if (heroLogo && logoImg && logoImg.src && !logoImg.src.includes('placeholder')) {
+                heroLogo.src = logoImg.src;
+                heroLogo.style.display = 'block';
+                console.log('✅ Logo aplicado:', logoImg.src);
+            } else if (heroLogo) {
+                heroLogo.style.display = 'none';
+            }
+
+            // Atualizar imagem capa quadrada
+            const heroCapa = document.getElementById('heroCapa');
+            const capaImg = document.querySelector('#capaPreviewContainer img');
+            
+            if (heroCapa && capaImg && capaImg.src && !capaImg.src.includes('placeholder')) {
+                heroCapa.src = capaImg.src;
+                heroCapa.style.display = 'block';
+                console.log('✅ Capa aplicada:', capaImg.src);
+            } else if (heroCapa) {
                 heroCapa.style.display = 'none';
             }
             
-            if (window.uploadedImages && window.uploadedImages.fundo) {
-                heroBackground.style.backgroundImage = 'url(' + window.uploadedImages.fundo + ')';
-            } else {
-                const corFundo = document.getElementById('corFundo').value || '#000000';
-                heroBackground.style.backgroundColor = corFundo;
-                heroBackground.style.backgroundImage = 'none';
-            }
+            // Atualizar imagem de fundo
+            const heroBackground = document.getElementById('heroBackground');
+            const heroSection = document.querySelector('.hero-section-mini');
+            const fundoImg = document.querySelector('#fundoPreviewMain img');
+            const corFundo = document.getElementById('corFundo')?.value || '#000000';
             
-            updatePreviewDetails();
-        }
-        
-        function updatePreviewDetails() {
-            const startDateTime = document.getElementById('startDateTime').value;
-            const category = document.getElementById('category').selectedOptions[0] ? document.getElementById('category').selectedOptions[0].text : '';
-            const isPresential = document.getElementById('locationTypeSwitch').classList.contains('active');
-            
-            if (startDateTime) {
-                const date = new Date(startDateTime);
-                const dateStr = date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-                document.getElementById('previewDate').textContent = dateStr;
-            }
-            
-            if (isPresential) {
-                const venueName = document.getElementById('venueName').value;
-                const city = document.getElementById('city').value;
-                let locationText = 'Local não definido';
-                if (venueName && city) {
-                    locationText = venueName + ', ' + city;
-                } else if (venueName) {
-                    locationText = venueName;
+            if (heroBackground && heroSection) {
+                if (fundoImg && fundoImg.src && !fundoImg.src.includes('placeholder')) {
+                    // Tem imagem de fundo
+                    heroBackground.style.backgroundImage = `url(${fundoImg.src})`;
+                    heroBackground.style.backgroundColor = '';
+                    heroBackground.style.opacity = '1';
+                    heroSection.classList.remove('solid-bg');
+                    console.log('✅ Imagem de fundo aplicada:', fundoImg.src);
+                } else {
+                    // Usar cor de fundo
+                    heroBackground.style.backgroundImage = '';
+                    heroBackground.style.backgroundColor = corFundo;
+                    heroBackground.style.opacity = '1';
+                    heroSection.classList.add('solid-bg');
+                    console.log('✅ Cor de fundo aplicada:', corFundo);
                 }
-                document.getElementById('previewLocation').textContent = locationText;
-                document.getElementById('previewType').textContent = 'Presencial';
-            } else {
-                document.getElementById('previewLocation').textContent = 'Evento online';
-                document.getElementById('previewType').textContent = 'Online';
-            }
-            
-            if (category) {
-                document.getElementById('previewCategory').textContent = category;
             }
         }
         
-        // Função para upload de imagem
-        function handleImageUpload(input, tipo) {
-            const file = input.files[0];
-            if (!file) return;
-            
-            if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/)) {
-                alert('Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF, WebP).');
-                input.value = '';
-                return;
+        function updateHeroBackground(url) {
+            const heroBackground = document.getElementById('heroBackground');
+            if (heroBackground) {
+                if (url) {
+                    console.log('Aplicando imagem de fundo:', url);
+                    heroBackground.style.backgroundImage = `url('${url}')`;
+                    heroBackground.style.backgroundColor = '';
+                } else {
+                    const color = document.getElementById('corFundo').value || '#000000';
+                    console.log('Aplicando cor de fundo:', color);
+                    heroBackground.style.backgroundImage = '';
+                    heroBackground.style.backgroundColor = color;
+                }
             }
-            
-            if (file.size > 5 * 1024 * 1024) {
-                alert('A imagem deve ter no máximo 5MB.');
-                input.value = '';
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const container = document.getElementById(tipo + 'PreviewContainer');
-                const clearBtn = document.getElementById('clear' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
-                
-                container.innerHTML = '<img src="' + e.target.result + '" alt="Preview" style="max-width: 100%; max-height: 120px; object-fit: contain;">';
-                clearBtn.style.display = 'block';
-                
-                if (!window.uploadedImages) window.uploadedImages = {};
-                window.uploadedImages[tipo] = e.target.result;
-                
-                updatePreview();
-            };
-            reader.readAsDataURL(file);
         }
         
-        // Funções de teste para debug
-        function testarCarregamento() {
-            console.log('🧪 TESTE: Carregamento de dados');
-            console.log('🔍 ID do evento:', window.dadosEvento.id);
+        function updateColorPreview() {
+            const color = document.getElementById('corFundo').value;
+            const colorPreview = document.getElementById('colorPreview');
+            const colorHex = document.getElementById('corFundoHex');
             
-            if (!window.dadosEvento.id) {
-                alert('❌ ID do evento não disponível. Verifique a URL.');
-                return;
+            if (colorPreview) {
+                colorPreview.style.backgroundColor = color;
+            }
+            if (colorHex) {
+                colorHex.value = color;
             }
             
-            console.log('📡 Fazendo requisição de teste...');
+            // Atualizar background do preview sempre (se não houver imagem de fundo)
+            const heroBackground = document.getElementById('heroBackground');
+            if (heroBackground) {
+                // Se não há imagem de fundo definida, usar a cor
+                const hasBackgroundImage = heroBackground.style.backgroundImage && 
+                                         heroBackground.style.backgroundImage !== 'none' && 
+                                         heroBackground.style.backgroundImage !== '';
+                if (!hasBackgroundImage) {
+                    console.log('Aplicando cor de fundo no preview:', color);
+                    heroBackground.style.backgroundColor = color;
+                }
+            }
+        }
+        
+        // ========================================
+        // SISTEMA DE UPLOAD DE IMAGENS
+        // ========================================
+        
+        function setupImageUpload(type) {
+            const uploadInput = document.getElementById(`${type}Upload`);
+            const clearBtn = document.getElementById(`clear${type.charAt(0).toUpperCase() + type.slice(1)}`);
             
-            fetch('/produtor/ajax/wizard_evento.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    action: 'carregar_dados_edicao',
-                    evento_id: window.dadosEvento.id
-                })
-            })
-            .then(response => {
-                console.log('📡 Status da resposta:', response.status);
-                return response.text();
-            })
-            .then(text => {
-                console.log('📡 Resposta em texto:', text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.sucesso) {
-                        alert('✅ Teste de carregamento: SUCESSO!');
-                        console.log('✅ Dados carregados:', data.evento);
-                    } else {
-                        alert('❌ Teste falhou: ' + data.erro);
+            if (uploadInput) {
+                uploadInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const url = e.target.result;
+                            showImagePreview(type, url, file.name);
+                            
+                            // REMOVIDO: Auto-save - apenas atualizar preview
+                        };
+                        reader.readAsDataURL(file);
                     }
-                } catch (e) {
-                    alert('❌ Erro no parse JSON: ' + e.message);
-                    console.error('Resposta que causou erro:', text);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Erro no teste:', error);
-                alert('❌ Erro na requisição: ' + error.message);
-            });
-        }
-        
-        function testarSalvamento() {
-            console.log('🧪 TESTE: Salvamento de dados');
-            
-            // Preencher alguns dados de teste
-            document.getElementById('eventName').value = 'Teste de Evento - ' + new Date().toLocaleString();
-            
-            const dadosTest = coletarDadosFormulario();
-            console.log('📋 Dados de teste coletados:', dadosTest);
-            
-            // Simular salvamento
-            const payload = {
-                action: 'salvar_edicao',
-                evento_id: window.dadosEvento.id,
-                dados: JSON.stringify(dadosTest)
-            };
-            
-            fetch('/produtor/ajax/wizard_evento.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams(payload)
-            })
-            .then(response => response.text())
-            .then(text => {
-                console.log('📡 Resposta do teste:', text);
-                try {
-                    const data = JSON.parse(text);
-                    alert('✅ Teste de salvamento: ' + (data.sucesso ? 'SUCESSO' : 'FALHOU - ' + data.erro));
-                } catch (e) {
-                    alert('❌ Erro no parse JSON: ' + e.message);
-                    console.error('Resposta que causou erro:', text);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Erro no teste:', error);
-                alert('❌ Erro na requisição: ' + error.message);
-            });
-        }
-        
-        function verificarDados() {
-            console.log('🧪 VERIFICAÇÃO: Estado atual dos dados');
-            console.log('🔍 URL:', window.location.href);
-            console.log('🔍 Parâmetros URL:', new URLSearchParams(window.location.search).toString());
-            console.log('🔍 Session Data:', window.sessionData);
-            console.log('🔍 Dados Evento:', window.dadosEvento);
-            console.log('🔍 Upload Images:', window.uploadedImages);
-            
-            // Verificar campos do formulário
-            const campos = {
-                eventName: document.getElementById('eventName').value,
-                classification: document.getElementById('classification').value,
-                category: document.getElementById('category').value,
-                startDateTime: document.getElementById('startDateTime').value,
-                venueName: document.getElementById('venueName').value
-            };
-            
-            console.log('🔍 Campos atuais:', campos);
-            
-            alert('🔍 Verificação completa - veja o console para detalhes');
-        }
-        
-        // Funções de menu mobile
-        function toggleMobileMenu() {
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            const menuToggle = document.querySelector('.menu-toggle');
-            
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
-            menuToggle.classList.toggle('active');
-        }
-
-        function closeMobileMenu() {
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            const menuToggle = document.querySelector('.menu-toggle');
-            
-            sidebar.classList.remove('active');
-            overlay.classList.remove('active');
-            menuToggle.classList.remove('active');
-        }
-
-        function toggleUserDropdown() {
-            const dropdown = document.getElementById('userDropdown');
-            dropdown.classList.toggle('active');
-        }
-
-        function logout() {
-            if (confirm('Tem certeza que deseja sair?')) {
-                window.location = 'logout.php';
-            }
-        }
-
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Página de edição carregada');
-            
-            // Carregar dados do evento se estiver editando
-            if (window.dadosEvento.id) {
-                console.log('📡 Iniciando carregamento dos dados do evento...');
-                carregarDadosEvento();
-            }
-            
-            // Event listeners para campos que afetam o preview
-            document.getElementById('eventName').addEventListener('input', updatePreview);
-            document.getElementById('eventDescription').addEventListener('input', updatePreview);
-            document.getElementById('startDateTime').addEventListener('change', updatePreview);
-            document.getElementById('classification').addEventListener('change', updatePreview);
-            document.getElementById('category').addEventListener('change', updatePreview);
-            document.getElementById('venueName').addEventListener('input', updatePreview);
-            document.getElementById('city').addEventListener('input', updatePreview);
-            document.getElementById('eventLink').addEventListener('input', updatePreview);
-            
-            // Color picker
-            document.getElementById('corFundo').addEventListener('change', function() {
-                document.getElementById('corFundoHex').value = this.value;
-                document.getElementById('colorPreview').style.backgroundColor = this.value;
-                updatePreview();
-            });
-            
-            document.getElementById('corFundoHex').addEventListener('input', function() {
-                if (this.value.match(/^#[0-9A-Fa-f]{6}$/)) {
-                    document.getElementById('corFundo').value = this.value;
-                    document.getElementById('colorPreview').style.backgroundColor = this.value;
-                    updatePreview();
-                }
-            });
-            
-            // Upload de imagens
-            ['logo', 'capa', 'fundo'].forEach(function(tipo) {
-                const input = document.getElementById(tipo + 'Upload');
-                if (input) {
-                    input.addEventListener('change', function() {
-                        handleImageUpload(this, tipo);
-                    });
-                }
-            });
-            
-            // Switch de localização
-            document.getElementById('locationTypeSwitch').addEventListener('click', function() {
-                this.classList.toggle('active');
-                const presential = document.getElementById('presentialLocation');
-                const online = document.getElementById('onlineLocation');
-                
-                if (this.classList.contains('active')) {
-                    presential.classList.add('show');
-                    online.classList.remove('show');
-                } else {
-                    presential.classList.remove('show');
-                    online.classList.add('show');
-                }
-                updatePreview();
-            });
-            
-            // Select de produtor
-            document.getElementById('producer').addEventListener('change', function() {
-                const newProducerFields = document.getElementById('newProducerFields');
-                if (this.value === 'new') {
-                    newProducerFields.style.display = 'block';
-                } else {
-                    newProducerFields.style.display = 'none';
-                }
-            });
-            
-            // Close dropdown quando clicar fora
-            document.addEventListener('click', function(event) {
-                const userMenu = document.querySelector('.user-menu');
-                const dropdown = document.getElementById('userDropdown');
-                const sidebar = document.querySelector('.sidebar');
-                const menuToggle = document.querySelector('.menu-toggle');
-                
-                if (!userMenu.contains(event.target)) {
-                    dropdown.classList.remove('active');
-                }
-                
-                if (window.innerWidth <= 768 && 
-                    !sidebar.contains(event.target) && 
-                    !menuToggle.contains(event.target)) {
-                    closeMobileMenu();
-                }
-            });
-
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 768) {
-                    closeMobileMenu();
-                }
-            });
-
-            // Mouse particles
-            document.addEventListener('mousemove', function(e) {
-                const particles = document.querySelectorAll('.particle');
-                const mouseX = e.clientX / window.innerWidth;
-                const mouseY = e.clientY / window.innerHeight;
-                
-                particles.forEach((particle, index) => {
-                    const speed = (index + 1) * 0.5;
-                    const x = mouseX * speed;
-                    const y = mouseY * speed;
-                    
-                    particle.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
                 });
+            }
+            
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    clearImage(type);
+                });
+            }
+        }
+        
+        function clearImage(type) {
+            const container = document.getElementById(`${type}PreviewContainer`);
+            const clearBtn = document.getElementById(`clear${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            const uploadInput = document.getElementById(`${type}Upload`);
+            
+            if (container) {
+                // Restaurar estado original
+                const icons = { logo: '🎨', capa: '🖼️', fundo: '🌄' };
+                const texts = { logo: 'Adicionar logo', capa: 'Adicionar capa', fundo: 'Clique para adicionar imagem de fundo' };
+                const hints = { 
+                    logo: '800x200px • Fundo transparente', 
+                    capa: '450x450px • Fundo transparente',
+                    fundo: 'PNG, JPG até 5MB • Tamanho ideal: 1920x640px'
+                };
+                
+                if (type === 'fundo') {
+                    container.innerHTML = `
+                        <div class="upload-icon">${icons[type]}</div>
+                        <div class="upload-text">${texts[type]}</div>
+                        <div class="upload-hint">${hints[type]}</div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="upload-icon">${icons[type]}</div>
+                        <div class="upload-text">${texts[type]}</div>
+                        <div class="upload-hint">${hints[type]}</div>
+                    `;
+                }
+            }
+            
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+            
+            if (uploadInput) {
+                uploadInput.value = '';
+            }
+            
+            // Limpar preview
+            if (type === 'logo') {
+                const heroLogo = document.getElementById('heroLogo');
+                if (heroLogo) heroLogo.style.display = 'none';
+            } else if (type === 'capa') {
+                const heroCapa = document.getElementById('heroCapa');
+                if (heroCapa) heroCapa.style.display = 'none';
+            } else if (type === 'fundo') {
+                updateHeroBackground();
+            }
+            
+            // REMOVIDO: Auto-save - apenas atualizar preview
+        }
+        
+        // ========================================
+        // SISTEMA DE LOCALIZAÇÃO
+        // ========================================
+        
+        function setupLocationTypeSwitch() {
+            const locationSwitch = document.getElementById('locationTypeSwitch');
+            if (locationSwitch) {
+                locationSwitch.addEventListener('click', function() {
+                    if (this.classList.contains('active')) {
+                        switchToOnlineMode();
+                    } else {
+                        switchToPresentialMode();
+                    }
+                    
+                    // REMOVIDO: Auto-save - apenas atualizar preview
+                });
+            }
+        }
+        
+        function switchToOnlineMode() {
+            const locationSwitch = document.getElementById('locationTypeSwitch');
+            const presentialSection = document.getElementById('presentialLocation');
+            const onlineSection = document.getElementById('onlineLocation');
+            
+            if (locationSwitch) locationSwitch.classList.remove('active');
+            if (presentialSection) presentialSection.classList.remove('show');
+            if (onlineSection) onlineSection.classList.add('show');
+            
+            updatePreviewType();
+            updatePreviewLocation();
+        }
+        
+        function switchToPresentialMode() {
+            const locationSwitch = document.getElementById('locationTypeSwitch');
+            const presentialSection = document.getElementById('presentialLocation');
+            const onlineSection = document.getElementById('onlineLocation');
+            
+            if (locationSwitch) locationSwitch.classList.add('active');
+            if (presentialSection) presentialSection.classList.add('show');
+            if (onlineSection) onlineSection.classList.remove('show');
+            
+            updatePreviewType();
+            updatePreviewLocation();
+        }
+        
+        // Sistema de busca de endereço
+        function searchAddressManual() {
+            const searchInput = document.getElementById('addressSearch');
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                alert('Digite um endereço para buscar');
+                return;
+            }
+            
+            searchAddress(query);
+        }
+        
+        async function searchAddress(query) {
+            const loadingDiv = document.getElementById('addressLoading');
+            const suggestionsDiv = document.getElementById('addressSuggestions');
+            
+            try {
+                if (loadingDiv) loadingDiv.style.display = 'flex';
+                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                
+                // Tentar buscar por CEP primeiro
+                const cepOnly = query.replace(/\D/g, '');
+                if (cepOnly.length === 8) {
+                    const response = await fetch(`https://viacep.com.br/ws/${cepOnly}/json/`);
+                    const data = await response.json();
+                    
+                    if (data && !data.erro) {
+                        fillAddressFields(data);
+                        updatePreviewLocation();
+                        saveEventData();
+                    } else {
+                        alert('CEP não encontrado');
+                    }
+                } else {
+                    alert('Digite um CEP válido com 8 dígitos');
+                }
+                
+            } catch (error) {
+                console.error('Erro na busca de endereço:', error);
+                alert('Erro ao buscar endereço. Tente novamente.');
+            } finally {
+                if (loadingDiv) loadingDiv.style.display = 'none';
+            }
+        }
+        
+        function fillAddressFields(addressData) {
+            const fields = {
+                'cep': addressData.cep,
+                'street': addressData.logradouro,
+                'neighborhood': addressData.bairro,
+                'city': addressData.localidade,
+                'state': addressData.uf
+            };
+            
+            Object.keys(fields).forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field && fields[fieldId]) {
+                    field.value = fields[fieldId];
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        }
+        
+        // ========================================
+        // RICH EDITOR
+        // ========================================
+        
+        function setupRichEditor() {
+            const toolbar = document.querySelector('.editor-toolbar');
+            const editor = document.getElementById('eventDescription');
+            
+            if (toolbar) {
+                toolbar.addEventListener('click', function(e) {
+                    const button = e.target.closest('.editor-btn');
+                    if (!button) return;
+                    
+                    e.preventDefault();
+                    const command = button.getAttribute('data-command');
+                    
+                    if (command === 'createLink') {
+                        const url = prompt('Digite a URL:');
+                        if (url) {
+                            document.execCommand('createLink', false, url);
+                        }
+                    } else {
+                        document.execCommand(command, false, null);
+                    }
+                    
+                    if (editor) {
+                        editor.focus();
+                        updateCharCounter();
+                        updatePreviewDescription();
+                    }
+                });
+            }
+            
+            if (editor) {
+                editor.addEventListener('input', function() {
+                    updateCharCounter();
+                    updatePreviewDescription();
+                });
+                
+                // REMOVIDO: Auto-save no blur - apenas atualizar preview
+            }
+        }
+        
+        function updateCharCounter() {
+            const editor = document.getElementById('eventDescription');
+            const counter = document.getElementById('charCounter');
+            
+            if (editor && counter) {
+                const text = editor.innerText || editor.textContent || '';
+                counter.textContent = text.length + ' caracteres';
+            }
+        }
+        
+        // ========================================
+        // SISTEMA DE ACEITE DE TERMOS
+        // ========================================
+        
+        function setupAceiteTermos() {
+            const aceitarTermos = document.getElementById('aceitarTermos');
+            const statusContainer = document.getElementById('statusContainer');
+            
+            if (aceitarTermos && statusContainer) {
+                aceitarTermos.addEventListener('change', function() {
+                    if (this.checked) {
+                        statusContainer.style.display = 'block';
+                    } else {
+                        statusContainer.style.display = 'none';
+                        // Resetar status para rascunho se desmarcar
+                        const statusEvento = document.getElementById('statusEvento');
+                        if (statusEvento) {
+                            statusEvento.value = 'rascunho';
+                        }
+                    }
+                });
+            }
+        }
+        
+        // ========================================
+        // EVENT LISTENERS E INICIALIZAÇÃO
+        // ========================================
+        
+        function setupEventListeners() {
+            // Event listeners para preview em tempo real
+            const previewFields = [
+                'eventName', 'startDateTime', 'endDateTime', 'classification', 
+                'category', 'venueName', 'city', 'eventLink'
+            ];
+            
+            previewFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('input', updatePreview);
+                    field.addEventListener('change', updatePreview);
+                    // REMOVIDO: Auto-save automático - apenas atualizar preview
+                }
             });
             
-            // Inicializar color preview
-            document.getElementById('colorPreview').style.backgroundColor = document.getElementById('corFundo').value;
+            // Color picker - incluindo clique no preview
+            const corFundo = document.getElementById('corFundo');
+            const corFundoHex = document.getElementById('corFundoHex');
+            const colorPreview = document.getElementById('colorPreview');
             
-            // Inicializar interface
-            updateProgressBar();
-            updateNavigationButtons();
-            updatePreview();
+            if (corFundo) {
+                corFundo.addEventListener('input', function() {
+                    updateColorPreview();
+                    updatePreview();
+                });
+                corFundo.addEventListener('change', updatePreview);
+            }
             
-            console.log('✅ Página de edição inicializada com sucesso');
+            if (corFundoHex) {
+                corFundoHex.addEventListener('input', function() {
+                    const color = this.value;
+                    if (/^#[0-9A-F]{6}$/i.test(color)) {
+                        if (corFundo) corFundo.value = color;
+                        updateColorPreview();
+                        updatePreview();
+                    }
+                });
+                corFundoHex.addEventListener('change', updatePreview);
+            }
+            
+            // Permitir clicar no preview da cor para abrir o color picker
+            if (colorPreview && corFundo) {
+                colorPreview.addEventListener('click', function() {
+                    corFundo.click();
+                });
+            }
+            
+            // Setup uploads
+            setupImageUpload('logo');
+            setupImageUpload('capa');
+            setupImageUpload('fundo');
+            
+            // Setup location switch
+            setupLocationTypeSwitch();
+            
+            // Setup rich editor
+            setupRichEditor();
+            
+            // Setup aceite de termos
+            setupAceiteTermos();
+            
+            // Busca de endereço
+            const addressSearch = document.getElementById('addressSearch');
+            if (addressSearch) {
+                addressSearch.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        searchAddressManual();
+                    }
+                });
+            }
+        }
+        
+        // ========================================
+        // INICIALIZAÇÃO PRINCIPAL
+        // ========================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Iniciando editor de evento...', { evento_id, eventData });
+            
+            // Setup inicial
+            setupEventListeners();
+            
+            // Aguardar elementos estarem disponíveis e carregar dados
+            setTimeout(() => {
+                loadEventData();
+                updatePreview();
+                updateColorPreview();
+                hideLoading();
+            }, 100);
         });
         
-        // Função auxiliar para inicializar Google Maps (se necessário)
-        function initMap() {
-            // Placeholder para Google Maps - implementar se necessário
-            console.log('🗺️ Google Maps inicializado');
+        // Prevenir perda de dados ao sair da página
+        window.addEventListener('beforeunload', function(e) {
+            if (isSaving) {
+                e.preventDefault();
+                e.returnValue = 'Salvando dados... Aguarde um momento.';
+                return e.returnValue;
+            }
+        });
+
+        // Funções do menu/header que podem ser necessárias
+        function toggleMobileMenu() {
+            console.log('Toggle mobile menu');
         }
         
-        // Tornar função global para Google Maps callback
-        window.initMap = initMap;
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('active');
+                
+                // Fechar dropdown se clicar fora
+                document.addEventListener('click', function closeDropdown(e) {
+                    if (!e.target.closest('.user-menu')) {
+                        dropdown.classList.remove('active');
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            }
+        }
+        
+        function logout() {
+            if (confirm('Deseja realmente sair?')) {
+                window.location.href = '/produtor/logout.php';
+            }
+        }
+        
+        function closeMobileMenu() {
+            console.log('Close mobile menu');
+        }
+        
     </script>
 
-    <!-- Scripts de busca de endereço -->
-    <script src="/produtor/js/busca-endereco-direto.js?v=<?php echo time(); ?>"></script>
+    <!-- Busca de endereço do novoevento.php -->
+    <script language='javascript' src="/produtor/js/busca-endereco-direto.js?v=<?php echo time(); ?>"></script>
     
     <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>

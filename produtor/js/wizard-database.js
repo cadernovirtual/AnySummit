@@ -401,14 +401,13 @@
             }
         }
         
-        // Etapa 7 - Produtor
-        if (evento.produtor_selecionado) {
-            const radio = document.querySelector(`input[name="producer"][value="${evento.produtor_selecionado}"]`);
-            if (radio) radio.checked = true;
+        // Etapa 7 - Organizador (Contratante)
+        if (evento.contratante_id) {
+            const contratanteSelect = document.getElementById('contratante');
+            if (contratanteSelect) {
+                contratanteSelect.value = evento.contratante_id;
+            }
         }
-        if (evento.nome_produtor) document.getElementById('producerName').value = evento.nome_produtor;
-        if (evento.nome_exibicao_produtor) document.getElementById('displayName').value = evento.nome_exibicao_produtor;
-        if (evento.descricao_produtor) document.getElementById('producerDescription').value = evento.descricao_produtor;
         
         // Etapa 8 - Termos
         if (evento.visibilidade) {
@@ -585,11 +584,8 @@
                 break;
                 
             case 7:
-                const producerRadio = document.querySelector('input[name="producer"]:checked');
-                formData.append('produtor_selecionado', producerRadio?.value || 'atual');
-                formData.append('nome_produtor', document.getElementById('producerName').value);
-                formData.append('nome_exibicao_produtor', document.getElementById('displayName').value);
-                formData.append('descricao_produtor', document.getElementById('producerDescription').value);
+                const contratanteSelect = document.getElementById('contratante');
+                formData.append('contratante_id', contratanteSelect?.value || '');
                 break;
                 
             case 8:

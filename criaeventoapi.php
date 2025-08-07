@@ -20,10 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // =====================================================
 
 class Database {
-    private $host = 'anysubd.mysql.dbaas.com.br';
-    private $username = 'anysubd';
-    private $password = 'Swko15357523@#';
-    private $database = 'anysubd';
+    private $host = 'anysummit.com.br';
+    private $username = 'anysummit_user';
+    private $password = 'Miran@Janyne@Gustavo';
+    private $database = 'anysummit_db';
     private $pdo;
     
     public function __construct() {
@@ -33,9 +33,16 @@ class Database {
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
             ];
             
             $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
+            
+            // Forçar collation compatível
+            $this->pdo->exec("SET character_set_client=utf8mb4");
+            $this->pdo->exec("SET character_set_connection=utf8mb4");
+            $this->pdo->exec("SET character_set_results=utf8mb4");
+            $this->pdo->exec("SET collation_connection=utf8mb4_unicode_ci");
             
         } catch (PDOException $e) {
             $this->sendError('Erro de conexão com banco de dados: ' . $e->getMessage(), 500);

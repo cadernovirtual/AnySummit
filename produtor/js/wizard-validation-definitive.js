@@ -196,8 +196,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
                 
             case 7:
-                // Produtor - geralmente sempre válido pois usa o produtor atual por padrão
-                isValid = true;
+                // Organizador (Contratante) - verificar se um foi selecionado
+                const contratanteSelect = document.getElementById('contratante');
+                if (!contratanteSelect || contratanteSelect.value === '') {
+                    if (contratanteSelect) contratanteSelect.classList.add('error-field');
+                    camposInvalidos.push('Organizador');
+                    isValid = false;
+                }
                 break;
                 
             case 8:

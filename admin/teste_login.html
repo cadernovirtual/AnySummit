@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Login Admin</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Teste de Login Admin AnySummit</h1>
+    
+    <form method="POST" action="">
+        <p>
+            <label>Email:</label><br>
+            <input type="email" name="email" value="admin@anysummit.com.br" style="width: 300px; padding: 8px;">
+        </p>
+        <p>
+            <label>Senha:</label><br>
+            <input type="password" name="senha" placeholder="Digite: 230572gu@" style="width: 300px; padding: 8px;">
+        </p>
+        <p>
+            <button type="submit" name="testar" style="padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer;">
+                Testar Login
+            </button>
+        </p>
+    </form>
+
+    <?php
+    if (isset($_POST['testar'])) {
+        $host = "anysummit.com.br";
+        $username = "anysummit_user"; 
+        $password = "Miran@Janyne@Gustavo";
+        $database = "anysummit_db";
+        
+        $con = new mysqli($host, $username, $password, $database);
+        
+        if ($con->connect_error) {
+            echo "<p style='color: red;'>Erro de conexão: " . $con->connect_error . "</p>";
+        } else {
+            $email = $_POST['email'];
+            $senha = $_POST['senha'];
+            
+            $stmt = $con->prepare("SELECT id, nome, senha_hash FROM usuarios WHERE email = ? AND perfil = 'admin'");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                $usuario = $result->fetch_assoc();
+                
+                if (password_verify($senha, $usuario['senha_hash'])) {
+                    echo "<div style='background: #d4edda; color: #155724; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px; margin: 10px 0;'>";
+                    echo "<h3>✅ LOGIN VÁLIDO!</h3>";
+                    echo "<p>Usuário: " . htmlspecialchars($usuario['nome']) . "</p>";
+                    echo "<p>O sistema admin funcionará perfeitamente!</p>";
+                    echo "</div>";
+                } else {
+                    echo "<div style='background: #f8d7da; color: #721c24; padding: 15px; border: 1px solid #f5c6cb; border-radius: 5px; margin: 10px 0;'>";
+                    echo "<h3>❌ SENHA INCORRETA!</h3>";
+                    echo "<p>Hash atual: " . substr($usuario['senha_hash'], 0, 30) . "...</p>";
+                    
+                    // Gerar hash correto e atualizar
+                    $hash_correto = password_hash($senha, PASSWORD_DEFAULT);
+                    $stmt_update = $con->prepare("UPDATE usuarios SET senha_hash = ? WHERE email = ?");
+                    $stmt_update->bind_param("ss", $hash_correto, $email);
+                    
+                    if ($stmt_update->execute()) {
+                        echo "<p>🔄 Hash corrigido automaticamente!</p>";
+                        echo "<p>✅ Tente fazer login novamente!</p>";
+                    }
+                    $stmt_update->close();
+                    echo "</div>";
+                }
+            } else {
+                echo "<p style='color: red;'>Usuário admin não encontrado!</p>";
+            }
+            
+            $stmt->close();
+            $con->close();
+        }
+    }
+    ?>
+</body>
+</html>

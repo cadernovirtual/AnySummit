@@ -10,10 +10,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 // Configuração do banco (ajuste conforme necessário)
-$host = "anysubd.mysql.dbaas.com.br";
-$user = "anysubd";
-$senha = "Swko15357523@#";
-$db = "anysubd";
+$host = "anysummit.com.br";
+$user = "anysummit_user";
+$senha = "Miran@Janyne@Gustavo";
+$db = "anysummit_db";
 
 $con = mysqli_connect($host, $user, $senha, $db);
 mysqli_set_charset($con, "utf8mb4");

@@ -1,6 +1,8 @@
 <?php
 session_start();
 include("conm/conn.php");
+include("api/enviar-email-confirmacao.php");
+include("api/notificar-organizador.php");
 
 // Verificar se existe sessão válida ou se foi passado um pedido_id válido
 $acesso_autorizado = false;
@@ -82,6 +84,31 @@ try {
             exit;
         }
         
+        // Se o pagamento foi aprovado, tentar enviar email de confirmação como backup
+        // (caso o webhook ainda não tenha sido processado)
+        if (($pedido_data['status_pagamento'] === 'pago' || $pedido_data['status_pagamento'] === 'aprovado') && 
+            $pedido_data['comprador_email']) {
+            try {
+                // Enviar email de confirmação como backup
+                $email_backup = enviarEmailConfirmacao($pedido_data['pedidoid'], $con);
+                if ($email_backup) {
+                    error_log("Email de confirmação (backup) enviado para pedido: " . $pedido_data['pedidoid']);
+                } else {
+                    error_log("Falha no envio de email de confirmação (backup) para pedido: " . $pedido_data['pedidoid']);
+                }
+                
+                // Enviar notificação para organizador como backup
+                $notificacao_backup = notificarOrganizadorCompra($pedido_data['pedidoid'], $con);
+                if ($notificacao_backup === true) {
+                    error_log("Notificação organizador (backup) enviada para pedido: " . $pedido_data['pedidoid']);
+                } else {
+                    error_log("Falha notificação organizador (backup) para pedido: " . $pedido_data['pedidoid']);
+                }
+            } catch (Exception $e) {
+                error_log("Erro no envio de email de confirmação (backup): " . $e->getMessage());
+            }
+        }
+        
         // Buscar itens do pedido
         $sql_itens = "SELECT ip.*, i.titulo as ingresso_titulo, i.descricao as ingresso_descricao, i.tipo as ingresso_tipo
                       FROM tb_itens_pedido ip LEFT JOIN ingressos i ON ip.ingresso_id = i.id 
@@ -100,10 +127,12 @@ try {
             $itens_pedido[] = $item;
         }
         
-        // Buscar dados do evento para o botão de voltar
+        // Buscar dados do evento, incluindo campos adicionais
         $evento_data = null;
         if ($pedido_data['eventoid']) {
-            $sql_evento = "SELECT slug FROM eventos WHERE id = ? LIMIT 1";
+            $sql_evento = "SELECT id, nome, slug, data_inicio, nome_local, cidade, estado, imagem_capa, 
+                          campos_adicionais_participante 
+                          FROM eventos WHERE id = ? LIMIT 1";
             $stmt_evento = $con->prepare($sql_evento);
             if ($stmt_evento) {
                 $stmt_evento->bind_param("i", $pedido_data['eventoid']);
@@ -111,6 +140,12 @@ try {
                 $result_evento = $stmt_evento->get_result();
                 if ($result_evento->num_rows > 0) {
                     $evento_data = $result_evento->fetch_assoc();
+                    // Decodificar campos adicionais JSON
+                    if ($evento_data['campos_adicionais_participante']) {
+                        $evento_data['campos_adicionais'] = json_decode($evento_data['campos_adicionais_participante'], true);
+                    } else {
+                        $evento_data['campos_adicionais'] = [];
+                    }
                 }
             }
         }
@@ -555,6 +590,75 @@ unset($_SESSION['checkout_start_time']);
                             <label for="participante_celular" class="form-label">Celular</label>
                             <input type="text" class="form-control" id="participante_celular" name="participante_celular" placeholder="(11) 99999-9999">
                         </div>
+
+                        <!-- Campos Adicionais Dinâmicos -->
+                        <?php if (!empty($evento_data['campos_adicionais'])): ?>
+                            <hr class="my-4">
+                            <h6 class="mb-3">
+                                <i class="fas fa-clipboard-list me-2"></i>
+                                Informações Adicionais
+                            </h6>
+                            <?php foreach ($evento_data['campos_adicionais'] as $campo): ?>
+                                <div class="mb-3">
+                                    <label for="campo_<?php echo htmlspecialchars($campo['campo']); ?>" class="form-label">
+                                        <?php echo htmlspecialchars($campo['label']); ?>
+                                        <?php if ($campo['obrigatorio']): ?>
+                                            <span class="text-danger">*</span>
+                                        <?php endif; ?>
+                                    </label>
+
+                                    <?php if ($campo['tipo'] === 'texto'): ?>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
+                                    
+                                    <?php elseif ($campo['tipo'] === 'selecao' && !empty($campo['opcoes'])): ?>
+                                        <select class="form-control" 
+                                                id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                                name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                                <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
+                                            <option value="">Selecione...</option>
+                                            <?php foreach ($campo['opcoes'] as $opcao): ?>
+                                                <option value="<?php echo htmlspecialchars($opcao); ?>">
+                                                    <?php echo htmlspecialchars($opcao); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    
+                                    <?php elseif ($campo['tipo'] === 'url'): ?>
+                                        <input type="url" 
+                                               class="form-control" 
+                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               placeholder="https://exemplo.com"
+                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
+                                    
+                                    <?php elseif ($campo['tipo'] === 'email'): ?>
+                                        <input type="email" 
+                                               class="form-control" 
+                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               placeholder="email@exemplo.com"
+                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
+                                    
+                                    <?php else: ?>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
+                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+                        <!-- Aviso Importante -->
+                        <div class="alert alert-warning mt-4">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Atenção:</strong> Depois de associar esse voucher a uma pessoa, os dados não poderão ser mais alterados.
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -785,6 +889,35 @@ unset($_SESSION['checkout_start_time']);
                 alert('Por favor, preencha os campos obrigatórios (Nome e E-mail)');
                 return;
             }
+
+            // Coletar campos adicionais
+            const campos_adicionais = {};
+            const campos_extras = form.querySelectorAll('[name^="campo_"]');
+            
+            // Validar campos adicionais obrigatórios
+            let camposObrigatoriosVazios = [];
+            campos_extras.forEach(campo => {
+                const nomeCampo = campo.name.replace('campo_', '');
+                const valor = campo.value.trim();
+                
+                // Verificar se é obrigatório (tem asterisco na label)
+                const label = form.querySelector(`label[for="${campo.id}"]`);
+                const isObrigatorio = label && label.innerHTML.includes('text-danger');
+                
+                if (isObrigatorio && !valor) {
+                    const labelText = label.textContent.replace('*', '').trim();
+                    camposObrigatoriosVazios.push(labelText);
+                }
+                
+                if (valor) {
+                    campos_adicionais[nomeCampo] = valor;
+                }
+            });
+
+            if (camposObrigatoriosVazios.length > 0) {
+                alert('Por favor, preencha os campos obrigatórios: ' + camposObrigatoriosVazios.join(', '));
+                return;
+            }
             
             // Preparar dados para envio
             const dados = {
@@ -792,7 +925,8 @@ unset($_SESSION['checkout_start_time']);
                 participante_nome: nome,
                 participante_email: email,
                 participante_documento: formData.get('participante_documento').trim(),
-                participante_celular: formData.get('participante_celular').trim()
+                participante_celular: formData.get('participante_celular').trim(),
+                dados_adicionais: campos_adicionais
             };
             
             // Debug: log dos dados que serão enviados

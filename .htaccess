@@ -1,89 +1,82 @@
-RewriteEngine On
-
-# Forçar HTTPS
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-# Redirecionar novo domínio para o antigo
-RewriteCond %{HTTP_HOST} ^anysummit\.anysolutions\.com\.br$ [NC]
-RewriteRule ^(.*)$ https://www.anysummit.com.br/$1 [R=301,L]
-
-# REGRA PRINCIPAL: Página do evento
-RewriteRule ^evento/([a-z0-9-]+)/?$ /evento/index.php?slug=$1 [NC,L,QSA]
-
-# Outras páginas do evento
-RewriteRule ^evento/checkout/([a-z0-9-]+)/?$ /evento/checkout.php?evento=$1 [NC,L,QSA]
-RewriteRule ^evento/pag-pix/([a-z0-9-]+)/?$ /evento/pagamento-pix.php?evento=$1 [NC,L,QSA]
-RewriteRule ^evento/pag-success/?$ /evento/pagamento-sucesso.php [NC,L]
-RewriteRule ^evento/pag-success/([a-z0-9-]+)/?$ /evento/pagamento-sucesso.php?evento=$1 [NC,L,QSA]
-
-# Páginas do produtor
-RewriteRule ^produtor/?$ /produtor/index.php [NC,L]
-RewriteRule ^produtor/novoevento/?$ /produtor/novoevento.php [NC,L]
-RewriteRule ^produtor/meuseventos/?$ /produtor/meuseventos.php [NC,L,QSA]
-RewriteRule ^produtor/editar-evento/([0-9]+)/?$ /produtor/editar-evento.php?eventoid=$1 [NC,L,QSA]
-RewriteRule ^produtor/evento-publicado/([0-9]+)/?$ /produtor/evento-publicado.php?eventoid=$1 [NC,L,QSA]
-RewriteRule ^produtor/config/?$ /produtor/config.php [NC,L]
-RewriteRule ^produtor/organizadores/?$ /produtor/organizadores.php [NC,L]
-
-# Páginas do staff
-RewriteRule ^staff/?$ /staff/index.php [NC,L]
-RewriteRule ^staff/checkin/?$ /staff/checkin.php [NC,L]
-RewriteRule ^staff/realizados/?$ /staff/realizados.php [NC,L]
-RewriteRule ^staff/credenciamento/?$ /staff/credenciamento.php [NC,L]
-
-# Páginas do participante
-RewriteRule ^participante/?$ /participante/index.php [NC,L]
-RewriteRule ^participante/checkin/?$ /participante/checkin.php [NC,L]
-RewriteRule ^participante/conexao/?$ /participante/conexao.php [NC,L]
-RewriteRule ^participante/msg-personalizada/?$ /participante/mensagem_personalizada.php [NC,L]
-RewriteRule ^participante/config/?$ /participante/config.php [NC,L]
-
-# Páginas do patrocinador
-RewriteRule ^patrocinador/?$ /patrocinador/index.php [NC,L]
-RewriteRule ^patrocinador/checkin/?$ /patrocinador/checkin.php [NC,L]
-RewriteRule ^patrocinador/conexao/?$ /patrocinador/conexao.php [NC,L]
-RewriteRule ^patrocinador/msg-personalizada/?$ /patrocinador/mensagem_personalizada.php [NC,L]
-RewriteRule ^patrocinador/config/?$ /patrocinador/config.php [NC,L]
-
-# Página inicial - redirecionar para produtor por padrão
-RewriteRule ^$ /produtor/ [R=302,L]
-
-# Outras páginas do evento (funcionando)
-RewriteRule ^evento/checkout/([a-z0-9-]+)/?$ /evento/checkout.php?evento=$1 [NC,L,QSA]
-RewriteRule ^evento/pag-pix/([a-z0-9-]+)/?$ /evento/pagamento-pix.php?evento=$1 [NC,L,QSA]
-RewriteRule ^evento/pag-success/?$ /evento/pagamento-sucesso.php [NC,L]
-RewriteRule ^evento/pag-success/([a-z0-9-]+)/?$ /evento/pagamento-sucesso.php?evento=$1 [NC,L,QSA]
-
-# Páginas do produtor (funcionando)
-RewriteRule ^produtor/?$ /produtor/index.php [NC,L]
-RewriteRule ^produtor/novoevento/?$ /produtor/novoevento.php [NC,L]
-RewriteRule ^produtor/meuseventos/?$ /produtor/meuseventos.php [NC,L,QSA]
-RewriteRule ^produtor/editar-evento/([0-9]+)/?$ /produtor/editar-evento.php?eventoid=$1 [NC,L,QSA]
-RewriteRule ^produtor/evento-publicado/([0-9]+)/?$ /produtor/evento-publicado.php?eventoid=$1 [NC,L,QSA]
-RewriteRule ^produtor/config/?$ /produtor/config.php [NC,L]
-RewriteRule ^produtor/organizadores/?$ /produtor/organizadores.php [NC,L]
-
-# Teste 4: Todas as seções de usuários + redirecionamento inicial
-# Páginas do staff
-RewriteRule ^staff/?$ /staff/index.php [NC,L]
-RewriteRule ^staff/checkin/?$ /staff/checkin.php [NC,L]
-RewriteRule ^staff/realizados/?$ /staff/realizados.php [NC,L]
-RewriteRule ^staff/credenciamento/?$ /staff/credenciamento.php [NC,L]
-
-# Páginas do participante
-RewriteRule ^participante/?$ /participante/index.php [NC,L]
-RewriteRule ^participante/checkin/?$ /participante/checkin.php [NC,L]
-RewriteRule ^participante/conexao/?$ /participante/conexao.php [NC,L]
-RewriteRule ^participante/msg-personalizada/?$ /participante/mensagem_personalizada.php [NC,L]
-RewriteRule ^participante/config/?$ /participante/config.php [NC,L]
-
-# Páginas do patrocinador
-RewriteRule ^patrocinador/?$ /patrocinador/index.php [NC,L]
-RewriteRule ^patrocinador/checkin/?$ /patrocinador/checkin.php [NC,L]
-RewriteRule ^patrocinador/conexao/?$ /patrocinador/conexao.php [NC,L]
-RewriteRule ^patrocinador/msg-personalizada/?$ /patrocinador/mensagem_personalizada.php [NC,L]
-RewriteRule ^patrocinador/config/?$ /patrocinador/config.php [NC,L]
-
-# Página inicial - redirecionar para produtor por padrão
+# php -- BEGIN cPanel-generated handler, do not edit
+# Defina o pacote "ea-php81" como a linguagem padrão de programação "PHP".
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php81___lsphp .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
+
+# Garantir interpretação PHP
+<IfModule mod_mime.c>
+  AddType application/x-httpd-php .php
+</IfModule>
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+ 
+# Forçar HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirecionar novo domínio para o antigo (REVERTIDO)
+RewriteCond %{HTTP_HOST} ^anysummit\.anysolutions\.com\.br$ [NC]
+RewriteRule ^(.*)$ https://www.anysummit.com.br/$1 [R=301,L]
+
+# REGRA PRINCIPAL: Página do evento (RESTAURADO)
+RewriteRule ^evento/([a-z0-9-]+)/?$ /evento/index.php?slug=$1 [NC,L,QSA]
+
+# Outras páginas do evento
+RewriteRule ^evento/checkout/([a-z0-9-]+)/?$ /evento/checkout.php?evento=$1 [NC,L,QSA]
+RewriteRule ^evento/pag-pix/([a-z0-9-]+)/?$ /evento/pagamento-pix.php?evento=$1 [NC,L,QSA]
+RewriteRule ^evento/pag-success/?$ /evento/pagamento-sucesso.php [NC,L]
+RewriteRule ^evento/pag-success/([a-z0-9-]+)/?$ /evento/pagamento-sucesso.php?evento=$1 [NC,L,QSA]
+
+# Páginas do produtor
+RewriteRule ^produtor/?$ /produtor/index.php [NC,L]
+RewriteRule ^produtor/novoevento/?$ /produtor/novoevento.php [NC,L] 
+RewriteRule ^produtor/meuseventos/?$ /produtor/meuseventos.php [NC,L,QSA]
+RewriteRule ^produtor/editar-evento/([0-9]+)/?$ /produtor/editar-evento.php?eventoid=$1 [NC,L,QSA]
+RewriteRule ^produtor/evento-publicado/([0-9]+)/?$ /produtor/evento-publicado.php?eventoid=$1 [NC,L,QSA]
+RewriteRule ^produtor/config/?$ /produtor/config.php [NC,L]
+RewriteRule ^produtor/organizadores/?$ /produtor/organizadores.php [NC,L]
+
+# Páginas do staff
+RewriteRule ^staff/?$ /staff/index.php [NC,L]
+RewriteRule ^staff/checkin/?$ /staff/checkin.php [NC,L] 
+RewriteRule ^staff/realizados/?$ /staff/realizados.php [NC,L] 
+RewriteRule ^staff/credenciamento/?$ /staff/credenciamento.php [NC,L]
+
+# Páginas do participante
+RewriteRule ^participante/?$ /participante/index.php [NC,L]
+RewriteRule ^participante/checkin/?$ /participante/checkin.php [NC,L] 
+RewriteRule ^participante/conexao/?$ /participante/conexao.php [NC,L] 
+RewriteRule ^participante/msg-personalizada/?$ /participante/mensagem_personalizada.php [NC,L] 
+RewriteRule ^participante/config/?$ /participante/config.php [NC,L] 
+
+# Páginas do patrocinador
+RewriteRule ^patrocinador/?$ /patrocinador/index.php [NC,L]
+RewriteRule ^patrocinador/checkin/?$ /patrocinador/checkin.php [NC,L] 
+RewriteRule ^patrocinador/conexao/?$ /patrocinador/conexao.php [NC,L] 
+RewriteRule ^patrocinador/msg-personalizada/?$ /patrocinador/mensagem_personalizada.php [NC,L] 
+RewriteRule ^patrocinador/config/?$ /patrocinador/config.php [NC,L] 
+
+# Página inicial - redirecionar para produtor por padrão
 RewriteRule ^$ /produtor/ [R=302,L]
+
+</IfModule>
+
+# Configurações de segurança
+<Files "*.md">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Configurações de cache
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+</IfModule>

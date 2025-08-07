@@ -50,7 +50,7 @@ if (file_exists("../includes/imagem-helpers.php")) {
 }
 
 // Pegar dados do usuário logado
-$contratante_id = $_COOKIE['contratanteid'] ?? 0;
+// Removido $contratante_id = $_COOKIE['contratanteid'] ?? 0; pois não existe mais
 $usuario_id = $_COOKIE['usuarioid'] ?? 0;
 
 // Buscar dados do usuário para o header
@@ -82,20 +82,20 @@ try {
             FROM eventos e 
             LEFT JOIN categorias_evento cat ON e.categoria_id = cat.id AND cat.ativo = 1
             LEFT JOIN ingressos ing ON e.id = ing.evento_id AND ing.ativo = 1
-            WHERE e.contratante_id = ? AND e.usuario_id = ? AND e.status != 'rascunho'
+            WHERE e.usuario_id = ? AND e.status != 'rascunho'
             GROUP BY e.id
             ORDER BY e.criado_em DESC";
 
     $stmt = mysqli_prepare($con, $sql);
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "ii", $contratante_id, $usuario_id);
+        mysqli_stmt_bind_param($stmt, "i", $usuario_id);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
         $eventos = mysqli_fetch_all($result, MYSQLI_ASSOC);
         mysqli_stmt_close($stmt);
         
         // Debug: Mostrar quantos eventos foram encontrados
-        error_log("Eventos encontrados: " . count($eventos) . " para usuário $usuario_id e contratante $contratante_id");
+        error_log("Eventos encontrados: " . count($eventos) . " para usuário $usuario_id");
     } else {
         error_log("Erro ao preparar query: " . mysqli_error($con));
     }
@@ -762,7 +762,8 @@ try {
                         
                         <div style="margin-top: 20px; padding: 15px; background: rgba(255, 193, 7, 0.1); border-radius: 12px; border: 1px solid rgba(255, 193, 7, 0.3);">
                             <p style="color: #FFC107; font-size: 14px;">
-                                <strong>Debug:</strong> Usuário ID: <?php echo $usuario_id; ?> | Contratante ID: <?php echo $contratante_id; ?>
+                                <strong>Debug:</strong> Usuário ID: <?php echo $usuario_id; ?>
+                                <!-- Removido Contratante ID pois não existe mais -->
                             </p>
                         </div>
                     </div>

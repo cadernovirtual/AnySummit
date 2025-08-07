@@ -26,7 +26,8 @@ $sql_evento = "
         c.nome_fantasia,
         c.razao_social,
         c.email_contato,
-        c.telefone as telefone_contratante
+        c.telefone as telefone_contratante,
+        c.logomarca
     FROM eventos e
     LEFT JOIN usuarios u ON e.usuario_id = u.id
     LEFT JOIN contratantes c ON e.contratante_id = c.id
@@ -47,24 +48,36 @@ if (mysqli_num_rows($result_evento) == 0) {
 
 $evento = mysqli_fetch_assoc($result_evento);
 
-// MODIFICADO: Buscar ingressos do evento com informações de lotes
+// QUERY ATUALIZADA COM JOIN DOS LOTES E FILTRO DE DATAS
 $sql_ingressos = "
     SELECT 
-        i.*,
-        l.id as lote_id,
+        i.*,  -- Todas as colunas da tabela ingressos
         l.nome as lote_nome,
         l.data_inicio as lote_data_inicio,
         l.data_fim as lote_data_fim,
+        l.tipo as lote_tipo,
         l.divulgar_criterio,
-        l.tipo as lote_tipo
-    FROM ingressos i
-    LEFT JOIN lotes l ON i.lote_id = l.id
-    WHERE i.evento_id = ?
-    AND i.ativo = 1 
-    AND i.disponibilidade = 'publico'
-    AND (i.inicio_venda IS NULL OR i.inicio_venda <= NOW())
-    AND (i.fim_venda IS NULL OR i.fim_venda >= NOW())
-    ORDER BY i.posicao_ordem ASC, i.preco ASC
+        l.percentual_venda,
+        l.percentual_aumento_valor
+    FROM 
+        ingressos i
+    LEFT JOIN 
+        lotes l ON i.lote_id = l.id
+    WHERE 
+        i.evento_id = ? 
+        AND i.ativo = 1 
+        AND i.disponibilidade = 'publico'
+        AND (
+            -- Se o lote for do tipo 'data', verificar se está no período válido (com hora)
+            (l.tipo = 'data' AND NOW() BETWEEN l.data_inicio AND l.data_fim)
+            OR 
+            -- Se o lote for do tipo 'quantidade', trazer todos
+            l.tipo = 'quantidade'
+            OR
+            -- Se não há lote associado, trazer também
+            l.id IS NULL
+        )
+    ORDER BY i.posicao_ordem ASC, i.id ASC
 ";
 
 $stmt_ingressos = mysqli_prepare($con, $sql_ingressos);
@@ -97,39 +110,26 @@ function validarDataLote($data_inicio, $data_fim) {
     return true;
 }
 
-// MODIFICADO: Função para verificar se existem múltiplos lotes
-function existeMultiplosLotes($ingressos_raw) {
-    $lotes_unicos = [];
-    foreach ($ingressos_raw as $ingresso) {
-        if (!empty($ingresso['lote_id']) && !in_array($ingresso['lote_id'], $lotes_unicos)) {
-            $lotes_unicos[] = $ingresso['lote_id'];
-        }
-    }
-    return count($lotes_unicos) > 1;
-}
-
-// MODIFICADO: Processar ingressos com validação de lotes
-$ingressos_raw = [];
-while ($row = mysqli_fetch_assoc($result_ingressos)) {
-    $ingressos_raw[] = $row;
-}
-
-// Verificar se há múltiplos lotes
-$mostrar_badge_lote = existeMultiplosLotes($ingressos_raw);
-
-// Filtrar apenas ingressos com lotes válidos
+// PROCESSAMENTO DOS INGRESSOS COM COMBOS EXPANDIDOS
 $ingressos = [];
-foreach ($ingressos_raw as $ingresso) {
-    // Validar datas do lote se existir
-    if (!empty($ingresso['lote_id'])) {
-        if (validarDataLote($ingresso['lote_data_inicio'], $ingresso['lote_data_fim'])) {
-            $ingressos[] = $ingresso;
-        }
-    } else {
-        // Se não tem lote associado, inclui mesmo assim
-        $ingressos[] = $ingresso;
+$ids_processados = [];
+
+while ($row = mysqli_fetch_assoc($result_ingressos)) {
+    // Evitar duplicação por ID (proteção contra base poluída)
+    if (in_array($row['id'], $ids_processados)) {
+        continue;
     }
+    
+    // Processar conteúdo do combo se for tipo combo
+    if ($row['tipo'] === 'combo' && !empty($row['conteudo_combo'])) {
+        $row['combo_itens_processados'] = processarConteudoCombo($row['conteudo_combo'], $con);
+    }
+    
+    $ingressos[] = $row;
+    $ids_processados[] = $row['id'];
 }
+
+$mostrar_badge_lote = true;
 
 // Funções auxiliares
 function formatarData($data, $timezone = 'America/Sao_Paulo') {
@@ -180,19 +180,49 @@ function formatarBadgeLote($ingresso) {
     return $badge_text;
 }
 
-// NOVA: Função para processar conteúdo do combo
-function processarConteudoCombo($conteudo_combo) {
+// NOVA: Função para processar conteúdo do combo e buscar nomes dos ingressos
+function processarConteudoCombo($conteudo_combo, $con) {
     if (empty($conteudo_combo)) {
         return null;
     }
     
+    // Decodificar JSON
     $combo_data = json_decode($conteudo_combo, true);
     
-    if (!$combo_data || !isset($combo_data['ingressos'])) {
+    if (!$combo_data || !is_array($combo_data)) {
         return null;
     }
     
-    return $combo_data['ingressos'];
+    $itens_processados = [];
+    
+    foreach ($combo_data as $item) {
+        if (isset($item['ingresso_id']) && isset($item['quantidade'])) {
+            $ingresso_id = (int)$item['ingresso_id'];
+            $quantidade = (int)$item['quantidade'];
+            
+            // Buscar nome do ingresso
+            $sql_nome = "SELECT titulo FROM ingressos WHERE id = ?";
+            $stmt_nome = mysqli_prepare($con, $sql_nome);
+            
+            if ($stmt_nome) {
+                mysqli_stmt_bind_param($stmt_nome, "i", $ingresso_id);
+                mysqli_stmt_execute($stmt_nome);
+                $result_nome = mysqli_stmt_get_result($stmt_nome);
+                
+                if ($row_nome = mysqli_fetch_assoc($result_nome)) {
+                    $itens_processados[] = [
+                        'ingresso_id' => $ingresso_id,
+                        'nome' => $row_nome['titulo'],
+                        'quantidade' => $quantidade
+                    ];
+                }
+                
+                mysqli_stmt_close($stmt_nome);
+            }
+        }
+    }
+    
+    return !empty($itens_processados) ? $itens_processados : null;
 }
 
 // Função para truncar texto
@@ -236,9 +266,12 @@ if ($evento['tipo_local'] == 'presencial') {
 }
 $nomelocal = $evento['nome_local'];
 // Nome do produtor para exibição
-$nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['nome_exibicao_produtor'] : 
-                        (!empty($evento['nome_exibicao']) ? $evento['nome_exibicao'] : 
-                        (!empty($evento['nome_fantasia']) ? $evento['nome_fantasia'] : $evento['nome_usuario']));
+$nome_organizador_display = !empty($evento['nome_fantasia']) ? $evento['nome_fantasia'] : 
+                            (!empty($evento['nome_exibicao_produtor']) ? $evento['nome_exibicao_produtor'] : 
+                            (!empty($evento['nome_exibicao']) ? $evento['nome_exibicao'] : $evento['nome_usuario']));
+$email_organizador = !empty($evento['email_contato']) ? $evento['email_contato'] : '';
+$telefone_organizador = !empty($evento['telefone_contratante']) ? $evento['telefone_contratante'] : '';
+$logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '';
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -251,7 +284,7 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
      
     <title><?php echo htmlspecialchars($evento['nome']); ?></title>
     <meta name="description" content=" <?php echo truncarTexto($evento['descricao'], 160); ?>">
-    <meta name="author" content="<?php echo htmlspecialchars($nome_produtor_display); ?>">
+    <meta name="author" content="<?php echo htmlspecialchars($nome_organizador_display); ?>">
 
     <meta property="og:title" content="<?php echo htmlspecialchars($evento['nome']); ?>">
     <meta property="og:description" content="<?php echo truncarTexto($evento['descricao'], 160); ?>">
@@ -345,7 +378,7 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
 		}
         <?php }else{ ?>
 		    .hero-section {
-			background:#8323C4;
+			background:<?php echo !empty($evento['cor_fundo']) ? htmlspecialchars($evento['cor_fundo']) : '#8323C4'; ?>;
            
             background-size: cover;
             background-position: center;
@@ -415,13 +448,26 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
             .info-card {
                 padding: 20px;
                 gap: 16px;
-                flex-direction: row;
+                flex-direction: column;
+                text-align: center;
+                align-items: center;
+                justify-content: center;
             }
 
             .info-icon {
                 width: 45px;
                 height: 45px;
                 font-size: 1.1rem;
+                margin: 0 auto;
+            }
+
+            .info-content {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
             }
 
             .info-content h5 {
@@ -430,10 +476,15 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
 
             .date-info, .time-info {
                 font-size: 0.9rem;
+                justify-content: center;
             }
 
             .address-details {
                 font-size: 0.85rem;
+            }
+
+            .address-details div {
+                justify-content: center;
             }
 
             /* Botão de calendário responsivo */
@@ -1027,38 +1078,33 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
                 <!-- Producer Section -->
                 <section id="produtor" class="mb-5">
                     <hr class="section-divider">
-                    <h2 class="h3 fw-bold mb-4">Sobre o Produtor</h2>
+                    <h2 class="h3 fw-bold mb-4">Sobre o Organizador</h2>
                     <div class="row align-items-center">
                         <div class="col-md-3 text-center text-md-start">
                             <div class="producer-avatar mx-auto mx-md-0">
-                                <?php if (!empty($evento['foto_perfil'])): ?>
-                                    <img src="/produtor/uploads/capas/<?php echo htmlspecialchars($evento['foto_perfil']); ?>" alt="<?php echo htmlspecialchars($nome_produtor_display); ?>" class="rounded-circle w-100 h-100" style="object-fit: cover;">
+                                <?php if (!empty($logomarca_organizador)): ?>
+                                    <img src="<?php echo htmlspecialchars($logomarca_organizador); ?>" alt="<?php echo htmlspecialchars($nome_organizador_display); ?>" class="rounded-circle w-100 h-100" style="object-fit: cover;">
                                 <?php else: ?>
-                                    <?php echo obterIniciais($nome_produtor_display); ?>
+                                    <?php echo obterIniciais($nome_organizador_display); ?>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <div class="col-md-9">
-                            <h4><?php echo htmlspecialchars($nome_produtor_display); ?></h4>
-                            <?php if (!empty($evento['descricao_produtor']) || !empty($evento['descricao_usuario'])): ?>
-                                <p class="text-muted mb-3">
-                                    <?php echo nl2br(htmlspecialchars($evento['descricao_produtor'] ?: $evento['descricao_usuario'])); ?>
-                                </p>
-                            <?php endif; ?>
+                            <h4><?php echo htmlspecialchars($nome_organizador_display); ?></h4>
                             
-                            <?php if (!empty($evento['email_contato'])): ?>
+                            <?php if (!empty($email_organizador)): ?>
                                 <p class="text-muted mb-3">
                                     <i class="fas fa-envelope me-2"></i>
-                                    <a href="mailto:<?php echo htmlspecialchars($evento['email_contato']); ?>" class="text-decoration-none">
-                                        <?php echo htmlspecialchars($evento['email_contato']); ?>
+                                    <a href="mailto:<?php echo htmlspecialchars($email_organizador); ?>" class="text-decoration-none">
+                                        <?php echo htmlspecialchars($email_organizador); ?>
                                     </a>
                                 </p>
                             <?php endif; ?>
                             
-                            <?php if (!empty($evento['telefone_contratante'])): ?>
+                            <?php if (!empty($telefone_organizador)): ?>
                                 <p class="text-muted mb-3">
                                     <i class="fas fa-phone me-2"></i>
-                                    <?php echo htmlspecialchars($evento['telefone_contratante']); ?>
+                                    <?php echo htmlspecialchars($telefone_organizador); ?>
                                 </p>
                             <?php endif; ?>
                         </div>
@@ -1184,34 +1230,42 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
                     }
                 }
                 
-                // NOVO: Processar conteúdo do combo
+                // NOVO: Aplicar aumento percentual do lote no preço
+                let precoFinal = preco;
+                if (ingresso.lote_tipo && ingresso.percentual_aumento_valor) {
+                    const aumentoPercentual = parseFloat(ingresso.percentual_aumento_valor || 0);
+                    if (aumentoPercentual > 0) {
+                        precoFinal = preco * (1 + aumentoPercentual / 100);
+                    }
+                }
+                
+                // NOVO: Processar conteúdo do combo com nomes dos ingressos
                 let comboItens = null;
                 if (ingresso.tipo === 'combo' && ingresso.conteudo_combo) {
-                    try {
-                        const comboData = JSON.parse(ingresso.conteudo_combo);
-                        if (comboData && comboData.ingressos) {
-                            comboItens = comboData.ingressos;
-                        }
-                    } catch (e) {
-                        console.warn('Erro ao processar combo:', e);
-                    }
+                    // Usar dados processados pelo PHP que já incluem os nomes
+                    comboItens = ingresso.combo_itens_processados || null;
                 }
                 
                 return {
                     id: ingresso.id.toString(),
                     name: ingresso.titulo,
-                    originalPrice: preco,
-                    currentPrice: preco,
-                    installments: preco > 0 ? `em até 12x R$ ${(preco / 12).toFixed(2).replace('.', ',')}` : '',
+                    originalPrice: preco, // Preço original sem lote
+                    currentPrice: precoFinal, // Preço com ajuste do lote
                     quantity: 0,
-                    maxQuantity: Math.min(disponivel, ingresso.limite_max || disponivel),
+                    maxQuantity: ingresso.limite_max > 0 ? Math.min(disponivel, ingresso.limite_max) : 0,
                     available: disponivel > 0 && ingresso.ativo == 1,
                     taxa_plataforma: taxa,
                     // NOVOS CAMPOS
                     tipo: ingresso.tipo,
                     badgeLote: badgeLote,
                     comboItens: comboItens,
-                    descricao: ingresso.descricao || ''
+                    descricao: ingresso.descricao || '',
+                    // CAMPOS DO LOTE
+                    lote_nome: ingresso.lote_nome || '',
+                    lote_tipo: ingresso.lote_tipo || '',
+                    lote_data_inicio: ingresso.lote_data_inicio || null,
+                    lote_data_fim: ingresso.lote_data_fim || null,
+                    percentual_aumento_valor: ingresso.percentual_aumento_valor || 0
                 };
             });
 
@@ -1227,6 +1281,14 @@ $nome_produtor_display = !empty($evento['nome_exibicao_produtor']) ? $evento['no
                         // Debug dos preços
                         tickets.forEach(ticket => {
                             console.log(`Ingresso: ${ticket.name} - Preço: R$ ${ticket.currentPrice.toFixed(2).replace('.', ',')}`);
+                            
+                            // Debug específico para combos
+                            if (ticket.tipo === 'combo' && ticket.comboItens) {
+                                console.log(`  Combo contém:`, ticket.comboItens);
+                                ticket.comboItens.forEach(item => {
+                                    console.log(`    - ${item.quantidade}x ${item.nome} (ID: ${item.ingresso_id})`);
+                                });
+                            }
                         });
                     }
                 }, 100);

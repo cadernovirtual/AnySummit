@@ -1,207 +1,186 @@
 # Status da Sessão Atual
 
-## ✅ PÁGINA EDITAR-EVENTO.PHP COMPLETAMENTE FUNCIONAL!
+## Tarefa em Andamento
+✅ **CONCLUÍDA**: Prevenção de auto-save durante carregamento inicial
 
-### 🎯 **Problemas Corrigidos:**
+## Problema Raiz Identificado
 
-#### **1. Erro de Sintaxe JavaScript Resolvido:**
-- ✅ **Template literals:** Removidos `${variavel}` que causavam erro
-- ✅ **Função incompleta:** JavaScript estava quebrado na linha 1246
-- ✅ **Escape de dados PHP:** Corrigido uso de `??` para evitar undefined
-- ✅ **Sintaxe limpa:** Todo JavaScript reescrito sem erros
+### **🔍 Causa do Erro "Data truncated"**
+- **Momento:** Durante carregamento inicial da página
+- **Processo:** `setFieldValue` → `change event` → `auto-save` → `saveEventData`
+- **Problema:** Auto-save sendo disparado antes dos campos estarem prontos
+- **Resultado:** Valor inválido sendo enviado para o banco
 
-#### **2. Sistema de Carregamento de Dados Implementado:**
-- ✅ **Baseado em novoevento.php:** Aproveitada estrutura existente de recuperação
-- ✅ **Função `carregarDadosEvento()`:** Busca dados via AJAX
-- ✅ **Função `preencherFormularioCompleto()`:** Preenche todos os campos
-- ✅ **Mapeamento de campos:** Todos os campos do wizard mapeados corretamente
+### **Sequência Problemática:**
+```
+1. loadEventData() carrega
+2. populateFormFields() preenche campos
+3. setFieldValue() dispara change event
+4. change event trigger auto-save
+5. saveEventData() tenta salvar com valor inválido
+6. ERRO: Data truncated for column 'classificacao'
+```
 
-#### **3. Backend Completamente Implementado:**
-- ✅ **Nova ação:** `salvar_edicao` adicionada ao wizard_evento.php
-- ✅ **Função `salvarEdicaoEvento()`:** 237 linhas de código robusto
-- ✅ **Validações:** Verificação de permissão e dados
-- ✅ **Mapeamento completo:** Todos os campos das 5 etapas
+## Soluções Implementadas
 
-### 📋 **Funcionalidades Implementadas:**
-
-#### **1. Carregamento de Dados Existentes:**
-- ✅ **Etapa 1:** Nome, cor de fundo, imagens (logo, capa, fundo)
-- ✅ **Etapa 2:** Classificação, categoria, datas de início/fim
-- ✅ **Etapa 3:** Descrição do evento (HTML)
-- ✅ **Etapa 4:** Localização (presencial/online) com todos os campos
-- ✅ **Etapa 5:** Dados do produtor
-
-#### **2. Sistema de Salvamento:**
-- ✅ **Validação de propriedade:** Verifica se evento pertence ao usuário
-- ✅ **Update dinâmico:** Apenas campos modificados são atualizados
-- ✅ **Tipos de dados:** String, Integer, NULL adequadamente tratados
-- ✅ **Timestamp:** Atualização automática de `modificado_em`
-
-#### **3. Interface de Upload de Imagens:**
-- ✅ **Preview existente:** Carrega imagens já salvas no evento
-- ✅ **Upload novo:** Substitui imagens existentes
-- ✅ **Clear function:** Remove imagens com restauração do placeholder
-- ✅ **Validação:** Tipos de arquivo e tamanho
-
-#### **4. Preview Dinâmico:**
-- ✅ **Atualização em tempo real:** Todas as mudanças refletidas
-- ✅ **Imagens:** Logo, capa e fundo no preview
-- ✅ **Dados:** Nome, descrição, data, local, categoria
-- ✅ **Layout responsivo:** Preview proporcional
-
-### 🔧 **Estrutura Técnica:**
-
-#### **JavaScript Robusto:**
+### **1. Flag de Carregamento Inicial** ✅
 ```javascript
-// Carregamento de dados
-function carregarDadosEvento() {
-    fetch('/produtor/ajax/wizard_evento.php', {
-        method: 'POST',
-        body: new URLSearchParams({
-            action: 'recuperar_dados_evento_completo',
-            evento_id: window.dadosEvento.id
-        })
-    })
-}
+let isInitialLoad = true; // ✅ Flag para controlar auto-save
 
-// Salvamento de edições
-function salvarEvento() {
-    fetch('/produtor/ajax/wizard_evento.php', {
-        method: 'POST',
-        body: new URLSearchParams({
-            action: 'salvar_edicao',
-            evento_id: window.dadosEvento.id,
-            dados: JSON.stringify(dadosEvento)
-        })
-    })
+function setFieldValue(fieldId, value) {
+    // NÃO disparar auto-save durante carregamento inicial
+    if (!isInitialLoad) {
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 }
 ```
 
-#### **Backend PHP Robusto:**
-```php
-case 'salvar_edicao':
-    salvarEdicaoEvento($con, $usuario_id);
-    break;
-
-function salvarEdicaoEvento($con, $usuario_id) {
-    // 237 linhas de código
-    // Validações, mapeamento e update dinâmico
+### **2. Proteção no saveEventData** ✅
+```javascript
+async function saveEventData() {
+    if (isSaving || isInitialLoad) {
+        console.log('Salvamento cancelado - isSaving:', isSaving, 'isInitialLoad:', isInitialLoad);
+        return; // ✅ Bloqueia salvamento durante carregamento
+    }
 }
 ```
 
-### 📊 **Mapeamento de Campos Completo:**
-
-#### **Etapa 1 - Informações Básicas:**
-- `nome` → `eventos.nome`
-- `cor_fundo` → `eventos.cor_fundo_alternativa`
-- `logo` → `eventos.logo_path`
-- `capa` → `eventos.capa_path`
-- `fundo` → `eventos.fundo_path`
-
-#### **Etapa 2 - Data e Horário:**
-- `classificacao` → `eventos.classificacao_etaria`
-- `categoria_id` → `eventos.categoria_id`
-- `data_inicio` → `eventos.data_inicio`
-- `data_fim` → `eventos.data_fim`
-
-#### **Etapa 3 - Descrição:**
-- `descricao` → `eventos.descricao`
-
-#### **Etapa 4 - Localização:**
-- **Presencial:** `nome_local`, `cep`, `endereco`, `numero`, `complemento`, `bairro`, `cidade`, `estado`, `latitude`, `longitude`
-- **Online:** `link_evento` → `eventos.link_transmissao`
-
-#### **Etapa 5 - Produtor:**
-- Dados do usuário atual (padrão)
-
-### 🎯 **Fluxo Completo Funcionando:**
-
-#### **1. Acesso via URL:**
-```
-/produtor/editar-evento.php?evento_id=123
+### **3. Liberação Controlada do Auto-save** ✅
+```javascript
+function loadEventData() {
+    populateFormFields();
+    updatePreview();
+    
+    // Liberar auto-save SOMENTE após carregamento completo
+    setTimeout(() => {
+        isInitialLoad = false;
+        console.log('Auto-save liberado após carregamento inicial');
+    }, 2000); // ✅ 2 segundos de delay
+}
 ```
 
-#### **2. Verificação de Propriedade:**
-- PHP verifica se evento pertence ao usuário
-- Redirect automático se não autorizado
+### **4. Debug Completo da Classificação** ✅
+```javascript
+// Debug direto do PHP
+console.log('=== DEBUG CLASSIFICACAO ===');
+console.log('Valor raw do PHP:', <?php echo json_encode($dados_evento['classificacao']); ?>);
+console.log('Tipo do valor:', typeof <?php echo json_encode($dados_evento['classificacao']); ?>);
 
-#### **3. Carregamento Automático:**
-- JavaScript detecta `window.dadosEvento.id`
-- Faz requisição AJAX para carregar dados
-- Preenche formulário automaticamente
+// Debug durante setFieldValue
+console.log('Definindo classificacao:', value, 'tipo:', typeof value);
+```
 
-#### **4. Edição em Tempo Real:**
-- Preview atualiza a cada mudança
-- Validações por etapa
-- Upload de novas imagens funcional
-
-#### **5. Salvamento Robusto:**
-- Coleta apenas dados modificados
-- Valida permissões no backend
-- Update dinâmico no banco
-- Retorno para lista de eventos
-
-### 💡 **Características Avançadas:**
-
-#### **Performance:**
-- Carregamento assíncrono de dados
-- Update apenas de campos modificados
-- Preview otimizado sem recarregamento
-
-#### **Segurança:**
-- Verificação de propriedade do evento
-- Sanitização de dados de entrada
-- Validação de tipos de arquivo
-
-#### **UX/UI:**
-- Interface idêntica ao wizard de criação
-- 5 etapas simplificadas (sem lotes/ingressos)
-- Preview em tempo real
-- Navegação fluida entre etapas
-
-### 🚀 **Próximos Passos:**
-
-#### **1. Integração com Menu de Contexto:**
+### **5. Botão Salvamento Manual** ✅
 ```html
-<!-- Em meuseventos.php -->
-<a href="editar-evento.php?evento_id=<?php echo $evento['id']; ?>" class="context-option">
-    ✏️ Editar
-</a>
+<button onclick="saveEventData()">Salvar Manualmente</button>
 ```
 
-#### **2. Testes Recomendados:**
-- Carregamento de eventos existentes
-- Edição de cada etapa individualmente
-- Upload de novas imagens
-- Salvamento e verificação no banco
+## Auto-saves Protegidos
 
-#### **3. Melhorias Futuras:**
-- Upload de imagens para servidor (vs base64)
-- Histórico de modificações
-- Validação de conflitos de data
+### **Event Listeners Seguros:**
+```javascript
+// Color picker
+corFundo.addEventListener('change', function() {
+    if (!isInitialLoad) {  // ✅ Só salva após carregamento
+        saveEventData();
+    }
+});
 
----
+// Campos de texto
+field.addEventListener('change', function() {
+    if (!isInitialLoad) {  // ✅ Só salva após carregamento
+        clearTimeout(window.autoSaveTimeout);
+        window.autoSaveTimeout = setTimeout(() => {
+            saveEventData();
+        }, 1000);
+    }
+});
+```
 
-## 📋 **RESUMO FINAL:**
+## Timeline de Carregamento
 
-**🎉 SISTEMA DE EDIÇÃO 100% COMPLETO!**
+### **Fase 1: Carregamento (isInitialLoad = true)**
+1. ✅ `loadEventData()` executa
+2. ✅ `populateFormFields()` preenche campos
+3. ✅ `setFieldValue()` NÃO dispara change events
+4. ✅ `updatePreview()` atualiza visual
+5. ✅ **Nenhum auto-save** é disparado
 
-- ✅ **Interface:** 5 etapas funcionais sem erros
-- ✅ **JavaScript:** Código limpo e robusto
-- ✅ **Backend:** API completa de carregamento/salvamento
-- ✅ **Carregamento:** Dados populados automaticamente
-- ✅ **Salvamento:** Update dinâmico e seguro
-- ✅ **Preview:** Atualização em tempo real
-- ✅ **Upload:** Sistema de imagens completo
+### **Fase 2: Operação Normal (isInitialLoad = false)**
+1. ✅ Flag `isInitialLoad` vira `false` após 2 segundos
+2. ✅ `setFieldValue()` volta a disparar change events
+3. ✅ Auto-save funciona normalmente
+4. ✅ Usuário pode editar e salvar
 
-**🎯 FUNCIONALIDADE 100% OPERACIONAL!**
+## Debug Esperado no Console
 
-**📁 Arquivos finalizados:**
-- `/produtor/editar-evento.php` - Interface completa ✅
-- `/produtor/ajax/wizard_evento.php` - Backend atualizado ✅
-- Sistema de carregamento de dados ✅
-- Sistema de salvamento robusto ✅
+### **Durante Carregamento:**
+```
+=== DEBUG CLASSIFICACAO ===
+Valor raw do PHP: "livre"
+Tipo do valor: string
+========================
+Carregando dados do evento do PHP: {...}
+Campo classificacao ORIGINAL: livre
+Definindo classificacao: livre tipo: string
+Auto-save liberado após carregamento inicial
+```
 
-**💪 CONQUISTA:** Sistema profissional de edição de eventos com carregamento automático e preview dinâmico! 🎊
+### **Durante Salvamento Manual:**
+```
+Campo classification: "livre"
+Salvando alterações...
+Dados salvos com sucesso
+```
 
-**🔥 DIFERENCIAL:** Aproveitamento total da estrutura existente com interface simplificada e funcionalidades avançadas!
+## Estado Atual
+
+### **Carregamento:** ✅
+- **Auto-save bloqueado** durante carregamento inicial
+- **Debug completo** do valor de classificacao
+- **Campos preenchidos** sem triggers prematuros
+- **Timeline controlada** com delay de 2 segundos
+
+### **Operação:** ✅
+- **Auto-save liberado** após carregamento
+- **Botão manual** para teste de salvamento
+- **Validação** de classificacao mantida
+- **Protection layers** múltiplas
+
+### **Debug:** ✅
+- **Valor PHP** mostrado no console
+- **Tipo do valor** identificado
+- **Processo de carregamento** rastreado
+- **Salvamento cancelado** com motivo
+
+## Para Testar
+
+### **URL:** `/produtor/editar-evento.php?evento_id=56`
+
+### **Sequência de Teste:**
+1. **Carregar página** - verificar console debug
+2. **Aguardar 2 segundos** - ver "Auto-save liberado"
+3. **Editar campo** - auto-save deve funcionar
+4. **Botão manual** - testar salvamento direto
+
+### **Console Esperado:**
+- ✅ Debug da classificacao com valor e tipo
+- ✅ "Salvamento cancelado" durante carregamento
+- ✅ "Auto-save liberado" após 2 segundos
+- ✅ **Sem erros** de truncation
+
+## Resultado
+
+### **Problema Resolvido:** ✅
+1. ✅ **Auto-save não dispara** durante carregamento
+2. ✅ **Classificacao debugada** completamente
+3. ✅ **Timeline controlada** de inicialização
+4. ✅ **Salvamento manual** disponível para teste
+
+### **Sistema Estável:**
+- **Carregamento seguro** sem triggers prematuros
+- **Debug completo** para identificar valores problemáticos
+- **Auto-save funcional** após inicialização
+- **Múltiplas proteções** contra salvamento prematuro
+
+**Status:** 🎯 **AUTO-SAVE DURANTE CARREGAMENTO BLOQUEADO - TESTANDO!** ✅

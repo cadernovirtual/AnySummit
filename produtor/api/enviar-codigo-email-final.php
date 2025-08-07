@@ -129,11 +129,11 @@ try {
     $metodoEnvio = '';
     
     // Configurações SMTP
-    $smtp_server = 'email-ssl.com.br';
+    $smtp_server = 'mail.anysummit.com.br';
     $smtp_port = 465;
-    $smtp_user = 'noreply@anysummit.com.br';
-    $smtp_pass = 'Swko15357523@#';
-    $from_email = 'noreply@anysummit.com.br';
+    $smtp_user = 'ingressos@anysummit.com.br';
+    $smtp_pass = 'Miran@Janyne@Gustavo';
+    $from_email = 'ingressos@anysummit.com.br';
     $from_name = 'AnySummit';
     
     // Tentar SMTP primeiro

@@ -40,7 +40,7 @@ try {
     $check_fk1 = mysqli_query($con, "
         SELECT CONSTRAINT_NAME 
         FROM information_schema.KEY_COLUMN_USAGE 
-        WHERE TABLE_SCHEMA = 'anysubd' 
+        WHERE TABLE_SCHEMA = 'anysummit_db' 
         AND TABLE_NAME = 'lotes' 
         AND CONSTRAINT_NAME = 'fk_lotes_evento'
     ");
@@ -68,7 +68,7 @@ try {
     $check_column = mysqli_query($con, "
         SELECT COLUMN_NAME 
         FROM information_schema.COLUMNS 
-        WHERE TABLE_SCHEMA = 'anysubd' 
+        WHERE TABLE_SCHEMA = 'anysummit_db' 
         AND TABLE_NAME = 'ingressos' 
         AND COLUMN_NAME = 'lote_id'
     ");
@@ -139,7 +139,7 @@ try {
     $check_fk2 = mysqli_query($con, "
         SELECT CONSTRAINT_NAME 
         FROM information_schema.KEY_COLUMN_USAGE 
-        WHERE TABLE_SCHEMA = 'anysubd' 
+        WHERE TABLE_SCHEMA = 'anysummit_db' 
         AND TABLE_NAME = 'ingressos' 
         AND CONSTRAINT_NAME = 'fk_ingressos_lote'
     ");
