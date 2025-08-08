@@ -53,25 +53,244 @@ $categorias = [];
 while ($row = mysqli_fetch_assoc($result_categorias)) {
     $categorias[] = $row;
 }
+
+// Buscar parâmetros de termos e políticas
+$sql_parametros = "SELECT politicas_eventos_default, termos_eventos_default FROM parametros LIMIT 1";
+$result_parametros = mysqli_query($con, $sql_parametros);
+$parametros = mysqli_fetch_assoc($result_parametros) ?: [
+    'politicas_eventos_default' => 'Políticas de Privacidade não configuradas.',
+    'termos_eventos_default' => 'Termos de Uso não configurados.'
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Editar Evento - Painel Produtor - Anysummit</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="/produtor/css/criaevento.css" />
-    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-1-0-0.css">
-    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-painel-1-0-0.css">
-    <link rel="stylesheet" type="text/css" href="/produtor/css/busca-endereco.css" />
-    <link rel="stylesheet" type="text/css" href="/produtor/css/iphone-switch.css" />
-    <link rel="stylesheet" type="text/css" href="/produtor/css/custom-dialogs.css" />
-    <link rel="stylesheet" type="text/css" href="/produtor/css/combo-styles.css" />
-    <link rel="stylesheet" type="text/css" href="/produtor/css/form-alignment.css" />
-    <link rel="stylesheet" type="text/css" href="/produtor/css/sistema-ingressos-etapa6.css" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/criaevento.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-1-0-0.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" type="text/css" href="/produtor/css/checkin-painel-1-0-0.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" type="text/css" href="/produtor/css/busca-endereco.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/iphone-switch.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/custom-dialogs.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/combo-styles.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/form-alignment.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" type="text/css" href="/produtor/css/sistema-ingressos-etapa6.css?v=<?php echo time(); ?>" />
     
     <style>
+        /* CORREÇÕES DE CACHE - CSS INLINE COM ALTA PRIORIDADE */
+        
+        /* Color picker oculto - FORÇAR */
+        #corFundo {
+            display: none !important;
+            visibility: hidden !important;
+        }
+        
+        /* Preview detail com espaçamento - FORÇAR */
+        .detail-icon {
+            margin-right: 8px !important;
+            display: inline-block !important;
+        }
+        
+        /* Preview card layout - FORÇAR */
+        .main-content {
+            display: grid !important;
+            grid-template-columns: 1fr 460px !important;
+            gap: 40px !important;
+            align-items: start !important;
+        }
+        
+        .preview-card {
+            width: 100% !important;
+            max-width: 460px !important;
+            padding: 5px !important;
+            position: sticky !important;
+            top: 0px !important;
+            margin-top: 0 !important;
+        }
+        
+        /* Hero miniatura CSS - FORÇAR */
+        .hero-mini-logo {
+            max-height: 80px !important;
+            max-width: 200px !important;
+            object-fit: contain !important;
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+        
+        .hero-mini-capa {
+            width: 100% !important;
+            max-width: 120px !important;
+            height: 120px !important;
+            object-fit: cover !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+        
+        /* Garantir que hero logo e capa sempre apareçam */
+        #heroLogo, #heroCapa {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
+            z-index: 2 !important;
+            max-width: none !important;
+            max-height: none !important;
+        }
+        
+        /* Layout hero-mini - ESTRUTURA BÁSICA */
+        .hero-mini-container {
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            padding: 20px !important;
+            box-sizing: border-box !important;
+        }
+        
+        .hero-mini-row {
+            display: flex !important;
+            width: 100% !important;
+            height: 100% !important;
+            align-items: center !important;
+            gap: 15px !important;
+        }
+        
+        .hero-mini-left {
+            flex: 0 0 66% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-right: 10px !important;
+            box-sizing: border-box !important;
+        }
+        
+        .hero-mini-right {
+            flex: 0 0 33% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            box-sizing: border-box !important;
+        }
+        
+        .hero-mini-logo-area {
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 60px !important;
+            overflow: visible !important;
+        }
+        
+        .hero-mini-left, .hero-mini-right {
+            overflow: visible !important;
+        }
+        
+        .hero-mini-container {
+            overflow: visible !important;
+        }
+        
+        .hero-section-mini {
+            overflow: visible !important;
+        }
+        
+        /* CSS específico para imagens hero - máxima prioridade */
+        div.preview-image div.hero-section-mini div.hero-mini-container div.hero-mini-row div.hero-mini-left div.hero-mini-logo-area img#heroLogo {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            width: auto !important;
+            height: auto !important;
+            max-width: 200px !important;
+            max-height: 80px !important;
+            object-fit: contain !important;
+            position: relative !important;
+            z-index: 999 !important;
+        }
+        
+        div.preview-image div.hero-section-mini div.hero-mini-container div.hero-mini-row div.hero-mini-right img#heroCapa {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            width: 120px !important;
+            height: 120px !important;
+            object-fit: cover !important;
+            border-radius: 8px !important;
+            position: relative !important;
+            z-index: 999 !important;
+        }
+        
+        /* Botão de exclusão circular */
+        .btn-clear-image {
+            position: absolute !important;
+            top: 8px !important;
+            right: 8px !important;
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 50% !important;
+            background: rgba(255, 82, 82, 0.9) !important;
+            color: white !important;
+            border: none !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            z-index: 10 !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+        }
+        
+        .btn-clear-image:hover {
+            background: rgba(255, 82, 82, 1) !important;
+            transform: scale(1.1) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        }
+        
+        /* Diminuir imagem de capa em 30% */
+        #capaPreviewContainer img {
+            max-width: 70% !important;
+            max-height: 70% !important;
+            object-fit: contain !important;
+        }
+        
+        .hero-mini-left {
+            flex: 0 0 66% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-right: 10px !important;
+        }
+        
+        .hero-mini-right {
+            flex: 0 0 33% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+        }
+        
+        /* Etapa 5 layout grid - FORÇAR */
+        .form-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+        }
+        
         /* Loading Spinner com backdrop */
         .loading-overlay {
             position: fixed;
@@ -357,6 +576,7 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             border-radius: 8px;
             cursor: pointer;
             background: transparent;
+            display: none; /* Ocultar o input color nativo */
         }
         
         .color-preview {
@@ -387,6 +607,11 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             font-size: 12px;
             color: #8B95A7;
             margin-left: 10px;
+        }
+        
+        /* Preview detail com espaçamento */
+        .detail-icon {
+            margin-right: 8px;
         }
         
         /* Controlar especificamente as imagens do preview */
@@ -572,9 +797,8 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         <!-- Content Area -->
         <main class="content-area">
          <div class="container">
-          <div class="header wizard-header">
-               <h1 style="font-size: 2.5rem; font-weight: 700; margin: 0; color: #fff;">Editar Evento</h1>
-               <p style="color: #8B95A7; margin-top: 8px; font-size: 1.1rem;">Modifique as informações do seu evento</p>
+          <div class="header" style="display: block; position: relative; z-index: 8; text-align: center; margin-bottom: 25px; border-radius: 20px;">
+               <p>Editar Evento</p>
           </div>
 
           <!-- Progress Bar -->
@@ -930,45 +1154,47 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                             </div>
                         </div>
 
-                        <!-- Organizador -->
-                        <div class="form-group">
-                            <label for="contratante">Organizador Responsável <span class="required">*</span></label>
-                            <select id="contratante" required>
-                                <option value="">Selecione o organizador</option>
-                                <?php foreach ($contratantes as $contratante): ?>
-                                    <option value="<?php echo $contratante['id']; ?>"><?php echo htmlspecialchars($contratante['razao_social']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <!-- Visibilidade -->
-                        <div class="form-group">
-                            <label for="visibilidade">Visibilidade do Evento <span class="required">*</span></label>
-                            <select id="visibilidade" required>
-                                <option value="">Selecione a visibilidade</option>
-                                <option value="publico">Público</option>
-                                <option value="privado">Privado</option>
-                            </select>
-                            <div class="form-hint">
-                                <strong>Eventos privados</strong> não terão página pública para compra de ingressos. 
-                                A página de venda somente será acessível via link privado.
+                        <!-- Organizador e Visibilidade -->
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="contratante">Organizador Responsável <span class="required">*</span></label>
+                                <select id="contratante" required>
+                                    <option value="">Selecione o organizador</option>
+                                    <?php foreach ($contratantes as $contratante): ?>
+                                        <option value="<?php echo $contratante['id']; ?>"><?php echo htmlspecialchars($contratante['razao_social']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
+
+                            <div class="form-group">
+                                <label for="visibilidade">Visibilidade do Evento <span class="required">*</span></label>
+                                <select id="visibilidade" required>
+                                    <option value="">Selecione a visibilidade</option>
+                                    <option value="publico">Público</option>
+                                    <option value="privado">Privado</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-hint" style="margin-top: 30px; margin-bottom: 30px;">
+                            <strong>Eventos privados</strong> não terão página pública para compra de ingressos. 
+                            A página de venda somente será acessível via link privado.
                         </div>
 
                         <!-- Aceite de Termos (apenas para rascunhos) -->
                         <?php if ($dados_evento['status'] === 'rascunho'): ?>
                         <div class="form-group" style="margin-top: 30px;">
-                            <div class="checkbox-container">
-                                <input type="checkbox" id="aceitarTermos" <?php echo !empty($dados_evento['dados_aceite']) ? 'checked disabled' : ''; ?>>
-                                <label for="aceitarTermos">
-                                    Aceito os <a href="/termos" target="_blank">Termos de Uso</a> e 
-                                    <a href="/privacidade" target="_blank">Políticas de Privacidade</a>
+                            <div class="checkbox-container" style="display: flex; align-items: flex-start; gap: 10px;">
+                                <input type="checkbox" id="aceitarTermos" style="margin-top: 3px;" <?php echo !empty($dados_evento['termos_aceitos']) && $dados_evento['termos_aceitos'] == 1 ? 'checked readonly onclick="return false;"' : ''; ?>>
+                                <label for="aceitarTermos" style="flex: 1; line-height: 1.4;">
+                                    Aceito os <a href="#" onclick="abrirTermos(); return false;">Termos de Uso</a> e 
+                                    <a href="#" onclick="abrirPoliticas(); return false;">Políticas de Privacidade</a>
                                 </label>
                             </div>
                         </div>
 
                         <!-- Status do Evento (apenas se termos aceitos) -->
-                        <div class="form-group" id="statusContainer" style="<?php echo empty($dados_evento['dados_aceite']) ? 'display: none;' : ''; ?>">
+                        <div class="form-group" id="statusContainer" style="margin-top: 30px; <?php echo empty($dados_evento['dados_aceite']) ? 'display: none;' : ''; ?>">
                             <label for="statusEvento">Situação do Evento</label>
                             <select id="statusEvento">
                                 <option value="rascunho" <?php echo $dados_evento['status'] === 'rascunho' ? 'selected' : ''; ?>>Rascunho</option>
@@ -1001,24 +1227,21 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                     <div class="preview-image" id="previewImage">
                         <!-- Preview Proporcional da Section -->
                         <div class="hero-section-mini">
-                            <!-- Background -->
-                            <div class="hero-mini-background" id="heroBackground"></div>
-                            
-                            <!-- Container com padding proporcional -->
-                            <div class="hero-mini-container">
+                            <!-- Container com padding proporcional E background -->
+                            <div class="hero-mini-container" style="position: relative; width: 100%; height: 150px; background-size: cover; background-position: center; background-repeat: no-repeat;">
                                 <div class="hero-mini-row">
                                     <!-- Coluna esquerda (66% - similar a col-lg-8) -->
                                     <div class="hero-mini-left">
                                         <!-- Logo do evento -->
                                         <div class="hero-mini-logo-area">
-                                            <img id="heroLogo" class="hero-mini-logo" src="" alt="Logo" style="display: none; position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain;">
+                                            <img id="heroLogo" class="hero-mini-logo" src="" alt="Logo" style="display: none;">
                                         </div>
                                     </div>
                                     
                                     <!-- Coluna direita (33% - similar a col-lg-4) -->
                                     <div class="hero-mini-right">
                                         <!-- Imagem capa -->
-                                        <img id="heroCapa" class="hero-mini-capa" src="" alt="Capa" style="display: none; position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain;">
+                                        <img id="heroCapa" class="hero-mini-capa" src="" alt="Capa" style="display: none;">
                                     </div>
                                 </div>
                             </div>
@@ -1069,7 +1292,9 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         window.sessionData = {
             usuarioId: <?php echo json_encode($usuario_id); ?>,
             usuarioNome: <?php echo json_encode($usuario['nome'] ?? ''); ?>,
-            usuarioEmail: <?php echo json_encode($usuario['email'] ?? ''); ?>
+            usuarioEmail: <?php echo json_encode($usuario['email'] ?? ''); ?>,
+            termosDefault: <?php echo json_encode($parametros['termos_eventos_default']); ?>,
+            politicasDefault: <?php echo json_encode($parametros['politicas_eventos_default']); ?>
         };
 
         // Debug do valor original da classificacao
@@ -1097,6 +1322,63 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             const overlay = document.getElementById('loadingOverlay');
             overlay.style.display = 'none';
             isLoading = false;
+        }
+        
+        // ========================================
+        // FUNÇÕES DE COLETA DE INFORMAÇÕES DO DISPOSITIVO
+        // ========================================
+        
+        async function getClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                console.log('Erro ao obter IP:', error);
+                return 'unknown';
+            }
+        }
+        
+        function getBrowserInfo() {
+            const ua = navigator.userAgent;
+            let browser = 'Unknown';
+            
+            if (ua.includes('Chrome')) browser = 'Chrome';
+            else if (ua.includes('Firefox')) browser = 'Firefox';
+            else if (ua.includes('Safari')) browser = 'Safari';
+            else if (ua.includes('Edge')) browser = 'Edge';
+            else if (ua.includes('Opera')) browser = 'Opera';
+            
+            return browser;
+        }
+        
+        async function getLocationInfo() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({ available: false, error: 'Geolocation not supported' });
+                    return;
+                }
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            available: true,
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            timestamp: position.timestamp
+                        });
+                    },
+                    (error) => {
+                        resolve({
+                            available: false,
+                            error: error.message,
+                            code: error.code
+                        });
+                    },
+                    { timeout: 5000, enableHighAccuracy: false }
+                );
+            });
         }
         
         // ========================================
@@ -1158,6 +1440,13 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         function getImageUrl(imagePath) {
             if (!imagePath) return null;
             
+            console.log('getImageUrl chamada com:', imagePath);
+            
+            // Se já começa com http:// ou https://
+            if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                return imagePath;
+            }
+            
             // Se já começa com /uploads/, usar diretamente
             if (imagePath.startsWith('/uploads/')) {
                 return imagePath;
@@ -1168,8 +1457,10 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 return '/' + imagePath;
             }
             
-            // Caso contrário, é apenas o nome do arquivo
-            return `/uploads/eventos/${imagePath}`;
+            // Caso contrário, é apenas o nome do arquivo - usar /uploads/eventos/
+            const finalUrl = `/uploads/eventos/${imagePath}`;
+            console.log('URL final gerada:', finalUrl);
+            return finalUrl;
         }
 
         function populateFormFields() {
@@ -1183,16 +1474,28 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 const logoUrl = getImageUrl(eventData.logo_evento);
                 console.log('Logo URL montada:', logoUrl);
                 showImagePreview('logo', logoUrl, eventData.logo_evento);
+                // Forçar atualização do hero logo
+                setTimeout(() => {
+                    updateHeroLogo(logoUrl);
+                }, 200);
             }
             if (eventData.imagem_capa) {
                 const capaUrl = getImageUrl(eventData.imagem_capa);
                 console.log('Capa URL montada:', capaUrl);
                 showImagePreview('capa', capaUrl, eventData.imagem_capa);
+                // Forçar atualização do hero capa
+                setTimeout(() => {
+                    updateHeroCapa(capaUrl);
+                }, 200);
             }
             if (eventData.imagem_fundo) {
                 const fundoUrl = getImageUrl(eventData.imagem_fundo);
                 console.log('Fundo URL montada:', fundoUrl);
                 showImagePreview('fundo', fundoUrl, eventData.imagem_fundo);
+                // Forçar atualização do hero fundo
+                setTimeout(() => {
+                    updateHeroBackground(fundoUrl);
+                }, 200);
             }
             
             // Etapa 2 - Data e horário (com conversão de timezone)
@@ -1241,11 +1544,12 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
             setFieldValue('visibilidade', eventData.visibilidade);
             setFieldValue('statusEvento', eventData.status);
             
-            // Checkbox de termos (se dados_aceite preenchido)
+            // Checkbox de termos (se termos_aceitos = 1)
             const aceitarTermosCheckbox = document.getElementById('aceitarTermos');
-            if (aceitarTermosCheckbox && eventData.dados_aceite) {
+            if (aceitarTermosCheckbox && eventData.termos_aceitos == 1) {
                 aceitarTermosCheckbox.checked = true;
-                aceitarTermosCheckbox.disabled = true;
+                aceitarTermosCheckbox.onclick = function() { return false; };
+                aceitarTermosCheckbox.style.pointerEvents = 'none';
             }
             
             console.log('Campos preenchidos com dados do evento');
@@ -1297,24 +1601,37 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 return;
             }
             
-            const container = document.getElementById(`${type}PreviewContainer`);
+            // Definir containers corretos para cada tipo
+            let container;
+            if (type === 'fundo') {
+                container = document.getElementById('fundoPreviewMain');
+            } else {
+                container = document.getElementById(`${type}PreviewContainer`);
+            }
+            
             const clearBtn = document.getElementById(`clear${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            
+            console.log(`Container ${type}:`, container);
             
             if (container && url) {
                 // Debug da URL final
                 console.log(`URL final da imagem ${type}:`, url);
                 
                 if (type === 'fundo') {
-                    container.innerHTML = `<img src="${url}" alt="${filename || 'Imagem'}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="console.error('Erro ao carregar imagem:', this.src)">`;
+                    // Para imagem de fundo, substituir todo o conteúdo do fundoPreviewMain
+                    container.innerHTML = `<img src="${url}" alt="${filename || 'Imagem'}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" onerror="console.error('Erro ao carregar imagem:', this.src); this.style.display='none';">`;
+                    console.log('✅ Imagem de fundo inserida no fundoPreviewMain');
                 } else {
-                    container.innerHTML = `<img src="${url}" alt="${filename || 'Imagem'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" onerror="console.error('Erro ao carregar imagem:', this.src)">`;
+                    container.innerHTML = `<img src="${url}" alt="${filename || 'Imagem'}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;" onerror="console.error('Erro ao carregar imagem:', this.src); this.style.display='none';">`;
                 }
                 
                 if (clearBtn) {
                     clearBtn.style.display = 'block';
+                    console.log(`✅ Botão clear ${type} mostrado`);
                 }
                 
-                // Atualizar preview
+                // Atualizar preview hero IMEDIATAMENTE
+                console.log(`🎨 Atualizando preview hero para ${type}...`);
                 if (type === 'logo') {
                     updateHeroLogo(url);
                 } else if (type === 'capa') {
@@ -1322,6 +1639,21 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 } else if (type === 'fundo') {
                     updateHeroBackground(url);
                 }
+                
+                // NOVA FUNÇÃO: Atualizar preview hero com nova estrutura
+                if (typeof window.atualizarPreviewHero === 'function') {
+                    setTimeout(() => {
+                        window.atualizarPreviewHero();
+                    }, 500);
+                }
+                
+                // Forçar atualização completa do preview após um pequeno delay
+                setTimeout(() => {
+                    updateHeroPreview();
+                }, 100);
+            } else {
+                console.log(`❌ Container não encontrado ou URL inválida para ${type}`);
+                console.log(`Tentou buscar container:`, type === 'fundo' ? 'fundoPreviewMain' : `${type}PreviewContainer`);
             }
         }
         
@@ -1338,19 +1670,15 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         
         function nextStep() {
             if (validateCurrentStep() && currentStep < maxSteps) {
-                saveEventData().then(() => {
-                    currentStep++;
-                    showStep(currentStep);
-                });
+                currentStep++;
+                showStep(currentStep);
             }
         }
         
         function prevStep() {
             if (currentStep > 1) {
-                saveEventData().then(() => {
-                    currentStep--;
-                    showStep(currentStep);
-                });
+                currentStep--;
+                showStep(currentStep);
             }
         }
         
@@ -1554,7 +1882,35 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 // Aceite de termos (se marcado e ainda não foi salvo)
                 const aceitarTermos = document.getElementById('aceitarTermos');
                 if (aceitarTermos && aceitarTermos.checked && !aceitarTermos.disabled) {
-                    formData.append('aceitarTermos', '1');
+                    // Coletar informações do dispositivo para o JSON
+                    const deviceInfo = {
+                        timestamp: new Date().toISOString(),
+                        ip: await getClientIP(),
+                        userAgent: navigator.userAgent,
+                        browser: getBrowserInfo(),
+                        screen: {
+                            width: screen.width,
+                            height: screen.height,
+                            colorDepth: screen.colorDepth,
+                            pixelDepth: screen.pixelDepth
+                        },
+                        window: {
+                            width: window.innerWidth,
+                            height: window.innerHeight
+                        },
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        language: navigator.language,
+                        languages: navigator.languages,
+                        platform: navigator.platform,
+                        cookieEnabled: navigator.cookieEnabled,
+                        onLine: navigator.onLine,
+                        hardwareConcurrency: navigator.hardwareConcurrency,
+                        maxTouchPoints: navigator.maxTouchPoints || 0,
+                        doNotTrack: navigator.doNotTrack,
+                        geolocation: await getLocationInfo()
+                    };
+                    
+                    formData.append('aceitarTermos', JSON.stringify(deviceInfo));
                 }
                 
                 // Datas com conversão de timezone
@@ -1714,77 +2070,95 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         }
         
         function updateHeroLogo(url) {
+            console.log('🎨 updateHeroLogo chamada com URL:', url);
             const heroLogo = document.getElementById('heroLogo');
+            console.log('heroLogo element:', heroLogo);
+            
             if (heroLogo && url) {
                 console.log('✅ Logo aplicado:', url);
                 heroLogo.src = url;
                 heroLogo.style.display = 'block';
+                heroLogo.style.opacity = '1';
+                heroLogo.style.visibility = 'visible';
+                heroLogo.style.zIndex = '999';
+                heroLogo.style.position = 'relative';
+                heroLogo.style.maxWidth = '200px';
+                heroLogo.style.maxHeight = '80px';
+                heroLogo.style.objectFit = 'contain';
+                
+                // Teste de carregamento da imagem
+                heroLogo.onload = function() {
+                    console.log('✅ Logo carregado com sucesso no hero');
+                    console.log('Dimensões logo:', this.naturalWidth, 'x', this.naturalHeight);
+                    console.log('Estilo computado logo display:', window.getComputedStyle(this).display);
+                    console.log('Estilo computado logo opacity:', window.getComputedStyle(this).opacity);
+                    console.log('Estilo computado logo visibility:', window.getComputedStyle(this).visibility);
+                };
+                heroLogo.onerror = function() {
+                    console.log('❌ Erro ao carregar logo no hero:', url);
+                };
             } else if (heroLogo) {
+                console.log('❌ Logo oculto - URL vazia');
                 heroLogo.style.display = 'none';
+            } else {
+                console.log('❌ Elemento heroLogo não encontrado');
             }
         }
         
         function updateHeroCapa(url) {
+            console.log('🎨 updateHeroCapa chamada com URL:', url);
             const heroCapa = document.getElementById('heroCapa');
+            console.log('heroCapa element:', heroCapa);
+            
             if (heroCapa && url) {
                 console.log('✅ Capa aplicada:', url);
                 heroCapa.src = url;
                 heroCapa.style.display = 'block';
+                heroCapa.style.opacity = '1';
+                heroCapa.style.visibility = 'visible';
+                heroCapa.style.zIndex = '999';
+                heroCapa.style.position = 'relative';
+                heroCapa.style.width = '120px';
+                heroCapa.style.height = '120px';
+                heroCapa.style.objectFit = 'cover';
+                heroCapa.style.borderRadius = '8px';
+                
+                // Teste de carregamento da imagem
+                heroCapa.onload = function() {
+                    console.log('✅ Capa carregada com sucesso no hero');
+                    console.log('Dimensões capa:', this.naturalWidth, 'x', this.naturalHeight);
+                    console.log('Estilo computado capa display:', window.getComputedStyle(this).display);
+                    console.log('Estilo computado capa opacity:', window.getComputedStyle(this).opacity);
+                    console.log('Estilo computado capa visibility:', window.getComputedStyle(this).visibility);
+                };
+                heroCapa.onerror = function() {
+                    console.log('❌ Erro ao carregar capa no hero:', url);
+                };
             } else if (heroCapa) {
+                console.log('❌ Capa oculta - URL vazia');
                 heroCapa.style.display = 'none';
+            } else {
+                console.log('❌ Elemento heroCapa não encontrado');
             }
         }
         
-        // Função para atualizar preview completo baseada no novoevento
+        // Função para atualizar preview completo - SIMPLIFICADA
         function updateHeroPreview() {
-            console.log('🎨 Atualizando preview hero completo...');
+            console.log('🎨 === ATUALIZANDO PREVIEW HERO COMPLETO ===');
             
-            // Atualizar logo
-            const heroLogo = document.getElementById('heroLogo');
-            const logoImg = document.querySelector('#logoPreviewContainer img');
-            
-            if (heroLogo && logoImg && logoImg.src && !logoImg.src.includes('placeholder')) {
-                heroLogo.src = logoImg.src;
-                heroLogo.style.display = 'block';
-                console.log('✅ Logo aplicado:', logoImg.src);
-            } else if (heroLogo) {
-                heroLogo.style.display = 'none';
+            // Usar a nova função que funciona
+            if (typeof window.atualizarPreviewHero === 'function') {
+                window.atualizarPreviewHero();
+                console.log('✅ Preview hero atualizado via nova função');
+            } else {
+                console.log('❌ Função atualizarPreviewHero não encontrada');
             }
-
-            // Atualizar imagem capa quadrada
-            const heroCapa = document.getElementById('heroCapa');
-            const capaImg = document.querySelector('#capaPreviewContainer img');
-            
-            if (heroCapa && capaImg && capaImg.src && !capaImg.src.includes('placeholder')) {
-                heroCapa.src = capaImg.src;
-                heroCapa.style.display = 'block';
-                console.log('✅ Capa aplicada:', capaImg.src);
-            } else if (heroCapa) {
-                heroCapa.style.display = 'none';
-            }
-            
-            // Atualizar imagem de fundo
-            const heroBackground = document.getElementById('heroBackground');
-            const heroSection = document.querySelector('.hero-section-mini');
-            const fundoImg = document.querySelector('#fundoPreviewMain img');
-            const corFundo = document.getElementById('corFundo')?.value || '#000000';
-            
-            if (heroBackground && heroSection) {
-                if (fundoImg && fundoImg.src && !fundoImg.src.includes('placeholder')) {
-                    // Tem imagem de fundo
-                    heroBackground.style.backgroundImage = `url(${fundoImg.src})`;
-                    heroBackground.style.backgroundColor = '';
-                    heroBackground.style.opacity = '1';
-                    heroSection.classList.remove('solid-bg');
-                    console.log('✅ Imagem de fundo aplicada:', fundoImg.src);
-                } else {
-                    // Usar cor de fundo
-                    heroBackground.style.backgroundImage = '';
-                    heroBackground.style.backgroundColor = corFundo;
-                    heroBackground.style.opacity = '1';
-                    heroSection.classList.add('solid-bg');
-                    console.log('✅ Cor de fundo aplicada:', corFundo);
-                }
+        }
+                    temSrc: logoImg ? logoImg.src : 'sem img',
+                    naoEhPlaceholder: logoImg ? !logoImg.src.includes('placeholder') : false,
+                    srcNaoVazio: logoImg ? logoImg.src !== '' : false,
+                    imagemCarregada: logoImg ? logoImg.naturalWidth > 0 : false
+                });
             }
         }
         
@@ -1842,14 +2216,12 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 uploadInput.addEventListener('change', function(e) {
                     const file = e.target.files[0];
                     if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            const url = e.target.result;
-                            showImagePreview(type, url, file.name);
-                            
-                            // REMOVIDO: Auto-save - apenas atualizar preview
-                        };
-                        reader.readAsDataURL(file);
+                        // Usar createObjectURL em vez de FileReader para melhor performance
+                        const url = URL.createObjectURL(file);
+                        showImagePreview(type, url, file.name);
+                        
+                        // REMOVIDO: Auto-save - apenas atualizar preview
+                        console.log(`✅ Arquivo ${type} selecionado:`, file.name);
                     }
                 });
             }
@@ -1863,7 +2235,14 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         }
         
         function clearImage(type) {
-            const container = document.getElementById(`${type}PreviewContainer`);
+            // Definir container correto para cada tipo
+            let container;
+            if (type === 'fundo') {
+                container = document.getElementById('fundoPreviewMain');
+            } else {
+                container = document.getElementById(`${type}PreviewContainer`);
+            }
+            
             const clearBtn = document.getElementById(`clear${type.charAt(0).toUpperCase() + type.slice(1)}`);
             const uploadInput = document.getElementById(`${type}Upload`);
             
@@ -1877,19 +2256,11 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                     fundo: 'PNG, JPG até 5MB • Tamanho ideal: 1920x640px'
                 };
                 
-                if (type === 'fundo') {
-                    container.innerHTML = `
-                        <div class="upload-icon">${icons[type]}</div>
-                        <div class="upload-text">${texts[type]}</div>
-                        <div class="upload-hint">${hints[type]}</div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="upload-icon">${icons[type]}</div>
-                        <div class="upload-text">${texts[type]}</div>
-                        <div class="upload-hint">${hints[type]}</div>
-                    `;
-                }
+                container.innerHTML = `
+                    <div class="upload-icon">${icons[type]}</div>
+                    <div class="upload-text">${texts[type]}</div>
+                    <div class="upload-hint">${hints[type]}</div>
+                `;
             }
             
             if (clearBtn) {
@@ -1900,18 +2271,45 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 uploadInput.value = '';
             }
             
-            // Limpar preview
+            // Limpar preview hero
             if (type === 'logo') {
                 const heroLogo = document.getElementById('heroLogo');
-                if (heroLogo) heroLogo.style.display = 'none';
+                if (heroLogo) {
+                    heroLogo.style.display = 'none';
+                    heroLogo.style.visibility = 'hidden';
+                    heroLogo.src = '';
+                    console.log('✅ Logo removido do preview hero');
+                }
             } else if (type === 'capa') {
                 const heroCapa = document.getElementById('heroCapa');
-                if (heroCapa) heroCapa.style.display = 'none';
+                if (heroCapa) {
+                    heroCapa.style.display = 'none';
+                    heroCapa.style.visibility = 'hidden';
+                    heroCapa.src = '';
+                    console.log('✅ Capa removida do preview hero');
+                }
             } else if (type === 'fundo') {
-                updateHeroBackground();
+                // Aplicar cor de fundo no hero-mini-container quando imagem for removida
+                const heroContainer = document.querySelector('.hero-mini-container');
+                if (heroContainer) {
+                    heroContainer.style.backgroundImage = 'none';
+                    
+                    // Buscar cor de fundo atual
+                    const corFundo = document.getElementById('corFundo');
+                    const corFundoHex = document.getElementById('corFundoHex');
+                    
+                    if (corFundo && corFundo.value) {
+                        heroContainer.style.backgroundColor = corFundo.value;
+                        console.log('✅ Fundo removido, aplicada cor:', corFundo.value);
+                    } else if (corFundoHex && corFundoHex.value) {
+                        heroContainer.style.backgroundColor = corFundoHex.value;
+                        console.log('✅ Fundo removido, aplicada cor hex:', corFundoHex.value);
+                    } else {
+                        heroContainer.style.backgroundColor = '#1a1a2e';
+                        console.log('✅ Fundo removido, aplicada cor padrão');
+                    }
+                }
             }
-            
-            // REMOVIDO: Auto-save - apenas atualizar preview
         }
         
         // ========================================
@@ -2077,6 +2475,62 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         }
         
         // ========================================
+        // SISTEMA DE POPUPS PARA TERMOS E POLÍTICAS
+        // ========================================
+        
+        function abrirTermos() {
+            const popup = window.open('', 'termos', 'width=800,height=600,scrollbars=yes,resizable=yes');
+            popup.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Termos de Uso</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+                        h1 { color: #333; margin-bottom: 20px; }
+                        .content { max-width: 100%; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Termos de Uso</h1>
+                    <div class="content">
+                        ${window.sessionData.termosDefault}
+                    </div>
+                    <br><br>
+                    <button onclick="window.close()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Fechar</button>
+                </body>
+                </html>
+            `);
+            popup.document.close();
+        }
+        
+        function abrirPoliticas() {
+            const popup = window.open('', 'politicas', 'width=800,height=600,scrollbars=yes,resizable=yes');
+            popup.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Políticas de Privacidade</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+                        h1 { color: #333; margin-bottom: 20px; }
+                        .content { max-width: 100%; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Políticas de Privacidade</h1>
+                    <div class="content">
+                        ${window.sessionData.politicasDefault}
+                    </div>
+                    <br><br>
+                    <button onclick="window.close()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Fechar</button>
+                </body>
+                </html>
+            `);
+            popup.document.close();
+        }
+        
+        // ========================================
         // SISTEMA DE ACEITE DE TERMOS
         // ========================================
         
@@ -2183,7 +2637,180 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
         // ========================================
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Iniciando editor de evento...', { evento_id, eventData });
+            console.log('🚀 INÍCIO: Editando evento', evento_id);
+            
+            // DEBUG: Verificar se elementos existem no DOM
+            setTimeout(() => {
+                console.log('🔍 VERIFICANDO ELEMENTOS NO DOM:');
+                console.log('heroBackground existe?', !!document.getElementById('heroBackground'));
+                console.log('heroLogo existe?', !!document.getElementById('heroLogo'));
+                console.log('heroCapa existe?', !!document.getElementById('heroCapa'));
+                console.log('hero-mini-background existe?', !!document.querySelector('.hero-mini-background'));
+                console.log('hero-mini-container existe?', !!document.querySelector('.hero-mini-container'));
+                console.log('hero-mini-row existe?', !!document.querySelector('.hero-mini-row'));
+                
+                // Mostrar HTML atual da area preview
+                const previewImage = document.getElementById('previewImage');
+                if (previewImage) {
+                    console.log('HTML atual do previewImage:', previewImage.innerHTML);
+                } else {
+                    console.log('previewImage NÃO EXISTE');
+                }
+            }, 2000);
+            
+            // Setup inicial
+            setupEventListeners();
+            
+            // Aguardar elementos estarem disponíveis e carregar dados
+            setTimeout(() => {
+                loadEventData();
+                // updatePreview(); // COMENTADO TEMPORARIAMENTE PARA TESTE
+                updateColorPreview();
+                hideLoading();
+                
+                // SOLUÇÃO FINAL: Trabalhar com hero-mini-container como background
+                setTimeout(() => {
+                    console.log('🎯 APLICANDO FUNDO NO HERO-MINI-CONTAINER...');
+                    
+                    // Encontrar o hero-mini-container
+                    const heroContainer = document.querySelector('.hero-mini-container');
+                    console.log('hero-mini-container encontrado:', !!heroContainer);
+                    
+                    if (heroContainer) {
+                        // Aplicar imagem de fundo OU cor de fundo
+                        if (eventData.imagem_fundo) {
+                            const fundoUrl = getImageUrl(eventData.imagem_fundo);
+                            heroContainer.style.backgroundImage = `url('${fundoUrl}')`;
+                            heroContainer.style.backgroundColor = '';
+                            console.log('✅ Imagem de fundo aplicada:', fundoUrl);
+                        } else if (eventData.cor_fundo) {
+                            heroContainer.style.backgroundImage = 'none';
+                            heroContainer.style.backgroundColor = eventData.cor_fundo;
+                            console.log('✅ Cor de fundo aplicada:', eventData.cor_fundo);
+                        } else {
+                            heroContainer.style.backgroundImage = 'none';
+                            heroContainer.style.backgroundColor = '#1a1a2e';
+                            console.log('✅ Cor padrão aplicada');
+                        }
+                        
+                        // Aplicar logo se existir OU ocultar se não existir
+                        const heroLogo = document.getElementById('heroLogo');
+                        if (eventData.logo_evento && heroLogo) {
+                            const logoUrl = getImageUrl(eventData.logo_evento);
+                            heroLogo.src = logoUrl;
+                            heroLogo.style.display = 'block';
+                            heroLogo.style.visibility = 'visible';
+                            console.log('✅ Logo aplicado:', logoUrl);
+                        } else if (heroLogo) {
+                            heroLogo.style.display = 'none';
+                            heroLogo.style.visibility = 'hidden';
+                            heroLogo.src = '';
+                            console.log('✅ Logo oculto (não existe)');
+                        }
+                        
+                        // Aplicar capa se existir OU ocultar se não existir
+                        const heroCapa = document.getElementById('heroCapa');
+                        if (eventData.imagem_capa && heroCapa) {
+                            const capaUrl = getImageUrl(eventData.imagem_capa);
+                            heroCapa.src = capaUrl;
+                            heroCapa.style.display = 'block';
+                            heroCapa.style.visibility = 'visible';
+                            console.log('✅ Capa aplicada:', capaUrl);
+                        } else if (heroCapa) {
+                            heroCapa.style.display = 'none';
+                            heroCapa.style.visibility = 'hidden';
+                            heroCapa.src = '';
+                            console.log('✅ Capa oculta (não existe)');
+                        }
+                        
+                        console.log('✅ PREVIEW HERO CONFIGURADO CORRETAMENTE!');
+                        
+                    } else {
+                        console.log('❌ hero-mini-container não encontrado!');
+                    }
+                    
+                }, 2000);
+                
+                // FUNÇÃO PARA ATUALIZAR PREVIEW QUANDO IMAGENS FOREM SUBSTITUÍDAS
+                window.atualizarPreviewHero = function() {
+                    console.log('🔄 ATUALIZANDO PREVIEW HERO APÓS UPLOAD...');
+                    
+                    const heroContainer = document.querySelector('.hero-mini-container');
+                    if (heroContainer) {
+                        // Recarregar eventData atual (pode ter sido modificado por upload)
+                        if (window.eventData) {
+                            if (window.eventData.imagem_fundo) {
+                                const fundoUrl = getImageUrl(window.eventData.imagem_fundo);
+                                heroContainer.style.backgroundImage = `url('${fundoUrl}')`;
+                                heroContainer.style.backgroundColor = '';
+                                console.log('🔄 Nova imagem de fundo aplicada:', fundoUrl);
+                            }
+                            
+                            const heroLogo = document.getElementById('heroLogo');
+                            if (window.eventData.logo_evento && heroLogo) {
+                                const logoUrl = getImageUrl(window.eventData.logo_evento);
+                                heroLogo.src = logoUrl;
+                                heroLogo.style.display = 'block';
+                                heroLogo.style.visibility = 'visible';
+                                console.log('🔄 Novo logo aplicado:', logoUrl);
+                            }
+                            
+                            const heroCapa = document.getElementById('heroCapa');
+                            if (window.eventData.imagem_capa && heroCapa) {
+                                const capaUrl = getImageUrl(window.eventData.imagem_capa);
+                                heroCapa.src = capaUrl;
+                                heroCapa.style.display = 'block';
+                                heroCapa.style.visibility = 'visible';
+                                console.log('🔄 Nova capa aplicada:', capaUrl);
+                            }
+                        }
+                    }
+                };
+            }, 100);
+            
+            // Debug dos elementos críticos
+            console.log('=== DEBUG ELEMENTOS CSS ===');
+            console.log('corFundo element:', document.getElementById('corFundo'));
+            console.log('main-content element:', document.querySelector('.main-content'));
+            console.log('preview-card element:', document.querySelector('.preview-card'));
+            console.log('heroLogo element:', document.getElementById('heroLogo'));
+            console.log('heroCapa element:', document.getElementById('heroCapa'));
+            console.log('heroBackground element:', document.getElementById('heroBackground'));
+            console.log('=========================');
+            
+            // TESTE SIMPLES - APLICAR IMAGENS DIRETAMENTE
+            console.log('🧪 === TESTE DIRETO ===');
+            
+            const heroLogo = document.getElementById('heroLogo');
+            const heroCapa = document.getElementById('heroCapa');
+            
+            if (heroLogo) {
+                console.log('✅ heroLogo encontrado');
+                if (eventData.logo_evento) {
+                    const logoUrl = '/uploads/eventos/' + eventData.logo_evento.split('/').pop();
+                    console.log('🎯 Aplicando logo DIRETO:', logoUrl);
+                    heroLogo.src = logoUrl;
+                    heroLogo.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: 150px !important; height: auto !important; border: 3px solid red !important; z-index: 9999 !important; position: relative !important;';
+                    console.log('🎯 Logo aplicado com borda vermelha');
+                }
+            } else {
+                console.log('❌ heroLogo NÃO encontrado');
+            }
+            
+            if (heroCapa) {
+                console.log('✅ heroCapa encontrado');
+                if (eventData.imagem_capa) {
+                    const capaUrl = '/uploads/eventos/' + eventData.imagem_capa.split('/').pop();
+                    console.log('🎯 Aplicando capa DIRETO:', capaUrl);
+                    heroCapa.src = capaUrl;
+                    heroCapa.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: 100px !important; height: 100px !important; border: 3px solid blue !important; z-index: 9999 !important; position: relative !important;';
+                    console.log('🎯 Capa aplicada com borda azul');
+                }
+            } else {
+                console.log('❌ heroCapa NÃO encontrado');
+            }
+            
+            console.log('🧪 === FIM TESTE DIRETO ===');
             
             // Setup inicial
             setupEventListeners();
@@ -2193,7 +2820,202 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                 loadEventData();
                 updatePreview();
                 updateColorPreview();
+                
+                // Debug completo após carregamento
+                setTimeout(() => {
+                    console.log('=== DEBUG COMPLETO APÓS CARREGAMENTO ===');
+                    
+                    // Verificar containers
+                    const logoContainer = document.getElementById('logoPreviewContainer');
+                    const capaContainer = document.getElementById('capaPreviewContainer');
+                    const fundoContainer = document.getElementById('fundoPreviewMain');
+                    
+                    console.log('logoPreviewContainer existe:', !!logoContainer);
+                    console.log('capaPreviewContainer existe:', !!capaContainer);
+                    console.log('fundoPreviewMain existe:', !!fundoContainer);
+                    
+                    if (logoContainer) {
+                        console.log('logoPreviewContainer HTML:', logoContainer.innerHTML);
+                        const logoImg = logoContainer.querySelector('img');
+                        if (logoImg) {
+                            console.log('Logo img src:', logoImg.src);
+                        }
+                    }
+                    
+                    if (capaContainer) {
+                        console.log('capaPreviewContainer HTML:', capaContainer.innerHTML);
+                        const capaImg = capaContainer.querySelector('img');
+                        if (capaImg) {
+                            console.log('Capa img src:', capaImg.src);
+                        }
+                    }
+                    
+                    if (fundoContainer) {
+                        console.log('fundoPreviewMain HTML:', fundoContainer.innerHTML);
+                        const fundoImg = fundoContainer.querySelector('img');
+                        if (fundoImg) {
+                            console.log('Fundo img src:', fundoImg.src);
+                        }
+                    }
+                    
+                    // Verificar dados do evento
+                    console.log('EventData logo_evento:', eventData.logo_evento);
+                    console.log('EventData imagem_capa:', eventData.imagem_capa);
+                    console.log('EventData imagem_fundo:', eventData.imagem_fundo);
+                    
+                    console.log('=== FIM DEBUG COMPLETO ===');
+                }, 200);
+                
+                // Forçar atualização do preview com imagens após carregamento
+                setTimeout(() => {
+                    console.log('🖼️ Forçando atualização de imagens no preview...');
+                    
+                    // Debug containers
+                    console.log('=== DEBUG CONTAINERS ===');
+                    console.log('logoPreviewContainer:', document.getElementById('logoPreviewContainer'));
+                    console.log('capaPreviewContainer:', document.getElementById('capaPreviewContainer'));
+                    console.log('fundoPreviewMain:', document.getElementById('fundoPreviewMain'));
+                    
+                    // FORÇAR atualização direta dos dados do evento
+                    console.log('🔥 FORÇANDO APLICAÇÃO DIRETA DOS DADOS DO EVENTO...');
+                    
+                    // Logo - aplicar diretamente dos dados
+                    if (eventData.logo_evento) {
+                        const logoUrl = getImageUrl(eventData.logo_evento);
+                        console.log('💪 FORÇANDO logo direto:', logoUrl);
+                        updateHeroLogo(logoUrl);
+                        
+                        // Garantir que o elemento existe e foi aplicado
+                        setTimeout(() => {
+                            const heroLogo = document.getElementById('heroLogo');
+                            if (heroLogo) {
+                                heroLogo.src = logoUrl;
+                                heroLogo.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: auto !important; height: auto !important; max-width: 200px !important; max-height: 80px !important; position: relative !important; z-index: 9999 !important;';
+                                console.log('💪 Logo REFORÇADO:', heroLogo.src);
+                                console.log('💪 Logo cssText:', heroLogo.style.cssText);
+                            }
+                        }, 100);
+                    }
+                    
+                    // Capa - aplicar diretamente dos dados
+                    if (eventData.imagem_capa) {
+                        const capaUrl = getImageUrl(eventData.imagem_capa);
+                        console.log('💪 FORÇANDO capa direto:', capaUrl);
+                        updateHeroCapa(capaUrl);
+                        
+                        // Garantir que o elemento existe e foi aplicado
+                        setTimeout(() => {
+                            const heroCapa = document.getElementById('heroCapa');
+                            if (heroCapa) {
+                                heroCapa.src = capaUrl;
+                                heroCapa.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: 120px !important; height: 120px !important; object-fit: cover !important; border-radius: 8px !important; position: relative !important; z-index: 9999 !important;';
+                                console.log('💪 Capa REFORÇADA:', heroCapa.src);
+                                console.log('💪 Capa cssText:', heroCapa.style.cssText);
+                            }
+                        }, 100);
+                    }
+                    
+                    // Fundo - aplicar diretamente dos dados
+                    if (eventData.imagem_fundo) {
+                        const fundoUrl = getImageUrl(eventData.imagem_fundo);
+                        console.log('💪 FORÇANDO fundo direto:', fundoUrl);
+                        updateHeroBackground(fundoUrl);
+                    }
+                    
+                    // Verificar containers também (fallback)
+                    setTimeout(() => {
+                        // Verificar e atualizar logo
+                        const logoImg = document.querySelector('#logoPreviewContainer img');
+                        console.log('Logo img encontrada:', logoImg);
+                        if (logoImg && logoImg.src && logoImg.src !== window.location.href) {
+                            console.log('⚡ Forçando atualização hero logo com:', logoImg.src);
+                            updateHeroLogo(logoImg.src);
+                        } else {
+                            console.log('❌ Logo não encontrada ou sem src válido');
+                            // Tentar buscar nos dados do evento
+                            if (eventData.logo_evento) {
+                                const logoUrl = getImageUrl(eventData.logo_evento);
+                                console.log('⚡ Usando logo dos dados do evento:', logoUrl);
+                                updateHeroLogo(logoUrl);
+                            }
+                        }
+                        
+                        // Verificar e atualizar capa
+                        const capaImg = document.querySelector('#capaPreviewContainer img');
+                        console.log('Capa img encontrada:', capaImg);
+                        if (capaImg && capaImg.src && capaImg.src !== window.location.href) {
+                            console.log('⚡ Forçando atualização hero capa com:', capaImg.src);
+                            updateHeroCapa(capaImg.src);
+                        } else {
+                            console.log('❌ Capa não encontrada ou sem src válido');
+                            // Tentar buscar nos dados do evento
+                            if (eventData.imagem_capa) {
+                                const capaUrl = getImageUrl(eventData.imagem_capa);
+                                console.log('⚡ Usando capa dos dados do evento:', capaUrl);
+                                updateHeroCapa(capaUrl);
+                            }
+                        }
+                        
+                        // Verificar e atualizar fundo
+                        const fundoImg = document.querySelector('#fundoPreviewMain img');
+                        console.log('Fundo img encontrada:', fundoImg);
+                        if (fundoImg && fundoImg.src && fundoImg.src !== window.location.href) {
+                            console.log('Atualizando hero fundo com:', fundoImg.src);
+                            updateHeroBackground(fundoImg.src);
+                        }
+                        
+                        // Atualizar preview completo
+                        updateHeroPreview();
+                        console.log('=== FIM DEBUG CONTAINERS ===');
+                    }, 200);
+                }, 500);
+                
                 hideLoading();
+                
+                // Forçar aplicação de CSS após carregamento
+                setTimeout(() => {
+                    console.log('🔧 Forçando aplicação de CSS...');
+                    
+                    // Forçar grid layout
+                    const mainContent = document.querySelector('.main-content');
+                    if (mainContent) {
+                        mainContent.style.display = 'grid';
+                        mainContent.style.gridTemplateColumns = '1fr 460px';
+                        mainContent.style.gap = '40px';
+                        console.log('✅ Grid layout aplicado');
+                    }
+                    
+                    // Forçar preview card
+                    const previewCard = document.querySelector('.preview-card');
+                    if (previewCard) {
+                        previewCard.style.maxWidth = '460px';
+                        previewCard.style.padding = '5px';
+                        previewCard.style.position = 'sticky';
+                        previewCard.style.top = '0px';
+                        console.log('✅ Preview card ajustado');
+                    }
+                    
+                    // Ocultar input color
+                    const corFundo = document.getElementById('corFundo');
+                    if (corFundo) {
+                        corFundo.style.display = 'none';
+                        corFundo.style.visibility = 'hidden';
+                        console.log('✅ Input color oculto');
+                    }
+                    
+                    // Atualizar preview após carregamento das imagens
+                    setTimeout(() => {
+                        console.log('🔄 Forçando atualização do preview após carregamento...');
+                        updateHeroPreview();
+                        
+                        // Verificar novamente em mais 2 segundos para imagens que demoram para carregar
+                        setTimeout(() => {
+                            console.log('🔄 Verificação final do preview...');
+                            updateHeroPreview();
+                        }, 2000);
+                    }, 500);
+                    
+                }, 1000);
             }, 100);
         });
         

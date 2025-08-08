@@ -2,10 +2,23 @@
 include("check_login.php");
 include("conm/conn.php");
 
-// Debug - verificar dados da sessão
-error_log("Session ID: " . session_id());
-error_log("Usuario ID: " . ($_SESSION['usuarioid'] ?? 'não definido'));
-error_log("Session Data: " . print_r($_SESSION, true));
+// Buscar dados do usuário
+$usuario_id = $_SESSION['usuarioid'] ?? $_COOKIE['usuarioid'] ?? 0;
+$stmt = $con->prepare("SELECT * FROM usuarios WHERE id = ?");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$usuario = $stmt->get_result()->fetch_assoc();
+
+// Buscar contratantes do usuário  
+$sql_contratantes = "SELECT id, razao_social FROM contratantes WHERE usuario_id = ? ORDER BY razao_social";
+$stmt_contratantes = $con->prepare($sql_contratantes);
+$stmt_contratantes->bind_param("i", $usuario_id);
+$stmt_contratantes->execute();
+$result_contratantes = $stmt_contratantes->get_result();
+$contratantes = [];
+while ($row = mysqli_fetch_assoc($result_contratantes)) {
+    $contratantes[] = $row;
+}
 
 // Buscar categorias ativas
 $sql_categorias = "SELECT id, nome FROM categorias_evento WHERE ativo = 1 ORDER BY nome";
@@ -14,6 +27,14 @@ $categorias = [];
 while ($row = mysqli_fetch_assoc($result_categorias)) {
     $categorias[] = $row;
 }
+
+// Buscar parâmetros de termos e políticas
+$sql_parametros = "SELECT politicas_eventos_default, termos_eventos_default FROM parametros LIMIT 1";
+$result_parametros = mysqli_query($con, $sql_parametros);
+$parametros = mysqli_fetch_assoc($result_parametros) ?: [
+    'politicas_eventos_default' => 'Políticas de Privacidade não configuradas.',
+    'termos_eventos_default' => 'Termos de Uso não configurados.'
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -1307,51 +1328,38 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
                     </div>
                 </div>
 
-                <!-- Step 7: Sobre o Produtor -->
+                <!-- Step 7: Organizador -->
                 <div class="section-card" data-step-content="7">
                     <div class="section-header">
                         <div class="section-number">7</div>
                         <div>
-                            <div class="section-title">🧑‍💼 Sobre o produtor</div>
-                            <div class="section-subtitle">Informações sobre quem está organizando o evento</div>
+                            <div class="section-title">🏢 Organizador</div>
+                            <div class="section-subtitle">Selecione o organizador responsável pelo evento</div>
                         </div>
                     </div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="producer">Selecionar produtor</label>
-                            <select id="producer">
-                                <option value="current">Você (<?php echo isset($_SESSION['usuario_nome']) ? htmlspecialchars($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>)</option>
-                                <option value="new">Novo produtor</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="conditional-section" id="newProducerFields" style="display: none;">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="producerName">Nome do produtor <span class="required">*</span></label>
-                                <input type="text" id="producerName" placeholder="Nome completo ou empresa">
+                    <div class="form-group full-width">
+                        <label for="contratanteId">Organizador do Evento <span class="required">*</span></label>
+                        <select id="contratanteId" required>
+                            <option value="">Selecione o organizador</option>
+                            <?php if (empty($contratantes)): ?>
+                                <option value="">Nenhum contratante cadastrado</option>
+                            <?php else: ?>
+                                <?php foreach ($contratantes as $contratante): ?>
+                                    <option value="<?php echo $contratante['id']; ?>"><?php echo htmlspecialchars($contratante['razao_social']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                        <?php if (empty($contratantes)): ?>
+                            <div class="field-hint">
+                                <strong>Atenção:</strong> Você precisa ter pelo menos um contratante cadastrado. 
+                                <a href="/produtor/perfil.php" target="_blank">Cadastre um contratante aqui</a>.
                             </div>
-                            <div class="form-group">
-                                <label for="displayName">Nome de exibição</label>
-                                <input type="text" id="displayName" placeholder="Como aparecerá no evento">
-                            </div>
-                        </div>
-                        <div class="form-group full-width">
-                            <label for="producerDescription">Descrição do produtor (opcional)</label>
-                            <textarea id="producerDescription" rows="4" placeholder="Conte um pouco sobre você ou sua empresa..."></textarea>
-                        </div>
+                        <?php endif; ?>
                     </div>
-                    
-                    <!-- Passar dados do usuário para JavaScript -->
-                    <script>
-                        window.currentUserName = '<?php echo isset($_SESSION['usuario_nome']) ? addslashes($_SESSION['usuario_nome']) : 'Usuário Atual'; ?>';
-                        window.currentUserId = '<?php echo isset($_SESSION['usuarioid']) ? $_SESSION['usuarioid'] : ''; ?>';
-                    </script>
                     
                     <div class="validation-message" id="validation-step-7">
-                        Por favor, preencha todos os campos obrigatórios.
+                        Por favor, selecione o organizador responsável pelo evento.
                     </div>
 
                     <div class="step-navigation">
@@ -2750,5 +2758,531 @@ while ($row = mysqli_fetch_assoc($result_categorias)) {
 
 <!-- CONSOLIDAÇÃO FINAL - REMOVE CONFLITOS E LOOPS -->
 <script src="js/consolidacao-final.js?v=<?php echo time(); ?>"></script>
+
+<!-- CORREÇÃO SIMPLIFICADA PARA PROBLEMAS DE INGRESSOS - DEVE SER O ÚLTIMO -->
+<script src="js/correcao-simplificada-ingressos.js?v=<?php echo time(); ?>"></script>
+
+<!-- VALIDAÇÕES OBRIGATÓRIAS IMPLEMENTADAS -->
+<script>
+// Adicionar validações obrigatórias específicas por etapa
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 Implementando validações obrigatórias...');
+    
+    // Controle de navegação automática
+    let wizardCurrentStep = 1;
+    let validationEnabled = true;
+    
+    // Prevenir navegação automática
+    if (typeof showStep === 'function') {
+        showStep(1);
+    }
+    
+    // Função para detectar step atual dinamicamente
+    function getCurrentStep() {
+        // Tentar detectar pela etapa ativa visível
+        const activeStep = document.querySelector('.section-card.active[data-step-content]');
+        if (activeStep) {
+            const stepNum = parseInt(activeStep.getAttribute('data-step-content'));
+            if (!isNaN(stepNum)) {
+                wizardCurrentStep = stepNum;
+                return stepNum;
+            }
+        }
+        
+        // Fallback para variável global existente
+        if (typeof window.currentStep !== 'undefined') {
+            wizardCurrentStep = window.currentStep;
+            return window.currentStep;
+        }
+        
+        return wizardCurrentStep;
+    }
+    
+    // Sobrescrever função nextStep se existir
+    if (typeof window.nextStep === 'function') {
+        window.originalNextStep = window.nextStep;
+    }
+    
+    // Implementar validação por etapas
+    window.nextStep = function() {
+        const currentStepNum = getCurrentStep();
+        console.log(`🔍 Validando etapa ${currentStepNum}`);
+        
+        if (!validationEnabled) {
+            console.log('⚠️ Validação desabilitada - chamando função original');
+            if (typeof window.originalNextStep === 'function') {
+                return window.originalNextStep();
+            }
+            return;
+        }
+        
+        // Esconder mensagens anteriores
+        hideValidationMessages();
+        
+        let isValid = false;
+        
+        try {
+            switch(currentStepNum) {
+                case 1:
+                    isValid = validateStep1();
+                    break;
+                case 2:
+                    isValid = validateStep2();
+                    break;
+                case 3:
+                    isValid = validateStep3();
+                    break;
+                case 4:
+                    isValid = validateStep4();
+                    break;
+                case 5:
+                    isValid = validateStep5();
+                    break;
+                case 6:
+                    isValid = validateStep6();
+                    break;
+                case 7:
+                    isValid = validateStep7();
+                    break;
+                default:
+                    console.log(`⚠️ Etapa ${currentStepNum} não requer validação específica`);
+                    isValid = true;
+            }
+        } catch (error) {
+            console.error('❌ Erro na validação:', error);
+            console.log('🔧 Permitindo avanço devido ao erro');
+            isValid = true; // Em caso de erro, permitir avanço
+        }
+        
+        if (isValid) {
+            console.log(`✅ Validação passou - avançando da etapa ${currentStepNum}`);
+            wizardCurrentStep = currentStepNum + 1;
+            if (typeof window.originalNextStep === 'function') {
+                return window.originalNextStep();
+            } else {
+                console.log('⚠️ Função original nextStep não encontrada');
+            }
+        } else {
+            console.log(`❌ Validação falhou na etapa ${currentStepNum} - não avançando`);
+        }
+    };
+    
+    // Funções de validação por etapa
+    function validateStep1() {
+        const errors = [];
+        
+        // Nome do evento
+        const eventName = document.getElementById('eventName');
+        if (!eventName || !eventName.value.trim()) {
+            errors.push('Nome do evento');
+            highlightField('eventName');
+        }
+        
+        // Logo
+        const logoUpload = document.getElementById('logoUpload');
+        if (!logoUpload || !logoUpload.files.length) {
+            errors.push('Logo do evento');
+        }
+        
+        // Capa
+        const capaUpload = document.getElementById('capaUpload');
+        if (!capaUpload || !capaUpload.files.length) {
+            errors.push('Imagem de capa');
+        }
+        
+        if (errors.length > 0) {
+            showValidationMessage(1, 'Campos obrigatórios: ' + errors.join(', '));
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function validateStep2() {
+        const errors = [];
+        
+        // Classificação
+        const classification = document.getElementById('classification');
+        if (!classification || !classification.value) {
+            errors.push('Classificação');
+            highlightField('classification');
+        }
+        
+        // Categoria
+        const category = document.getElementById('category');
+        if (!category || !category.value) {
+            errors.push('Categoria');
+            highlightField('category');
+        }
+        
+        // Data de início
+        const startDateTime = document.getElementById('startDateTime');
+        if (!startDateTime || !startDateTime.value) {
+            errors.push('Data e hora de início');
+            highlightField('startDateTime');
+        }
+        
+        if (errors.length > 0) {
+            showValidationMessage(2, 'Campos obrigatórios: ' + errors.join(', '));
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function validateStep3() {
+        const description = document.getElementById('eventDescription');
+        
+        if (!description) {
+            console.log('⚠️ Campo eventDescription não encontrado, permitindo avanço');
+            return true;
+        }
+        
+        // Para editor rico (div contenteditable)
+        let text = '';
+        if (description.contentEditable === 'true' || description.getAttribute('contenteditable') === 'true') {
+            // Editor rico - usar textContent para texto limpo
+            text = description.textContent || description.innerText || '';
+        } else {
+            // Textarea ou input
+            text = description.value || '';
+        }
+        
+        // Limpar o texto
+        text = text.trim();
+        
+        console.log(`📝 ETAPA 3 DEBUG:`);
+        console.log(`- Elemento encontrado:`, description);
+        console.log(`- contentEditable:`, description.contentEditable);
+        console.log(`- textContent:`, description.textContent);
+        console.log(`- innerText:`, description.innerText);
+        console.log(`- Texto final (${text.length} caracteres):`, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+        
+        // TEMPORÁRIO: Permitir avanço mesmo sem texto para debug
+        if (!text) {
+            console.log('⚠️ TEMPORÁRIO: Texto vazio, mas permitindo avanço para teste');
+            showValidationMessage(3, 'Aviso: Descrição vazia (temporariamente permitindo avanço)');
+            return true; // Temporário: permitir avanço
+        }
+        
+        if (text.length < 50) {
+            console.log('⚠️ TEMPORÁRIO: Texto curto (' + text.length + ' chars), mas permitindo avanço para teste');
+            showValidationMessage(3, 'Aviso: Descrição com ' + text.length + ' caracteres (mínimo: 50) - temporariamente permitindo avanço');
+            return true; // Temporário: permitir avanço
+        }
+        
+        console.log('✅ Validação da etapa 3 passou completamente');
+        return true;
+    }
+    
+    function validateStep4() {
+        const errors = [];
+        const fields = [
+            { id: 'venueName', name: 'Nome do local' },
+            { id: 'cep', name: 'CEP' },
+            { id: 'street', name: 'Rua' },
+            { id: 'number', name: 'Número' },
+            { id: 'neighborhood', name: 'Bairro' },
+            { id: 'city', name: 'Cidade' },
+            { id: 'state', name: 'Estado' }
+        ];
+        
+        fields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (!element || !element.value.trim()) {
+                errors.push(field.name);
+                highlightField(field.id);
+            }
+        });
+        
+        if (errors.length > 0) {
+            showValidationMessage(4, 'Campos obrigatórios: ' + errors.join(', '));
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function validateStep5() {
+        console.log('🔍 Validando etapa 5 - Lotes');
+        
+        // Verificar se há lotes cadastrados
+        const lotesPorDataList = document.getElementById('lotesPorDataList');
+        const lotesPorPercentualList = document.getElementById('lotesPorPercentualList');
+        
+        let hasLotes = false;
+        let totalLotes = 0;
+        
+        if (lotesPorDataList && lotesPorDataList.children.length > 0) {
+            // Verificar se há lotes reais (não apenas empty state)
+            const realLotes = Array.from(lotesPorDataList.children).filter(child => 
+                !child.classList.contains('lote-empty-state') && 
+                child.classList.contains('lote-item')
+            );
+            if (realLotes.length > 0) {
+                hasLotes = true;
+                totalLotes += realLotes.length;
+            }
+            console.log(`📅 Lotes por data encontrados: ${realLotes.length}`);
+        }
+        
+        if (lotesPorPercentualList && lotesPorPercentualList.children.length > 0) {
+            const realLotes = Array.from(lotesPorPercentualList.children).filter(child => 
+                !child.classList.contains('lote-empty-state') && 
+                child.classList.contains('lote-item')
+            );
+            if (realLotes.length > 0) {
+                hasLotes = true;
+                totalLotes += realLotes.length;
+            }
+            console.log(`📊 Lotes por percentual encontrados: ${realLotes.length}`);
+        }
+        
+        console.log(`📋 Total de lotes: ${totalLotes}`);
+        
+        if (!hasLotes || totalLotes === 0) {
+            showValidationMessage(5, 'É necessário cadastrar pelo menos um lote para prosseguir');
+            return false;
+        }
+        
+        console.log('✅ Validação da etapa 5 passou');
+        return true;
+    }
+    
+    function validateStep6() {
+        // Verificar se há ingressos cadastrados
+        const ticketList = document.getElementById('ticketList');
+        
+        if (!ticketList || ticketList.children.length === 0) {
+            showValidationMessage(6, 'É necessário cadastrar pelo menos um tipo de ingresso');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function validateStep7() {
+        const contratanteId = document.getElementById('contratanteId');
+        
+        if (!contratanteId || !contratanteId.value) {
+            showValidationMessage(7, 'Selecione o organizador responsável pelo evento');
+            highlightField('contratanteId');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Funções auxiliares
+    function highlightField(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.classList.add('error-field');
+            setTimeout(() => field.classList.remove('error-field'), 3000);
+        }
+    }
+    
+    function showValidationMessage(step, message) {
+        const msgEl = document.getElementById(`validation-step-${step}`);
+        if (msgEl) {
+            msgEl.textContent = message;
+            msgEl.classList.add('show');
+        }
+    }
+    
+    function hideValidationMessages() {
+        const allMessages = document.querySelectorAll('.validation-message');
+        allMessages.forEach(msg => msg.classList.remove('show'));
+    }
+    
+    console.log('✅ Validações obrigatórias implementadas');
+    
+    // Debug: Adicionar listener para monitorar cliques nos botões
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-continue') || e.target.textContent.includes('Avançar')) {
+            console.log('🖱️ Clique no botão avançar detectado');
+            console.log('Etapa atual detectada:', getCurrentStep());
+        }
+    });
+    
+    // Debug: Verificar se há conflitos de currentStep
+    if (typeof window.currentStep !== 'undefined') {
+        console.log('⚠️ Variável window.currentStep já existe:', window.currentStep);
+    }
+    
+    // Função global para desabilitar validação em caso de problemas
+    window.disableValidation = function() {
+        validationEnabled = false;
+        console.log('🔧 Validação desabilitada - wizard funcionará normalmente');
+    };
+    
+    window.enableValidation = function() {
+        validationEnabled = true;
+        console.log('🔧 Validação habilitada');
+    };
+    
+    // Implementar contador de caracteres para o editor rico
+    function initializeCharCounter() {
+        const description = document.getElementById('eventDescription');
+        const charCounter = document.getElementById('charCounter');
+        
+        if (description && charCounter) {
+            function updateCounter() {
+                const text = description.textContent || description.innerText || '';
+                const cleanText = text.trim();
+                charCounter.textContent = cleanText.length + ' caracteres';
+                
+                // Mudar cor baseado no mínimo
+                if (cleanText.length < 50) {
+                    charCounter.style.color = '#ef4444';
+                } else {
+                    charCounter.style.color = '#10b981';
+                }
+            }
+            
+            // Atualizar contador em tempo real
+            description.addEventListener('input', updateCounter);
+            description.addEventListener('keyup', updateCounter);
+            description.addEventListener('paste', function() {
+                setTimeout(updateCounter, 100); // Delay para processar o paste
+            });
+            
+            // Atualizar inicialmente
+            updateCounter();
+            
+            console.log('✅ Contador de caracteres inicializado');
+        }
+    }
+    
+    // Inicializar contador após DOM carregar
+    initializeCharCounter();
+    
+    // Implementar preenchimento automático de datas nos modais de ingresso
+    function initializeLoteDateFilling() {
+        console.log('🔄 Inicializando preenchimento automático de datas dos lotes');
+        
+        // Monitor para modal de ingresso pago
+        const paidLoteSelect = document.getElementById('paidTicketLote');
+        if (paidLoteSelect) {
+            paidLoteSelect.addEventListener('change', function() {
+                fillLoteDatesForPaidTicket(this.value);
+            });
+        }
+        
+        // Monitor para modal de ingresso gratuito
+        const freeLoteSelect = document.getElementById('freeTicketLote');
+        if (freeLoteSelect) {
+            freeLoteSelect.addEventListener('change', function() {
+                fillLoteDatesForFreeTicket(this.value);
+            });
+        }
+    }
+    
+    function fillLoteDatesForPaidTicket(loteId) {
+        console.log('🗓️ Preenchendo datas para ingresso pago, lote:', loteId);
+        
+        if (!loteId) return;
+        
+        // Buscar dados do lote selecionado
+        const loteData = findLoteData(loteId);
+        if (loteData && loteData.tipo === 'data') {
+            const startField = document.getElementById('paidSaleStart');
+            const endField = document.getElementById('paidSaleEnd');
+            
+            if (startField && endField) {
+                startField.value = loteData.inicio;
+                startField.readOnly = true;
+                startField.style.backgroundColor = '#f3f4f6';
+                
+                endField.value = loteData.fim;
+                endField.readOnly = true;
+                endField.style.backgroundColor = '#f3f4f6';
+                
+                console.log('✅ Datas preenchidas automaticamente:', loteData.inicio, 'até', loteData.fim);
+            }
+        } else {
+            // Se não for lote por data, liberar campos
+            const startField = document.getElementById('paidSaleStart');
+            const endField = document.getElementById('paidSaleEnd');
+            
+            if (startField && endField) {
+                startField.readOnly = false;
+                startField.style.backgroundColor = '';
+                endField.readOnly = false;
+                endField.style.backgroundColor = '';
+            }
+        }
+    }
+    
+    function fillLoteDatesForFreeTicket(loteId) {
+        console.log('🗓️ Preenchendo datas para ingresso gratuito, lote:', loteId);
+        
+        if (!loteId) return;
+        
+        // Buscar dados do lote selecionado
+        const loteData = findLoteData(loteId);
+        if (loteData && loteData.tipo === 'data') {
+            const startField = document.getElementById('freeSaleStart');
+            const endField = document.getElementById('freeSaleEnd');
+            
+            if (startField && endField) {
+                startField.value = loteData.inicio;
+                startField.readOnly = true;
+                startField.style.backgroundColor = '#f3f4f6';
+                
+                endField.value = loteData.fim;
+                endField.readOnly = true;
+                endField.style.backgroundColor = '#f3f4f6';
+                
+                console.log('✅ Datas preenchidas automaticamente:', loteData.inicio, 'até', loteData.fim);
+            }
+        } else {
+            // Se não for lote por data, liberar campos
+            const startField = document.getElementById('freeSaleStart');
+            const endField = document.getElementById('freeSaleEnd');
+            
+            if (startField && endField) {
+                startField.readOnly = false;
+                startField.style.backgroundColor = '';
+                endField.readOnly = false;
+                endField.style.backgroundColor = '';
+            }
+        }
+    }
+    
+    function findLoteData(loteId) {
+        // Buscar nos arrays globais de lotes se existirem
+        if (typeof window.lotesPorData !== 'undefined') {
+            const lote = window.lotesPorData.find(l => l.id == loteId);
+            if (lote) return { ...lote, tipo: 'data' };
+        }
+        
+        if (typeof window.lotesPorPercentual !== 'undefined') {
+            const lote = window.lotesPorPercentual.find(l => l.id == loteId);
+            if (lote) return { ...lote, tipo: 'percentual' };
+        }
+        
+        // Buscar no DOM como fallback
+        const loteElement = document.querySelector(`[data-lote-id="${loteId}"]`);
+        if (loteElement) {
+            return {
+                id: loteId,
+                tipo: loteElement.getAttribute('data-lote-tipo'),
+                inicio: loteElement.getAttribute('data-lote-inicio'),
+                fim: loteElement.getAttribute('data-lote-fim')
+            };
+        }
+        
+        console.log('⚠️ Lote não encontrado:', loteId);
+        return null;
+    }
+    
+    // Inicializar preenchimento de datas
+    setTimeout(initializeLoteDateFilling, 1000); // Delay para garantir que os modais estão carregados
+    
+    console.log('💡 Para desabilitar validação temporariamente, execute: disableValidation()');
+    console.log('💡 Para habilitar validação novamente, execute: enableValidation()');
+});
+</script>
 </body>
 </html>

@@ -87,10 +87,35 @@ try {
     }
     
     // Aceite de termos
-    if (isset($_POST['aceitarTermos']) && $_POST['aceitarTermos'] == '1') {
-        $updates[] = "dados_aceite = ?";
-        $params[] = date('Y-m-d H:i:s');
-        $types .= 's';
+    if (isset($_POST['aceitarTermos']) && $_POST['aceitarTermos'] != '1') {
+        // É um JSON com informações do dispositivo
+        $deviceInfo = $_POST['aceitarTermos'];
+        
+        // Validar se é um JSON válido
+        $decoded = json_decode($deviceInfo, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $updates[] = "dados_aceite = ?";
+            $params[] = $deviceInfo;
+            $types .= 's';
+            
+            // Marcar termos_aceitos como 1
+            $updates[] = "termos_aceitos = ?";
+            $params[] = 1;
+            $types .= 'i';
+            
+            // Copiar conteúdos dos parâmetros para a tabela eventos
+            $sql_parametros = "SELECT politicas_eventos_default, termos_eventos_default FROM parametros LIMIT 1";
+            $result_parametros = mysqli_query($con, $sql_parametros);
+            if ($row_parametros = mysqli_fetch_assoc($result_parametros)) {
+                $updates[] = "politicas = ?";
+                $params[] = $row_parametros['politicas_eventos_default'];
+                $types .= 's';
+                
+                $updates[] = "termos = ?";
+                $params[] = $row_parametros['termos_eventos_default'];
+                $types .= 's';
+            }
+        }
     }
     
     // Processar uploads de imagens

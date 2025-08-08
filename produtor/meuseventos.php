@@ -73,7 +73,7 @@ $eventos = [];
  
 
 try {
-    // Query para buscar eventos do usuário
+    // Query para buscar eventos do usuário (incluindo rascunhos)
     $sql = "SELECT e.*, 
                    COALESCE(cat.nome, 'Sem categoria') as categoria_nome,
                    MIN(ing.preco) as preco_min,
@@ -82,7 +82,7 @@ try {
             FROM eventos e 
             LEFT JOIN categorias_evento cat ON e.categoria_id = cat.id AND cat.ativo = 1
             LEFT JOIN ingressos ing ON e.id = ing.evento_id AND ing.ativo = 1
-            WHERE e.usuario_id = ? AND e.status != 'rascunho'
+            WHERE e.usuario_id = ?
             GROUP BY e.id
             ORDER BY e.criado_em DESC";
 
@@ -1331,11 +1331,17 @@ try {
                 particle.style.transform = `translate(${x}px, ${y}px)`;
             });
         });
+
+        // Função para criar novo evento (sempre do zero)
+        function criarNovoEvento() {
+            // Redirecionar direto para a página de novo evento, sempre iniciando do zero
+            window.location.href = '/produtor/novoevento.php';
+        }
     </script>
     
-    <!-- Script para gerenciar criação de novos eventos -->
-    <script src="/produtor/js/modal-rascunho.js"></script>
-    <script src="/produtor/js/gerenciar-rascunhos.js"></script>
+    <!-- Scripts para gerenciar criação de novos eventos - DESATIVADOS TEMPORARIAMENTE -->
+    <!-- <script src="/produtor/js/modal-rascunho.js"></script> -->
+    <!-- <script src="/produtor/js/gerenciar-rascunhos.js"></script> -->
     
 </body>
 </html>
