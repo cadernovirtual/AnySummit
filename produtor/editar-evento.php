@@ -2154,13 +2154,6 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                 console.log('❌ Função atualizarPreviewHero não encontrada');
             }
         }
-                    temSrc: logoImg ? logoImg.src : 'sem img',
-                    naoEhPlaceholder: logoImg ? !logoImg.src.includes('placeholder') : false,
-                    srcNaoVazio: logoImg ? logoImg.src !== '' : false,
-                    imagemCarregada: logoImg ? logoImg.naturalWidth > 0 : false
-                });
-            }
-        }
         
         function updateHeroBackground(url) {
             const heroBackground = document.getElementById('heroBackground');
