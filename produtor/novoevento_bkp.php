@@ -1930,7 +1930,7 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                 </div>
                 
-                <!-- Coluna 2: Quantidade e Descrição -->
+                <!-- Coluna 2: Quantidade e Setores -->
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Acesso</h4>
                     
@@ -1943,17 +1943,6 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                     
                     <div class="form-group" style="margin-top: 25px;">
-                        <label style="font-size: 12px;">Descrição (opcional)</label>
-                        <textarea id="paidTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
-                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
-                    </div>
-                </div>
-                
-                <!-- Coluna 3: Setores -->
-                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
-                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Setores de Acesso</h4>
-                    
-                    <div class="form-group">
                         <label style="font-size: 12px;">Indique setores onde esse ingresso dará acesso (opcional)</label>
                         <div style="margin-top: 8px;">
                             <select id="paidTicketSetores" style="width: 100%; font-size: 12px;" onchange="addSetorToPaidTicket()">
@@ -1962,10 +1951,23 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                             </select>
                         </div>
                         <div id="paidTicketSetoresList" style="margin-top: 10px;">
-                            <div class="setores-empty-badge">
-                                Nenhum setor selecionado
+                            <div class="setores-badges-container">
+                                <div class="setores-empty-badge">
+                                    Nenhum setor selecionado
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Coluna 3: Descrição -->
+                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
+                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Informações Adicionais</h4>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="font-size: 12px;">Descrição (opcional)</label>
+                        <textarea id="paidTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
+                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
                     </div>
                 </div>
             </div>
@@ -2023,7 +2025,7 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                 </div>
                 
-                <!-- Coluna 2: Quantidade e Descrição -->
+                <!-- Coluna 2: Quantidade e Setores -->
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Acesso</h4>
                     
@@ -2036,17 +2038,6 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                     
                     <div class="form-group" style="margin-top: 25px;">
-                        <label style="font-size: 12px;">Descrição (opcional)</label>
-                        <textarea id="freeTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
-                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
-                    </div>
-                </div>
-                
-                <!-- Coluna 3: Setores -->
-                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
-                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Setores de Acesso</h4>
-                    
-                    <div class="form-group">
                         <label style="font-size: 12px;">Indique setores onde esse ingresso dará acesso (opcional)</label>
                         <div style="margin-top: 8px;">
                             <select id="freeTicketSetores" style="width: 100%; font-size: 12px;" onchange="addSetorToFreeTicket()">
@@ -2055,10 +2046,23 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                             </select>
                         </div>
                         <div id="freeTicketSetoresList" style="margin-top: 10px;">
-                            <div class="setores-empty-badge">
-                                Nenhum setor selecionado
+                            <div class="setores-badges-container">
+                                <div class="setores-empty-badge">
+                                    Nenhum setor selecionado
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Coluna 3: Descrição -->
+                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
+                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Informações Adicionais</h4>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="font-size: 12px;">Descrição (opcional)</label>
+                        <textarea id="freeTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
+                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
                     </div>
                 </div>
             </div>
@@ -2475,7 +2479,7 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                 </div>
                 
-                <!-- Coluna 2: Quantidade e Descrição -->
+                <!-- Coluna 2: Quantidade e Setores -->
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Acesso</h4>
                     
@@ -2488,17 +2492,6 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                     
                     <div class="form-group" style="margin-top: 25px;">
-                        <label style="font-size: 12px;">Descrição (opcional)</label>
-                        <textarea id="editPaidTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
-                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
-                    </div>
-                </div>
-                
-                <!-- Coluna 3: Setores -->
-                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
-                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Setores de Acesso</h4>
-                    
-                    <div class="form-group">
                         <label style="font-size: 12px;">Indique setores onde esse ingresso dará acesso (opcional)</label>
                         <div style="margin-top: 8px;">
                             <select id="editPaidTicketSetores" style="width: 100%; font-size: 12px;" onchange="addSetorToEditPaidTicket()">
@@ -2507,10 +2500,23 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                             </select>
                         </div>
                         <div id="editPaidTicketSetoresList" style="margin-top: 10px;">
-                            <div class="setores-empty-badge">
-                                Nenhum setor selecionado
+                            <div class="setores-badges-container">
+                                <div class="setores-empty-badge">
+                                    Nenhum setor selecionado
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Coluna 3: Descrição -->
+                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
+                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Informações Adicionais</h4>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="font-size: 12px;">Descrição (opcional)</label>
+                        <textarea id="editPaidTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
+                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
                     </div>
                 </div>
             </div>
@@ -2570,7 +2576,7 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                 </div>
                 
-                <!-- Coluna 2: Quantidade e Descrição -->
+                <!-- Coluna 2: Quantidade e Setores -->
                 <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
                     <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Configurações de Acesso</h4>
                     
@@ -2583,17 +2589,6 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     </div>
                     
                     <div class="form-group" style="margin-top: 25px;">
-                        <label style="font-size: 12px;">Descrição (opcional)</label>
-                        <textarea id="editFreeTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
-                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
-                    </div>
-                </div>
-                
-                <!-- Coluna 3: Setores -->
-                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
-                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Setores de Acesso</h4>
-                    
-                    <div class="form-group">
                         <label style="font-size: 12px;">Indique setores onde esse ingresso dará acesso (opcional)</label>
                         <div style="margin-top: 8px;">
                             <select id="editFreeTicketSetores" style="width: 100%; font-size: 12px;" onchange="addSetorToEditFreeTicket()">
@@ -2602,10 +2597,23 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                             </select>
                         </div>
                         <div id="editFreeTicketSetoresList" style="margin-top: 10px;">
-                            <div class="setores-empty-badge">
-                                Nenhum setor selecionado
+                            <div class="setores-badges-container">
+                                <div class="setores-empty-badge">
+                                    Nenhum setor selecionado
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Coluna 3: Descrição -->
+                <div style="border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px;">
+                    <h4 style="color: #00C2FF; margin-bottom: 8px; font-size: 12px;">Informações Adicionais</h4>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="font-size: 12px;">Descrição (opcional)</label>
+                        <textarea id="editFreeTicketDescription" rows="6" placeholder="Informações adicionais sobre este tipo de ingresso..." maxlength="200" style="font-size: 12px; width: 100%; resize: vertical;"></textarea>
+                        <small style="color: #8B95A7; font-size: 10px;">Máximo 200 caracteres</small>
                     </div>
                 </div>
             </div>
@@ -2968,207 +2976,7 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
      <script language='javascript' src="/produtor/js/ingressos-pagos.js" charset="UTF-8"></script>
      <script language='javascript' src="/produtor/js/criaevento.js?v=<?php echo time(); ?>" charset="UTF-8"></script>
      <script language='javascript' src="/produtor/js/spinner-carregamento.js?v=<?php echo time(); ?>"></script>
-     <script language='javascript' src="/produtor/js/wizard-database.js?v=<?php echo time(); ?>"></script>
-     
-     <!-- Sistema de Rascunho Automático -->
-     <script>
-     (function() {
-         'use strict';
-         
-         console.log('🎯 Sistema de Rascunho Automático carregado');
-         
-         let eventoId = null;
-         
-         // Verificar se tem evento_id na URL (modo edição)
-         const urlParams = new URLSearchParams(window.location.search);
-         const eventoIdURL = urlParams.get('evento_id');
-         
-         if (eventoIdURL) {
-             console.log('📝 Modo edição - evento_id:', eventoIdURL);
-             eventoId = eventoIdURL;
-         }
-         
-         // Função para criar/verificar evento em rascunho
-         async function iniciarEventoRascunho() {
-             if (eventoId) {
-                 console.log('⏩ Evento já existe, pulando criação de rascunho');
-                 return;
-             }
-             
-             console.log('🆕 Criando novo evento em rascunho...');
-             
-             try {
-                 const response = await fetch('/produtor/ajax/wizard_evento.php', {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/x-www-form-urlencoded'
-                     },
-                     body: 'action=iniciar_evento'
-                 });
-                 
-                 const data = await response.json();
-                 console.log('📡 Resposta do servidor:', data);
-                 
-                 if (data.sucesso) {
-                     eventoId = data.evento_id;
-                     console.log('✅ Evento criado em rascunho com ID:', eventoId);
-                     
-                     // Atualizar URL sem recarregar a página
-                     const newURL = window.location.pathname + '?evento_id=' + eventoId;
-                     window.history.replaceState({}, '', newURL);
-                     
-                     // Armazenar globalmente para uso em outras funções
-                     window.currentEventoId = eventoId;
-                 } else {
-                     console.error('❌ Erro ao criar evento:', data.erro);
-                 }
-             } catch (error) {
-                 console.error('❌ Erro na requisição:', error);
-             }
-         }
-         
-         // Interceptar função nextStep para salvar dados automaticamente
-         const originalNextStep = window.nextStep;
-         
-         window.nextStep = async function() {
-             if (!eventoId && !window.currentEventoId) {
-                 console.warn('⚠️ Evento não criado ainda, tentando criar...');
-                 await iniciarEventoRascunho();
-             }
-             
-             const currentEventId = eventoId || window.currentEventoId;
-             
-             if (currentEventId) {
-                 console.log('💾 Salvando etapa atual antes de avançar...');
-                 await salvarEtapaAtual(currentEventId);
-             }
-             
-             // Chamar função original
-             if (originalNextStep) {
-                 originalNextStep.call(this);
-             }
-         };
-         
-         // Função para salvar dados da etapa atual
-         async function salvarEtapaAtual(eventoId) {
-             // Obter etapa atual
-             const currentStepElements = document.querySelectorAll('.step.active');
-             let currentStep = 1;
-             
-             if (currentStepElements.length > 0) {
-                 const stepElement = currentStepElements[0];
-                 const stepData = stepElement.getAttribute('data-step');
-                 if (stepData) {
-                     currentStep = parseInt(stepData);
-                 }
-             }
-             
-             console.log(`📊 Salvando dados da etapa ${currentStep}...`);
-             
-             // Coletar dados baseado na etapa
-             const dadosParaSalvar = coletarDadosEtapa(currentStep);
-             
-             if (Object.keys(dadosParaSalvar).length === 0) {
-                 console.log('⚠️ Nenhum dado para salvar na etapa', currentStep);
-                 return;
-             }
-             
-             // Salvar no backend
-             try {
-                 const response = await fetch('/produtor/ajax/wizard_evento.php', {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/x-www-form-urlencoded'
-                     },
-                     body: `action=salvar_etapa&evento_id=${eventoId}&etapa=${currentStep}&dados=${encodeURIComponent(JSON.stringify(dadosParaSalvar))}`
-                 });
-                 
-                 const result = await response.json();
-                 
-                 if (result.sucesso) {
-                     console.log(`✅ Etapa ${currentStep} salva com sucesso`);
-                 } else {
-                     console.error(`❌ Erro ao salvar etapa ${currentStep}:`, result.erro);
-                 }
-             } catch (error) {
-                 console.error('❌ Erro na requisição de salvamento:', error);
-             }
-         }
-         
-         // Função para coletar dados da etapa atual
-         function coletarDadosEtapa(etapa) {
-             const dados = {};
-             
-             switch(etapa) {
-                 case 1: // Informações básicas
-                     const nome = document.getElementById('nome')?.value;
-                     const descricao = document.getElementById('descricao')?.value;
-                     const categoria = document.getElementById('categoria')?.value;
-                     
-                     if (nome) dados.nome = nome;
-                     if (descricao) dados.descricao = descricao;
-                     if (categoria) dados.categoria_id = categoria;
-                     break;
-                     
-                 case 2: // Data e local
-                     const dataInicio = document.getElementById('dataInicio')?.value;
-                     const horaInicio = document.getElementById('horaInicio')?.value;
-                     const dataFim = document.getElementById('dataFim')?.value;
-                     const horaFim = document.getElementById('horaFim')?.value;
-                     const endereco = document.getElementById('endereco')?.value;
-                     
-                     if (dataInicio) dados.data_inicio = dataInicio;
-                     if (horaInicio) dados.hora_inicio = horaInicio;
-                     if (dataFim) dados.data_fim = dataFim;
-                     if (horaFim) dados.hora_fim = horaFim;
-                     if (endereco) dados.endereco = endereco;
-                     break;
-                     
-                 case 3: // Imagens
-                     if (window.uploadedImages) {
-                         if (window.uploadedImages.logo) dados.logo = window.uploadedImages.logo;
-                         if (window.uploadedImages.capa) dados.capa = window.uploadedImages.capa;
-                         if (window.uploadedImages.fundo) dados.imagem_fundo = window.uploadedImages.fundo;
-                     }
-                     
-                     const corFundo = document.getElementById('corFundo')?.value;
-                     if (corFundo) dados.cor_fundo = corFundo;
-                     break;
-                     
-                 case 4: // Configurações
-                     const configuracoes = {};
-                     // Adicionar campos de configuração conforme necessário
-                     if (Object.keys(configuracoes).length > 0) {
-                         dados.configuracoes = configuracoes;
-                     }
-                     break;
-                     
-                 // Adicionar mais etapas conforme necessário
-             }
-             
-             return dados;
-         }
-         
-         // Inicializar sistema ao carregar a página
-         document.addEventListener('DOMContentLoaded', function() {
-             console.log('🚀 Inicializando sistema de rascunho...');
-             
-             // Aguardar um pouco para garantir que outros scripts carregaram
-             setTimeout(async () => {
-                 await iniciarEventoRascunho();
-             }, 1000);
-         });
-         
-         // Tornar disponível globalmente
-         window.sistemaRascunho = {
-             iniciarEvento: iniciarEventoRascunho,
-             salvarEtapa: salvarEtapaAtual,
-             getEventoId: () => eventoId || window.currentEventoId
-         };
-         
-     })();
-     </script>
-     
+     <!-- DESABILITADO TEMPORARIAMENTE: <script language='javascript' src="/produtor/js/wizard-database.js?v=<?php echo time(); ?>"></script> -->
      <script language='javascript' src="/produtor/js/busca-endereco-direto.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/diagnostico-google-maps.js?v=<?php echo time(); ?>"></script>
      <script language='javascript' src="/produtor/js/verificacao-final.js?v=<?php echo time(); ?>"></script>

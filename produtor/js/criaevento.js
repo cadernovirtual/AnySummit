@@ -5,7 +5,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
     'use strict';
     
     let currentStep = 1;
-    const totalSteps = 8;
+    const totalSteps = 9;
     let map;
     let geocoder;
     let marker;
@@ -373,6 +373,11 @@ console.log('🎯 criaevento.js iniciando carregamento...');
         // Função para navegar entre steps
         function updateStepDisplay() {
             
+            // Esconder mensagens de validação ao mudar de etapa
+            document.querySelectorAll('.validation-message').forEach(msg => {
+                msg.style.display = 'none';
+            });
+            
             // Atualizar cards de conteúdo
             document.querySelectorAll('.section-card').forEach(card => {
                 const stepNumber = parseInt(card.dataset.stepContent);
@@ -591,7 +596,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
 
             // Mostrar ou esconder mensagem de valida��o
             if (!isValid && validationMessage) {
-                validationMessage.textContent = 'Todos os campos obrigat�rios precisam ser preenchidos!';
+                validationMessage.textContent = 'Todos os campos obrigatórios precisam ser preenchidos!';
                 validationMessage.style.display = 'block';
                 validationMessage.classList.add('show');
                 
@@ -1357,10 +1362,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 document.getElementById('paidTicketTitle').classList.add('error-field');
                 hasError = true;
             }
-            if (!quantity && quantity !== '0') { // Permitir quantidade 0 para checkbox desmarcado
-                document.getElementById('paidTicketQuantity').classList.add('error-field');
-                hasError = true;
-            }
+            // Quantidade agora é opcional - não validar
             if (!price || price === 'R$ 0,00') {
                 document.getElementById('paidTicketPrice').classList.add('error-field');
                 hasError = true;
@@ -1371,7 +1373,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             }
             
             if (hasError) {
-                alert('Por favor, preencha todos os campos obrigat�rios marcados em vermelho.');
+                alert('Por favor, preencha todos os campos obrigatórios marcados em vermelho.');
                 return;
             }
 
@@ -1429,26 +1431,8 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 const cleanTaxa = parseFloat(taxaValor.replace(/[R$\s\.]/g, '').replace(',', '.'));
                 const cleanValorReceber = parseFloat(valorReceber.replace(/[R$\s\.]/g, '').replace(',', '.'));
                 
-                if (typeof addTicketToCreationList === 'function') {
-                    addTicketToCreationList(
-                        'paid', 
-                        title, 
-                        parseInt(quantity), 
-                        cleanPrice, 
-                        description, 
-                        saleStart, 
-                        saleEnd, 
-                        parseInt(minQuantity), 
-                        parseInt(maxQuantity),
-                        cobrarTaxa,
-                        cleanTaxa,
-                        cleanValorReceber,
-                        loteId
-                    );
-                } else {
-                    // Fallback para fun��o antiga
-                    addTicketToList('paid', title, quantity, price, loteId);
-                }
+                // Sempre usar addTicketToList em modo de criação
+                addTicketToList('paid', title, quantity, price, loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
                 
                 closeModal('paidTicketModal');
                 
@@ -1477,8 +1461,8 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             const maxQuantity = document.getElementById('freeMaxQuantity')?.value || 5;
             const loteId = document.getElementById('freeTicketLote')?.value;
 
-            if (!title || (!quantity && quantity !== '0')) { // Permitir quantidade 0 para checkbox desmarcado
-                alert('Por favor, preencha todos os campos obrigat�rios.');
+            if (!title) { // Apenas título é obrigatório
+                alert('Por favor, preencha o título do ingresso.');
                 return;
             }
 
@@ -1526,22 +1510,8 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 });
             } else {
                 // Modo cria��o - usar sistema de ingressos tempor�rios
-                if (typeof addTicketToCreationList === 'function') {
-                    addTicketToCreationList(
-                        'gratuito', 
-                        title, 
-                        parseInt(quantity), 
-                        0, 
-                        description, 
-                        saleStart, 
-                        saleEnd, 
-                        parseInt(minQuantity), 
-                        parseInt(maxQuantity)
-                    );
-                } else {
-                    // Fallback para fun��o antiga com par�metros adicionais
-                    addTicketToList('free', title, quantity, 'Gratuito', loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
-                }
+                // Sempre usar addTicketToList em modo de criação
+                addTicketToList('free', title, quantity, 'Gratuito', loteId, description, saleStart, saleEnd, minQuantity, maxQuantity);
                 
                 closeModal('freeTicketModal');
                 
@@ -1561,7 +1531,6 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             const previewDescription = document.getElementById('previewDescription');
             const previewDate = document.getElementById('previewDate');
             const previewLocation = document.getElementById('previewLocation');
-            const previewCategory = document.getElementById('previewCategory');
             const previewType = document.getElementById('previewType');
 
             if (!previewTitle) return;
@@ -1619,12 +1588,6 @@ console.log('🎯 criaevento.js iniciando carregamento...');
 
             if (previewType) {
                 previewType.textContent = isPresential ? 'Presencial' : 'Online';
-            }
-            
-            if (previewCategory) {
-                const categoryEl = document.querySelector(`#category option[value="${category}"]`);
-                const categoryText = categoryEl ? categoryEl.textContent : 'Categoria n�o definida';
-                previewCategory.textContent = categoryText;
             }
             
             // Atualizar preview Hero
@@ -2519,6 +2482,10 @@ console.log('🎯 criaevento.js iniciando carregamento...');
 
             const eventoId = dados?.evento_id || dados?.id || 'N/A';
             const mensagem = dados?.message || 'Evento registrado.';
+            
+            // Salvar ID do evento criado para uso pelos setores
+            window.lastCreatedEventId = eventoId;
+            console.log('💾 ID do evento criado salvo:', eventoId);
 
             criarNotificacao(
                 '🎉 Evento criado com sucesso!',
@@ -2921,7 +2888,16 @@ console.log('🎯 criaevento.js iniciando carregamento...');
         function addTicketToList(type, title, quantity, price, loteId = '', description = '', saleStart = '', saleEnd = '', minQuantity = 1, maxQuantity = 5) {
             ticketCount++;
             const ticketList = document.getElementById('ticketList');
-            if (!ticketList) return;
+            
+            console.log('🎟️ addTicketToList chamada:', {
+                type, title, quantity, price, loteId, description,
+                ticketList: ticketList ? 'encontrado' : 'NÃO ENCONTRADO'
+            });
+            
+            if (!ticketList) {
+                console.error('❌ Elemento ticketList não encontrado no DOM');
+                return;
+            }
 
             const ticketItem = document.createElement('div');
             ticketItem.className = 'ticket-item';
@@ -2973,7 +2949,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 </div>
                 <div class="ticket-details">
                     <div class="ticket-info">
-                        ${type === 'combo' ? '' : (quantity > 0 ? `<span>Quantidade Limite a Venda: <strong>${quantity}</strong></span>` : '')}
+                        ${type === 'combo' ? '' : (quantity > 0 ? `<span>Quantidade: <strong>${quantity}</strong></span>` : `<span>Quantidade: <strong style="color: #00C2FF;">Não limitar</strong></span>`)}
                         ${type === 'paid' ? `<span>Preço: <strong class="ticket-buyer-price">${buyerPrice}</strong></span>` : '<span class="ticket-buyer-price">Gratuito</span>'}
                         <span>Taxa: <strong>${taxFormatted}</strong></span>
                         <span>Você recebe: <strong>${receiveFormatted}</strong></span>
@@ -3073,7 +3049,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             const endDate = document.getElementById('codeSaleEnd')?.value;
 
             if (!title || !quantity || !startDate || !endDate) {
-                alert('Por favor, preencha todos os campos obrigat�rios.');
+                alert('Por favor, preencha todos os campos obrigatórios.');
                 return;
             }
 
@@ -3507,7 +3483,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
             }
 
             if (hasError) {
-                alert('Por favor, preencha todos os campos obrigat�rios marcados em vermelho.');
+                alert('Por favor, preencha todos os campos obrigatórios marcados em vermelho.');
                 return;
             }
 
@@ -3994,7 +3970,7 @@ function updatePaidTicket() {
     
     // Valida�ões
     if (!ticketData.titulo || !ticketData.quantidade_total || !ticketData.preco) {
-        alert('Por favor, preencha todos os campos obrigat�rios');
+        alert('Por favor, preencha todos os campos obrigatórios');
         return;
     }
     
@@ -4024,7 +4000,7 @@ function updateFreeTicket() {
     
     // Valida�ões
     if (!ticketData.titulo || !ticketData.quantidade_total) {
-        alert('Por favor, preencha todos os campos obrigat�rios');
+        alert('Por favor, preencha todos os campos obrigatórios');
         return;
     }
     
@@ -4286,7 +4262,7 @@ function updateComboTicket() {
     
     // Valida�ões
     if (!comboData.titulo || !comboData.quantidade_total || !comboData.preco) {
-        alert('Por favor, preencha todos os campos obrigat�rios');
+        alert('Por favor, preencha todos os campos obrigatórios');
         return;
     }
     

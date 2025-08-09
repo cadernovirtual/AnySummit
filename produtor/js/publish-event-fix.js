@@ -29,6 +29,19 @@
             let sucesso = false;
             if (typeof window.enviarEventoParaAPI === 'function') {
                 sucesso = await window.enviarEventoParaAPI();
+                
+                // Se o evento foi criado com sucesso, salvar os setores
+                if (sucesso && window.lastCreatedEventId) {
+                    console.log('🏢 Salvando setores para o evento criado...');
+                    try {
+                        await window.salvarSetoresNoEvento(window.lastCreatedEventId);
+                        console.log('✅ Setores salvos com sucesso');
+                    } catch (error) {
+                        console.error('❌ Erro ao salvar setores:', error);
+                        // Não falhar o evento por causa dos setores, apenas avisar
+                        alert('Evento criado com sucesso, mas houve um problema ao salvar os setores. Você pode adicioná-los depois na edição do evento.');
+                    }
+                }
             } else {
                 console.error('❌ Função enviarEventoParaAPI não encontrada');
                 // Tentar criar e enviar manualmente

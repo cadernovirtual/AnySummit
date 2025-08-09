@@ -446,6 +446,98 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
         
+        /* CORREÇÃO ESPECÍFICA PARA O SWITCH locationTypeSwitch */
+        .switch-container {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            margin: 20px 0 !important;
+        }
+
+        .switch {
+            position: relative !important;
+            width: 50px !important;
+            height: 26px !important;
+            background: rgba(139, 149, 167, 0.3) !important;
+            border-radius: 13px !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            border: none !important;
+            outline: none !important;
+            user-select: none !important;
+            pointer-events: auto !important;
+        }
+
+        .switch.active {
+            background: linear-gradient(135deg, #00C2FF, #725EFF) !important;
+        }
+
+        .switch-handle {
+            position: absolute !important;
+            top: 3px !important;
+            left: 3px !important;
+            width: 20px !important;
+            height: 20px !important;
+            background: white !important;
+            border-radius: 50% !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        .switch.active .switch-handle {
+            transform: translateX(24px) !important;
+        }
+
+        /* Garantir que o switch seja clicável */
+        #locationTypeSwitch {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            z-index: 10 !important;
+        }
+
+        /* Label do switch */
+        .switch-container label {
+            color: #E1E5F2 !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            user-select: none !important;
+        }
+        
+        /* Seções condicionais - PRESENCIAL vs ONLINE */
+        .conditional-section {
+            display: none !important;
+            opacity: 0 !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .conditional-section.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        
+        /* Seção presencial */
+        #presentialLocation.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        
+        /* Seção online */
+        #onlineLocation.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        
+        /* Debug visual para as seções */
+        #presentialLocation {
+            border-left: 3px solid #00C2FF !important;
+            padding-left: 15px !important;
+        }
+        
+        #onlineLocation {
+            border-left: 3px solid #725EFF !important;
+            padding-left: 15px !important;
+        }
+        
         .section-card[data-step-content].active {
             position: relative !important;
             opacity: 1;
@@ -1791,6 +1883,13 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                         if (!eventLink) {
                             isValid = false;
                             errorMessage = 'Por favor, informe o link do evento online.';
+                        } else {
+                            // Validar se é uma URL válida
+                            const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+                            if (!urlPattern.test(eventLink)) {
+                                isValid = false;
+                                errorMessage = 'Link do evento deve ser uma URL válida.';
+                            }
                         }
                     } else {
                         const venueName = document.getElementById('venueName').value.trim();
@@ -2075,31 +2174,47 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
             console.log('heroLogo element:', heroLogo);
             
             if (heroLogo && url) {
-                console.log('✅ Logo aplicado:', url);
-                heroLogo.src = url;
-                heroLogo.style.display = 'block';
-                heroLogo.style.opacity = '1';
-                heroLogo.style.visibility = 'visible';
-                heroLogo.style.zIndex = '999';
-                heroLogo.style.position = 'relative';
-                heroLogo.style.maxWidth = '200px';
-                heroLogo.style.maxHeight = '80px';
-                heroLogo.style.objectFit = 'contain';
+                // VERIFICAR se foi ocultado intencionalmente pelo usuário
+                if (isHiddenByUser(heroLogo)) {
+                    console.log('🚫 Logo foi ocultado pelo usuário, ignorando updateHeroLogo');
+                    return;
+                }
                 
-                // Teste de carregamento da imagem
-                heroLogo.onload = function() {
-                    console.log('✅ Logo carregado com sucesso no hero');
-                    console.log('Dimensões logo:', this.naturalWidth, 'x', this.naturalHeight);
-                    console.log('Estilo computado logo display:', window.getComputedStyle(this).display);
-                    console.log('Estilo computado logo opacity:', window.getComputedStyle(this).opacity);
-                    console.log('Estilo computado logo visibility:', window.getComputedStyle(this).visibility);
+                // VALIDAR URL ANTES DE APLICAR - CORREÇÃO PARA EVITAR ÍCONES QUEBRADOS
+                const testImg = new Image();
+                
+                testImg.onload = function() {
+                    // Verificar novamente se não foi ocultado durante o teste
+                    if (!isHiddenByUser(heroLogo)) {
+                        console.log('✅ Logo testado e válido, aplicando:', url);
+                        heroLogo.src = url;
+                        heroLogo.style.display = 'block';
+                        heroLogo.style.opacity = '1';
+                        heroLogo.style.visibility = 'visible';
+                        heroLogo.style.zIndex = '999';
+                        heroLogo.style.position = 'relative';
+                        heroLogo.style.maxWidth = '200px';
+                        heroLogo.style.maxHeight = '80px';
+                        heroLogo.style.objectFit = 'contain';
+                        console.log('✅ Logo aplicado e carregado com sucesso');
+                    } else {
+                        console.log('🚫 Logo foi ocultado durante teste, não aplicando');
+                    }
                 };
-                heroLogo.onerror = function() {
-                    console.log('❌ Erro ao carregar logo no hero:', url);
+                
+                testImg.onerror = function() {
+                    console.log('❌ Logo inválido, ocultando elemento');
+                    heroLogo.style.display = 'none';
+                    heroLogo.style.visibility = 'hidden';
+                    heroLogo.src = '';
                 };
+                
+                testImg.src = url;
             } else if (heroLogo) {
                 console.log('❌ Logo oculto - URL vazia');
                 heroLogo.style.display = 'none';
+                heroLogo.style.visibility = 'hidden';
+                heroLogo.src = '';
             } else {
                 console.log('❌ Elemento heroLogo não encontrado');
             }
@@ -2111,32 +2226,48 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
             console.log('heroCapa element:', heroCapa);
             
             if (heroCapa && url) {
-                console.log('✅ Capa aplicada:', url);
-                heroCapa.src = url;
-                heroCapa.style.display = 'block';
-                heroCapa.style.opacity = '1';
-                heroCapa.style.visibility = 'visible';
-                heroCapa.style.zIndex = '999';
-                heroCapa.style.position = 'relative';
-                heroCapa.style.width = '120px';
-                heroCapa.style.height = '120px';
-                heroCapa.style.objectFit = 'cover';
-                heroCapa.style.borderRadius = '8px';
+                // VERIFICAR se foi ocultado intencionalmente pelo usuário
+                if (isHiddenByUser(heroCapa)) {
+                    console.log('🚫 Capa foi ocultada pelo usuário, ignorando updateHeroCapa');
+                    return;
+                }
                 
-                // Teste de carregamento da imagem
-                heroCapa.onload = function() {
-                    console.log('✅ Capa carregada com sucesso no hero');
-                    console.log('Dimensões capa:', this.naturalWidth, 'x', this.naturalHeight);
-                    console.log('Estilo computado capa display:', window.getComputedStyle(this).display);
-                    console.log('Estilo computado capa opacity:', window.getComputedStyle(this).opacity);
-                    console.log('Estilo computado capa visibility:', window.getComputedStyle(this).visibility);
+                // VALIDAR URL ANTES DE APLICAR - CORREÇÃO PARA EVITAR ÍCONES QUEBRADOS
+                const testImg = new Image();
+                
+                testImg.onload = function() {
+                    // Verificar novamente se não foi ocultado durante o teste
+                    if (!isHiddenByUser(heroCapa)) {
+                        console.log('✅ Capa testada e válida, aplicando:', url);
+                        heroCapa.src = url;
+                        heroCapa.style.display = 'block';
+                        heroCapa.style.opacity = '1';
+                        heroCapa.style.visibility = 'visible';
+                        heroCapa.style.zIndex = '999';
+                        heroCapa.style.position = 'relative';
+                        heroCapa.style.width = '120px';
+                        heroCapa.style.height = '120px';
+                        heroCapa.style.objectFit = 'cover';
+                        heroCapa.style.borderRadius = '8px';
+                        console.log('✅ Capa aplicada e carregada com sucesso');
+                    } else {
+                        console.log('🚫 Capa foi ocultada durante teste, não aplicando');
+                    }
                 };
-                heroCapa.onerror = function() {
-                    console.log('❌ Erro ao carregar capa no hero:', url);
+                
+                testImg.onerror = function() {
+                    console.log('❌ Capa inválida, ocultando elemento');
+                    heroCapa.style.display = 'none';
+                    heroCapa.style.visibility = 'hidden';
+                    heroCapa.src = '';
                 };
+                
+                testImg.src = url;
             } else if (heroCapa) {
                 console.log('❌ Capa oculta - URL vazia');
                 heroCapa.style.display = 'none';
+                heroCapa.style.visibility = 'hidden';
+                heroCapa.src = '';
             } else {
                 console.log('❌ Elemento heroCapa não encontrado');
             }
@@ -2157,16 +2288,48 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
         
         function updateHeroBackground(url) {
             const heroBackground = document.getElementById('heroBackground');
-            if (heroBackground) {
-                if (url) {
-                    console.log('Aplicando imagem de fundo:', url);
+            const heroContainer = document.querySelector('.hero-mini-container');
+            
+            if (url) {
+                console.log('✅ Aplicando imagem de fundo:', url);
+                
+                // Aplicar no heroBackground (se existir)
+                if (heroBackground) {
                     heroBackground.style.backgroundImage = `url('${url}')`;
                     heroBackground.style.backgroundColor = '';
-                } else {
-                    const color = document.getElementById('corFundo').value || '#000000';
-                    console.log('Aplicando cor de fundo:', color);
+                }
+                
+                // CORREÇÃO: Aplicar também na hero-mini-container
+                if (heroContainer) {
+                    heroContainer.style.backgroundImage = `url('${url}')`;
+                    heroContainer.style.backgroundColor = '';
+                    console.log('✅ Background aplicado na hero-mini-container');
+                }
+            } else {
+                // Aplicar cor de fundo quando não há imagem
+                const corFundo = document.getElementById('corFundo');
+                const corFundoHex = document.getElementById('corFundoHex');
+                let color = '#000000';
+                
+                if (corFundo && corFundo.value) {
+                    color = corFundo.value;
+                } else if (corFundoHex && corFundoHex.value) {
+                    color = corFundoHex.value;
+                }
+                
+                console.log('✅ Aplicando cor de fundo:', color);
+                
+                // Aplicar no heroBackground (se existir)
+                if (heroBackground) {
                     heroBackground.style.backgroundImage = '';
                     heroBackground.style.backgroundColor = color;
+                }
+                
+                // CORREÇÃO: Aplicar também na hero-mini-container
+                if (heroContainer) {
+                    heroContainer.style.backgroundImage = '';
+                    heroContainer.style.backgroundColor = color;
+                    console.log('✅ Cor aplicada na hero-mini-container');
                 }
             }
         }
@@ -2311,43 +2474,101 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
         
         function setupLocationTypeSwitch() {
             const locationSwitch = document.getElementById('locationTypeSwitch');
+            const switchContainer = document.querySelector('.switch-container');
+            const label = switchContainer ? switchContainer.querySelector('label') : null;
+            
+            console.log('🔧 Setup Location Switch:', {
+                switch: !!locationSwitch,
+                container: !!switchContainer,
+                label: !!label
+            });
+            
             if (locationSwitch) {
-                locationSwitch.addEventListener('click', function() {
-                    if (this.classList.contains('active')) {
-                        switchToOnlineMode();
-                    } else {
-                        switchToPresentialMode();
-                    }
-                    
-                    // REMOVIDO: Auto-save - apenas atualizar preview
-                });
+                // Remover listeners existentes
+                locationSwitch.removeEventListener('click', handleSwitchClick);
+                
+                // Adicionar novo listener
+                locationSwitch.addEventListener('click', handleSwitchClick);
+                
+                // Adicionar listener ao label também
+                if (label) {
+                    label.removeEventListener('click', handleSwitchClick);
+                    label.addEventListener('click', handleSwitchClick);
+                }
+                
+                // Garantir que o switch comece no estado correto
+                const isPresential = locationSwitch.classList.contains('active');
+                updateSwitchState(isPresential);
             }
         }
         
-        function switchToOnlineMode() {
+        function handleSwitchClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const locationSwitch = document.getElementById('locationTypeSwitch');
+            if (!locationSwitch) return;
+            
+            const isCurrentlyActive = locationSwitch.classList.contains('active');
+            
+            console.log('🎯 Switch clicado:', {
+                currentlyActive: isCurrentlyActive,
+                willBeActive: !isCurrentlyActive
+            });
+            
+            if (isCurrentlyActive) {
+                switchToOnlineMode();
+            } else {
+                switchToPresentialMode();
+            }
+        }
+        
+        function updateSwitchState(isPresential) {
             const locationSwitch = document.getElementById('locationTypeSwitch');
             const presentialSection = document.getElementById('presentialLocation');
             const onlineSection = document.getElementById('onlineLocation');
+            const label = document.querySelector('.switch-container label');
             
-            if (locationSwitch) locationSwitch.classList.remove('active');
-            if (presentialSection) presentialSection.classList.remove('show');
-            if (onlineSection) onlineSection.classList.add('show');
+            if (locationSwitch) {
+                if (isPresential) {
+                    locationSwitch.classList.add('active');
+                } else {
+                    locationSwitch.classList.remove('active');
+                }
+            }
+            
+            if (presentialSection) {
+                if (isPresential) {
+                    presentialSection.classList.add('show');
+                } else {
+                    presentialSection.classList.remove('show');
+                }
+            }
+            
+            if (onlineSection) {
+                if (isPresential) {
+                    onlineSection.classList.remove('show');
+                } else {
+                    onlineSection.classList.add('show');
+                }
+            }
+            
+            if (label) {
+                label.textContent = isPresential ? 'Evento presencial' : 'Evento online';
+            }
             
             updatePreviewType();
             updatePreviewLocation();
         }
         
+        function switchToOnlineMode() {
+            console.log('🌐 Mudando para modo ONLINE');
+            updateSwitchState(false);
+        }
+        
         function switchToPresentialMode() {
-            const locationSwitch = document.getElementById('locationTypeSwitch');
-            const presentialSection = document.getElementById('presentialLocation');
-            const onlineSection = document.getElementById('onlineLocation');
-            
-            if (locationSwitch) locationSwitch.classList.add('active');
-            if (presentialSection) presentialSection.classList.add('show');
-            if (onlineSection) onlineSection.classList.remove('show');
-            
-            updatePreviewType();
-            updatePreviewLocation();
+            console.log('🏢 Mudando para modo PRESENCIAL');
+            updateSwitchState(true);
         }
         
         // Sistema de busca de endereço
@@ -2688,32 +2909,62 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                         
                         // Aplicar logo se existir OU ocultar se não existir
                         const heroLogo = document.getElementById('heroLogo');
-                        if (eventData.logo_evento && heroLogo) {
-                            const logoUrl = getImageUrl(eventData.logo_evento);
-                            heroLogo.src = logoUrl;
-                            heroLogo.style.display = 'block';
-                            heroLogo.style.visibility = 'visible';
-                            console.log('✅ Logo aplicado:', logoUrl);
-                        } else if (heroLogo) {
-                            heroLogo.style.display = 'none';
-                            heroLogo.style.visibility = 'hidden';
-                            heroLogo.src = '';
-                            console.log('✅ Logo oculto (não existe)');
+                        if (heroLogo) {
+                            if (eventData.logo_evento && eventData.logo_evento.trim() !== '') {
+                                const logoUrl = getImageUrl(eventData.logo_evento);
+                                console.log('🔍 Carregando logo inicial:', logoUrl);
+                                
+                                // Testar se URL é válida antes de mostrar
+                                const testImg = new Image();
+                                testImg.onload = function() {
+                                    heroLogo.src = logoUrl;
+                                    heroLogo.style.display = 'block';
+                                    heroLogo.style.visibility = 'visible';
+                                    console.log('✅ Logo inicial carregado:', logoUrl);
+                                };
+                                testImg.onerror = function() {
+                                    heroLogo.style.display = 'none';
+                                    heroLogo.style.visibility = 'hidden';
+                                    heroLogo.src = '';
+                                    console.log('❌ Logo inicial falhou, mantendo oculto');
+                                };
+                                testImg.src = logoUrl;
+                            } else {
+                                heroLogo.style.display = 'none';
+                                heroLogo.style.visibility = 'hidden';
+                                heroLogo.src = '';
+                                console.log('✅ Logo oculto (não existe)');
+                            }
                         }
                         
                         // Aplicar capa se existir OU ocultar se não existir
                         const heroCapa = document.getElementById('heroCapa');
-                        if (eventData.imagem_capa && heroCapa) {
-                            const capaUrl = getImageUrl(eventData.imagem_capa);
-                            heroCapa.src = capaUrl;
-                            heroCapa.style.display = 'block';
-                            heroCapa.style.visibility = 'visible';
-                            console.log('✅ Capa aplicada:', capaUrl);
-                        } else if (heroCapa) {
-                            heroCapa.style.display = 'none';
-                            heroCapa.style.visibility = 'hidden';
-                            heroCapa.src = '';
-                            console.log('✅ Capa oculta (não existe)');
+                        if (heroCapa) {
+                            if (eventData.imagem_capa && eventData.imagem_capa.trim() !== '') {
+                                const capaUrl = getImageUrl(eventData.imagem_capa);
+                                console.log('🔍 Carregando capa inicial:', capaUrl);
+                                
+                                // Testar se URL é válida antes de mostrar
+                                const testImg = new Image();
+                                testImg.onload = function() {
+                                    heroCapa.src = capaUrl;
+                                    heroCapa.style.display = 'block';
+                                    heroCapa.style.visibility = 'visible';
+                                    console.log('✅ Capa inicial carregada:', capaUrl);
+                                };
+                                testImg.onerror = function() {
+                                    heroCapa.style.display = 'none';
+                                    heroCapa.style.visibility = 'hidden';
+                                    heroCapa.src = '';
+                                    console.log('❌ Capa inicial falhou, mantendo oculta');
+                                };
+                                testImg.src = capaUrl;
+                            } else {
+                                heroCapa.style.display = 'none';
+                                heroCapa.style.visibility = 'hidden';
+                                heroCapa.src = '';
+                                console.log('✅ Capa oculta (não existe)');
+                            }
                         }
                         
                         console.log('✅ PREVIEW HERO CONFIGURADO CORRETAMENTE!');
@@ -2732,29 +2983,80 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                     if (heroContainer) {
                         // Recarregar eventData atual (pode ter sido modificado por upload)
                         if (window.eventData) {
-                            if (window.eventData.imagem_fundo) {
+                            // LOGO: Verificar se existe e aplicar/ocultar
+                            const heroLogo = document.getElementById('heroLogo');
+                            if (heroLogo) {
+                                if (window.eventData.logo_evento && window.eventData.logo_evento.trim() !== '') {
+                                    const logoUrl = getImageUrl(window.eventData.logo_evento);
+                                    console.log('🔍 Verificando logo URL:', logoUrl);
+                                    
+                                    // Testar se URL é válida antes de aplicar
+                                    const testImg = new Image();
+                                    testImg.onload = function() {
+                                        heroLogo.src = logoUrl;
+                                        heroLogo.style.display = 'block';
+                                        heroLogo.style.visibility = 'visible';
+                                        console.log('✅ Logo aplicado e carregado:', logoUrl);
+                                    };
+                                    testImg.onerror = function() {
+                                        heroLogo.style.display = 'none';
+                                        heroLogo.style.visibility = 'hidden';
+                                        heroLogo.src = '';
+                                        console.log('❌ Logo falhou ao carregar, ocultando');
+                                    };
+                                    testImg.src = logoUrl;
+                                } else {
+                                    heroLogo.style.display = 'none';
+                                    heroLogo.style.visibility = 'hidden';
+                                    heroLogo.src = '';
+                                    console.log('📭 Logo removido (não existe no eventData)');
+                                }
+                            }
+                            
+                            // CAPA: Verificar se existe e aplicar/ocultar
+                            const heroCapa = document.getElementById('heroCapa');
+                            if (heroCapa) {
+                                if (window.eventData.imagem_capa && window.eventData.imagem_capa.trim() !== '') {
+                                    const capaUrl = getImageUrl(window.eventData.imagem_capa);
+                                    console.log('🔍 Verificando capa URL:', capaUrl);
+                                    
+                                    // Testar se URL é válida antes de aplicar
+                                    const testImg = new Image();
+                                    testImg.onload = function() {
+                                        heroCapa.src = capaUrl;
+                                        heroCapa.style.display = 'block';
+                                        heroCapa.style.visibility = 'visible';
+                                        console.log('✅ Capa aplicada e carregada:', capaUrl);
+                                    };
+                                    testImg.onerror = function() {
+                                        heroCapa.style.display = 'none';
+                                        heroCapa.style.visibility = 'hidden';
+                                        heroCapa.src = '';
+                                        console.log('❌ Capa falhou ao carregar, ocultando');
+                                    };
+                                    testImg.src = capaUrl;
+                                } else {
+                                    heroCapa.style.display = 'none';
+                                    heroCapa.style.visibility = 'hidden';
+                                    heroCapa.src = '';
+                                    console.log('📭 Capa removida (não existe no eventData)');
+                                }
+                            }
+                            
+                            // FUNDO: Aplicar imagem ou cor
+                            if (window.eventData.imagem_fundo && window.eventData.imagem_fundo.trim() !== '') {
                                 const fundoUrl = getImageUrl(window.eventData.imagem_fundo);
                                 heroContainer.style.backgroundImage = `url('${fundoUrl}')`;
                                 heroContainer.style.backgroundColor = '';
                                 console.log('🔄 Nova imagem de fundo aplicada:', fundoUrl);
-                            }
-                            
-                            const heroLogo = document.getElementById('heroLogo');
-                            if (window.eventData.logo_evento && heroLogo) {
-                                const logoUrl = getImageUrl(window.eventData.logo_evento);
-                                heroLogo.src = logoUrl;
-                                heroLogo.style.display = 'block';
-                                heroLogo.style.visibility = 'visible';
-                                console.log('🔄 Novo logo aplicado:', logoUrl);
-                            }
-                            
-                            const heroCapa = document.getElementById('heroCapa');
-                            if (window.eventData.imagem_capa && heroCapa) {
-                                const capaUrl = getImageUrl(window.eventData.imagem_capa);
-                                heroCapa.src = capaUrl;
-                                heroCapa.style.display = 'block';
-                                heroCapa.style.visibility = 'visible';
-                                console.log('🔄 Nova capa aplicada:', capaUrl);
+                            } else if (window.eventData.cor_fundo) {
+                                heroContainer.style.backgroundImage = 'none';
+                                heroContainer.style.backgroundColor = window.eventData.cor_fundo;
+                                console.log('🔄 Cor de fundo aplicada:', window.eventData.cor_fundo);
+                            } else {
+                                heroContainer.style.backgroundImage = 'none';
+                                heroContainer.style.backgroundColor = '#1a1a2e';
+                                console.log('🔄 Cor padrão aplicada');
                             }
                         }
                     }
@@ -2779,12 +3081,16 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
             
             if (heroLogo) {
                 console.log('✅ heroLogo encontrado');
-                if (eventData.logo_evento) {
+                
+                // VERIFICAR se foi ocultado intencionalmente pelo usuário
+                if (!isHiddenByUser(heroLogo) && eventData.logo_evento) {
                     const logoUrl = '/uploads/eventos/' + eventData.logo_evento.split('/').pop();
                     console.log('🎯 Aplicando logo DIRETO:', logoUrl);
                     heroLogo.src = logoUrl;
                     heroLogo.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: 150px !important; height: auto !important; border: 3px solid red !important; z-index: 9999 !important; position: relative !important;';
                     console.log('🎯 Logo aplicado com borda vermelha');
+                } else if (isHiddenByUser(heroLogo)) {
+                    console.log('🚫 Logo foi ocultado pelo usuário, mantendo oculto');
                 }
             } else {
                 console.log('❌ heroLogo NÃO encontrado');
@@ -2792,12 +3098,16 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
             
             if (heroCapa) {
                 console.log('✅ heroCapa encontrado');
-                if (eventData.imagem_capa) {
+                
+                // VERIFICAR se foi ocultado intencionalmente pelo usuário
+                if (!isHiddenByUser(heroCapa) && eventData.imagem_capa) {
                     const capaUrl = '/uploads/eventos/' + eventData.imagem_capa.split('/').pop();
                     console.log('🎯 Aplicando capa DIRETO:', capaUrl);
                     heroCapa.src = capaUrl;
                     heroCapa.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: 100px !important; height: 100px !important; border: 3px solid blue !important; z-index: 9999 !important; position: relative !important;';
                     console.log('🎯 Capa aplicada com borda azul');
+                } else if (isHiddenByUser(heroCapa)) {
+                    console.log('🚫 Capa foi ocultada pelo usuário, mantendo oculta');
                 }
             } else {
                 console.log('❌ heroCapa NÃO encontrado');
@@ -2881,11 +3191,13 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                         // Garantir que o elemento existe e foi aplicado
                         setTimeout(() => {
                             const heroLogo = document.getElementById('heroLogo');
-                            if (heroLogo) {
+                            if (heroLogo && !isHiddenByUser(heroLogo)) {
                                 heroLogo.src = logoUrl;
                                 heroLogo.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: auto !important; height: auto !important; max-width: 200px !important; max-height: 80px !important; position: relative !important; z-index: 9999 !important;';
                                 console.log('💪 Logo REFORÇADO:', heroLogo.src);
                                 console.log('💪 Logo cssText:', heroLogo.style.cssText);
+                            } else if (isHiddenByUser(heroLogo)) {
+                                console.log('🚫 Logo foi ocultado pelo usuário, não reforçando');
                             }
                         }, 100);
                     }
@@ -2899,11 +3211,13 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                         // Garantir que o elemento existe e foi aplicado
                         setTimeout(() => {
                             const heroCapa = document.getElementById('heroCapa');
-                            if (heroCapa) {
+                            if (heroCapa && !isHiddenByUser(heroCapa)) {
                                 heroCapa.src = capaUrl;
                                 heroCapa.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; width: 120px !important; height: 120px !important; object-fit: cover !important; border-radius: 8px !important; position: relative !important; z-index: 9999 !important;';
                                 console.log('💪 Capa REFORÇADA:', heroCapa.src);
                                 console.log('💪 Capa cssText:', heroCapa.style.cssText);
+                            } else if (isHiddenByUser(heroCapa)) {
+                                console.log('🚫 Capa foi ocultada pelo usuário, não reforçando');
                             }
                         }, 100);
                     }
@@ -3053,11 +3367,238 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
         
     </script>
 
+    <!-- ===== CORREÇÃO PARA IMAGENS QUEBRADAS E BACKGROUND ===== -->
+    <script>
+        // Correção final para evitar ícones de imagem quebrada
+        function setupImageErrorHandling() {
+            console.log('🛠️ Configurando tratamento de erro de imagens...');
+            
+            const heroLogo = document.getElementById('heroLogo');
+            const heroCapa = document.getElementById('heroCapa');
+            
+            // Configurar heroLogo
+            if (heroLogo) {
+                // Ocultar por padrão se src estiver vazio
+                if (!heroLogo.src || heroLogo.src === '' || heroLogo.src === window.location.href) {
+                    heroLogo.style.display = 'none';
+                    heroLogo.style.visibility = 'hidden';
+                }
+                
+                // Event listener para erro
+                heroLogo.addEventListener('error', function() {
+                    console.log('❌ Logo falhou ao carregar, ocultando...');
+                    this.style.display = 'none';
+                    this.style.visibility = 'hidden';
+                });
+                
+                // Event listener para sucesso
+                heroLogo.addEventListener('load', function() {
+                    if (this.src && this.src !== '' && this.src !== window.location.href) {
+                        console.log('✅ Logo carregado com sucesso');
+                        this.style.display = 'block';
+                        this.style.visibility = 'visible';
+                    }
+                });
+            }
+            
+            // Configurar heroCapa
+            if (heroCapa) {
+                // Ocultar por padrão se src estiver vazio
+                if (!heroCapa.src || heroCapa.src === '' || heroCapa.src === window.location.href) {
+                    heroCapa.style.display = 'none';
+                    heroCapa.style.visibility = 'hidden';
+                }
+                
+                // Event listener para erro
+                heroCapa.addEventListener('error', function() {
+                    console.log('❌ Capa falhou ao carregar, ocultando...');
+                    this.style.display = 'none';
+                    this.style.visibility = 'hidden';
+                });
+                
+                // Event listener para sucesso
+                heroCapa.addEventListener('load', function() {
+                    if (this.src && this.src !== '' && this.src !== window.location.href) {
+                        console.log('✅ Capa carregada com sucesso');
+                        this.style.display = 'block';
+                        this.style.visibility = 'visible';
+                    }
+                });
+            }
+        }
+        
+        // Configurar tratamento do fundoUpload para atualizar hero-mini-container
+        function setupFundoUploadHandling() {
+            console.log('🎨 Configurando upload de fundo para hero-mini-container...');
+            
+            const fundoUpload = document.getElementById('fundoUpload');
+            const clearFundo = document.getElementById('clearFundo');
+            
+            if (fundoUpload) {
+                fundoUpload.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const heroContainer = document.querySelector('.hero-mini-container');
+                            if (heroContainer) {
+                                // Testar se a imagem carrega antes de aplicar
+                                const testImg = new Image();
+                                testImg.onload = function() {
+                                    heroContainer.style.backgroundImage = `url(${e.target.result})`;
+                                    heroContainer.style.backgroundColor = '';
+                                    console.log('✅ Background da hero-mini-container atualizado');
+                                };
+                                testImg.onerror = function() {
+                                    console.log('❌ Erro ao carregar imagem de fundo');
+                                };
+                                testImg.src = e.target.result;
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+            
+            if (clearFundo) {
+                clearFundo.addEventListener('click', function(event) {
+                    const heroContainer = document.querySelector('.hero-mini-container');
+                    if (heroContainer) {
+                        // Remover background-image e aplicar cor
+                        heroContainer.style.backgroundImage = '';
+                        
+                        const corFundo = document.getElementById('corFundo');
+                        const corFundoHex = document.getElementById('corFundoHex');
+                        
+                        let cor = '#000000';
+                        if (corFundo && corFundo.value) {
+                            cor = corFundo.value;
+                        } else if (corFundoHex && corFundoHex.value) {
+                            cor = corFundoHex.value;
+                        }
+                        
+                        heroContainer.style.backgroundColor = cor;
+                        console.log('✅ Background removido, cor aplicada:', cor);
+                    }
+                });
+            }
+        }
+        
+        // NOVA FUNÇÃO: Configurar botões de limpar logo e capa
+        function setupClearButtonsHandling() {
+            console.log('🗑️ Configurando botões de limpar logo e capa...');
+            
+            const clearLogo = document.getElementById('clearLogo');
+            const clearCapa = document.getElementById('clearCapa');
+            
+            // Botão clearLogo - ocultar heroLogo COM FORÇA
+            if (clearLogo) {
+                clearLogo.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    const heroLogo = document.getElementById('heroLogo');
+                    if (heroLogo) {
+                        // FORÇA a ocultação com !important para sobrepor outras regras
+                        heroLogo.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                        heroLogo.src = '';
+                        heroLogo.removeAttribute('src');
+                        
+                        // Marcar como intencionalmente oculto
+                        heroLogo.setAttribute('data-hidden-by-user', 'true');
+                        
+                        console.log('✅ HeroLogo FORÇADAMENTE ocultado via botão clearLogo');
+                    }
+                });
+            }
+            
+            // Botão clearCapa - ocultar heroCapa COM FORÇA
+            if (clearCapa) {
+                clearCapa.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    const heroCapa = document.getElementById('heroCapa');
+                    if (heroCapa) {
+                        // FORÇA a ocultação com !important para sobrepor outras regras
+                        heroCapa.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                        heroCapa.src = '';
+                        heroCapa.removeAttribute('src');
+                        
+                        // Marcar como intencionalmente oculto
+                        heroCapa.setAttribute('data-hidden-by-user', 'true');
+                        
+                        console.log('✅ HeroCapa FORÇADAMENTE ocultada via botão clearCapa');
+                    }
+                });
+            }
+        }
+        
+        // NOVA FUNÇÃO: Verificar se imagem foi ocultada intencionalmente pelo usuário
+        function isHiddenByUser(element) {
+            return element && element.getAttribute('data-hidden-by-user') === 'true';
+        }
+        
+        // Inicializar quando DOM carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                setupImageErrorHandling();
+                setupFundoUploadHandling();
+                setupClearButtonsHandling();
+                console.log('✅ Correções de imagem, background e botões clear aplicadas');
+            }, 1000);
+        });
+        
+        // Também inicializar quando window carregar (fallback)
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                setupImageErrorHandling();
+                console.log('🔄 Verificação adicional de imagens (window load)');
+            }, 2000);
+        });
+        
+        console.log('🎯 Script de correção de imagens carregado para editar-evento.php');
+    </script>
+
     <!-- Busca de endereço do novoevento.php -->
     <script language='javascript' src="/produtor/js/busca-endereco-direto.js?v=<?php echo time(); ?>"></script>
     
     <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDU5-cOqdusZMBI5pqbsLihQVKEI0fEO9o&libraries=places&callback=initMap" async defer></script>
+
+    <!-- SCRIPT DE DEBUG PARA O SWITCH -->
+    <script>
+        // Debug adicional para o switch após DOM carregar
+        setTimeout(() => {
+            const locationSwitch = document.getElementById('locationTypeSwitch');
+            const presentialSection = document.getElementById('presentialLocation');
+            const onlineSection = document.getElementById('onlineLocation');
+            
+            console.log('🔍 DEBUG SWITCH APÓS DOM:');
+            console.log('Switch element:', locationSwitch);
+            console.log('Switch classes:', locationSwitch ? locationSwitch.className : 'não encontrado');
+            console.log('Presential section:', presentialSection);
+            console.log('Online section:', onlineSection);
+            console.log('Presential classes:', presentialSection ? presentialSection.className : 'não encontrado');
+            console.log('Online classes:', onlineSection ? onlineSection.className : 'não encontrado');
+            
+            // Força o estado inicial
+            if (locationSwitch && presentialSection && onlineSection) {
+                const isActive = locationSwitch.classList.contains('active');
+                console.log('🎯 Switch está ativo?', isActive);
+                
+                if (isActive) {
+                    presentialSection.classList.add('show');
+                    onlineSection.classList.remove('show');
+                    console.log('✅ Forçado modo presencial');
+                } else {
+                    presentialSection.classList.remove('show');
+                    onlineSection.classList.add('show');
+                    console.log('✅ Forçado modo online');
+                }
+            }
+        }, 3000);
+    </script>
 
 </body>
 </html>

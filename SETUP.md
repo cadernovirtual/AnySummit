@@ -3,6 +3,13 @@
 ## Contexto do Sistema
 AnySummit é uma plataforma de gestão de eventos em PHP/MySQL com módulos para Produtor, Participante, Evento, Staff e Patrocinador.
 
+## Forma e Regras para a execução dos prompts pelo Agente IA
+- Não crie artefatos, faça as alterações necessárias diretamente na pasta do sistema (estrutura a serguir)
+- Quando precisar corrigir algo, não crie novos arquivos para sobrescrever e/ou alterar o efeito errado. Ataque diretamente a causa do erro, procurando o motivo e alterando as rotinas e páginas existentes.
+- Antes de alterar qualquer arquivo CRIE UMA CÓPIA DE BACKUP DO MESMO. Pode padroniar o nome (coloque _bkp no final do nome do arquivo) e SOBREPONHA arquivos eventuais arquivos de backup já existentes se necessário, não precisa criar versionamento, apenas manter backup da última versão do arquivo antes de alterar.
+- Ao final de qualquer alteração, verifique se o arquivo alterado permanece íntegrou. Muitas vezes o claude sobre interrupções de contexto e deixa arquivos corrompidos. Para evitar isso, sempre confira antes de entregar o job.
+- Se você julgar que a janela de contexto não comporta a execução de determinada alteração **NÃO A INICIE. AVISE PARA QUE EU POSSA RECONEÇAR EM OUTRO CHAT**
+
 ## Localização do Projeto
 - **Pasta Principal**: `D:\Dropbox\DESENVOLVIMENTO\AnySummit\public_html`
 - **Banco de Dados**: MySQL hospedado no AnySummit (anysummit.com.br)
@@ -66,7 +73,7 @@ Repo: https://github.com/cadernovirtual/AnySummit
 Sempre ler primeiro:
 1. Este arquivo `SETUP.md`
 2. O arquivo `STATUS.md` (se existir)
-3. Após ler o STATUS.md, apagá-lo imediatamente
+3. Executar completamente uma tarefa solicitada, apague o arquivo de STATUS.md para que ele não acumule assuntos diversos.
 4. Faça alterações diretamente em meu HD, mas pasta do projeto usando o mcp Desktop Commander
 5. Se precisar consultar ou alterar tabelas no banco, use o mcp MySQL
 
@@ -118,33 +125,3 @@ Antes do chat acabar:
 
 Este setup permite continuidade entre sessões. Sempre que iniciar novo chat, incluir SETUP.md e STATUS.md no contexto.
 
----
-
-## INVESTIGAÇÃO ATUAL - Exclusão de Lotes
-
-### Problema Identificado
-- **Sistema:** Exclusão de lotes não funciona devido a múltiplos interceptadores de clique
-- **Sintomas:** Botão chama "recarregar rascunho" em vez de excluir lote
-- **Análise:** 128 funções relacionadas a lotes encontradas, múltiplos `addEventListener('click')` conflitantes
-
-### Funções Principais Identificadas
-- ✅ `excluirLoteDataInterface(loteId)` - Interface principal 
-- ✅ `excluirLoteQuantidadeInterface(loteId)` - Interface quantidade
-- ✅ `excluirLoteData(loteId)` - Função por data
-- ✅ `excluirLotePercentual(loteId)` - Função por percentual
-
-### Interceptadores Conflitantes
-- `versao-final-completa-combos.js` - intercepta `[onclick*="Modal"]`
-- `validacao-exclusao-ingressos.js` - intercepta botões de exclusão
-- 50+ outros arquivos com `addEventListener('click')`
-
-### Estratégia Atual
-- Debug agressivo com prioridade máxima (capture phase)
-- Prevenção de outros interceptadores (`stopImmediatePropagation`)
-- Execução direta da função via `eval(onclick)`
-
-### Backend Verificado
-- ✅ Ação `excluir_lote` existe em `wizard_evento.php`
-- ✅ Função `excluirLote($con, $usuario_id)` implementada
-- ✅ Função `renomearLotesPorTipo()` corrigida (mysqli procedural)
-- ✅ Logs detalhados para debug
