@@ -3,6 +3,9 @@
  * Função para notificar organizador sobre nova compra
  */
 
+// Evitar redeclaração da função
+if (!function_exists('notificarOrganizadorCompra')) {
+
 function notificarOrganizadorCompra($pedidoid, $con) {
     error_log("=== INICIO NOTIFICACAO ORGANIZADOR - Pedido: $pedidoid ===");
     
@@ -296,4 +299,6 @@ function gerarTemplateNotificacaoOrganizador($pedido, $evento, $ingressos, $nome
 
     return $html;
 }
+
+} // Fim do if (!function_exists('notificarOrganizadorCompra'))
 ?>

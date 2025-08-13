@@ -39,6 +39,7 @@ console.log('🎯 criaevento.js iniciando carregamento...');
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
+                credentials: 'same-origin',
                 body: `action=carregar_limite_vendas&evento_id=${eventoId}`
             })
             .then(response => response.json())

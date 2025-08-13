@@ -10,7 +10,7 @@ try {
     
     // Como o método makeRequest é privado, vou fazer a requisição manualmente
     $url = 'https://api.asaas.com/v3' . $endpoint;
-    $access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjBhNWVjYzRhLTM1NDEtNDc5Yy1iODFmLTJkMTM0MDA4OTIzMDo6JGFhY2hfOGIzZDhhOTctMTJiYS00YThiLWJhYjMtMDRiZDZkZDlmYTlk';
+    $access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjcyYmVjMTY3LTE1ZjAtNGU4NS04OGVhLTQ3YjYxZmY1ZjAzYjo6JGFhY2hfMTZmYzFlODQtMzYyZi00ZGE3LTgzYzYtZTQxMTFmN2Y1Mzg5';
     
     $headers = [
         'Content-Type: application/json',

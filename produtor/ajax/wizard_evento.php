@@ -20,6 +20,12 @@ error_reporting(0);
 require_once '../conm/conn.php';
 session_start();
 
+// LIMPAR QUALQUER OUTPUT ANTERIOR - MÚLTIPLAS TENTATIVAS
+while (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
+
 // CORREÇÃO: Headers limpos para JSON
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, must-revalidate');
@@ -47,6 +53,10 @@ switch ($action) {
         
     case 'excluir_rascunho':
         excluirRascunho($con, $usuario_id);
+        break;
+        
+    case 'criar_evento_etapa1':
+        criarEventoEtapa1($con, $usuario_id);
         break;
         
     case 'iniciar_evento':
@@ -212,6 +222,7 @@ switch ($action) {
     default:
         http_response_code(400);
         echo json_encode(['erro' => 'Ação não reconhecida']);
+        exit;
 }
 
 /**
@@ -238,6 +249,7 @@ function iniciarEvento($con, $usuario_id) {
             'nome' => $row['nome'],
             'mensagem' => 'Evento em rascunho encontrado'
         ]);
+        exit;
     } else {
         // Criar novo evento em rascunho
         $nome_temp = "Novo Evento - " . date('d/m/Y H:i');
@@ -257,15 +269,88 @@ function iniciarEvento($con, $usuario_id) {
         
         if (mysqli_stmt_execute($stmt)) {
             $evento_id = mysqli_insert_id($con);
-            echo json_encode([
+            $response = [
                 'sucesso' => true,
                 'evento_id' => $evento_id,
                 'mensagem' => 'Novo evento criado em rascunho'
-            ]);
+            ];
+            
+            // Log para debug
+            error_log("JSON Response: " . json_encode($response));
+            
+            echo json_encode($response);
+            exit;
         } else {
             http_response_code(500);
-            echo json_encode(['erro' => 'Erro ao criar evento: ' . mysqli_error($con)]);
+            $error_response = ['erro' => 'Erro ao criar evento: ' . mysqli_error($con)];
+            echo json_encode($error_response);
+            exit;
         }
+    }
+}
+
+/**
+ * Cria evento na etapa 1 com dados básicos
+ */
+function criarEventoEtapa1($con, $usuario_id) {
+    $nome = $_POST['nome'] ?? '';
+    $categoria_id = $_POST['categoria_id'] ?? null;
+    $descricao = $_POST['descricao'] ?? '';
+    
+    if (empty($nome)) {
+        http_response_code(400);
+        echo json_encode(['erro' => 'Nome do evento é obrigatório']);
+        exit;
+    }
+    
+    // Gerar slug único
+    $slug_base = gerarSlugWizard($nome);
+    $slug = $slug_base;
+    $contador = 1;
+    
+    // Verificar se slug já existe
+    while (true) {
+        $sql_check = "SELECT id FROM eventos WHERE slug = ?";
+        $stmt_check = mysqli_prepare($con, $sql_check);
+        mysqli_stmt_bind_param($stmt_check, "s", $slug);
+        mysqli_stmt_execute($stmt_check);
+        $result_check = mysqli_stmt_get_result($stmt_check);
+        
+        if (mysqli_num_rows($result_check) == 0) {
+            break; // Slug é único
+        }
+        
+        $slug = $slug_base . '-' . $contador;
+        $contador++;
+    }
+    
+    // Inserir evento
+    $sql = "INSERT INTO eventos (
+                usuario_id, 
+                nome, 
+                slug, 
+                categoria_id,
+                descricao,
+                status, 
+                criado_em,
+                data_inicio
+            ) VALUES (?, ?, ?, ?, ?, 'rascunho', NOW(), NOW())";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    mysqli_stmt_bind_param($stmt, "issis", $usuario_id, $nome, $slug, $categoria_id, $descricao);
+    
+    if (mysqli_stmt_execute($stmt)) {
+        $evento_id = mysqli_insert_id($con);
+        echo json_encode([
+            'sucesso' => true,
+            'evento_id' => $evento_id,
+            'mensagem' => 'Evento criado com sucesso'
+        ]);
+        exit;
+    } else {
+        http_response_code(500);
+        echo json_encode(['erro' => 'Erro ao criar evento: ' . mysqli_error($con)]);
+        exit;
     }
 }
 

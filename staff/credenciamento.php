@@ -236,14 +236,65 @@ mysqli_set_charset($con, "utf8mb4");
             }
             e.target.value = value;
         });
+        // ==========================================
+        // VALIDAÇÃO DE CPF - RECEITA FEDERAL
+        // ==========================================
+        
+        function validarCPF(cpf) {
+            cpf = cpf.replace(/[^\d]/g, '');
+            if (cpf.length !== 11) return false;
+            if (/^(\d)\1{10}$/.test(cpf)) return false;
+            
+            let soma = 0;
+            for (let i = 0; i < 9; i++) {
+                soma += parseInt(cpf.charAt(i)) * (10 - i);
+            }
+            let resto = soma % 11;
+            let digito1 = resto < 2 ? 0 : 11 - resto;
+            if (parseInt(cpf.charAt(9)) !== digito1) return false;
+            
+            soma = 0;
+            for (let i = 0; i < 10; i++) {
+                soma += parseInt(cpf.charAt(i)) * (11 - i);
+            }
+            resto = soma % 11;
+            let digito2 = resto < 2 ? 0 : 11 - resto;
+            return parseInt(cpf.charAt(10)) === digito2;
+        }
+        
+        function formatarCPF(cpf) {
+            cpf = cpf.replace(/[^\d]/g, '');
+            if (cpf.length <= 11) {
+                cpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            }
+            return cpf;
+        }
 
         document.getElementById('cpf').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            value = value.replace(/(\d{3})(\d)/, '$1.$2');
-            value = value.replace(/(\d{3})(\d)/, '$1.$2');
-            value = value.replace(/(\d{3})(\d{1,2})/, '$1-$2');
-            value = value.replace(/(-\d{2})\d+?$/, '$1');
-            e.target.value = value;
+            let valor = e.target.value;
+            if (valor.replace(/[^\d]/g, '').length <= 11) {
+                e.target.value = formatarCPF(valor);
+            } else {
+                e.target.value = valor.substring(0, 14);
+            }
+        });
+        
+        document.getElementById('cpf').addEventListener('blur', function(e) {
+            const cpf = e.target.value;
+            const cpfLimpo = cpf.replace(/[^\d]/g, '');
+            
+            e.target.classList.remove('is-valid', 'is-invalid');
+            
+            if (cpfLimpo.length === 0) return;
+            
+            if (!validarCPF(cpf)) {
+                e.target.classList.add('is-invalid');
+                e.target.style.borderColor = '#dc3545';
+                showPopup('CPF Inválido', 'O CPF digitado não é válido. Verifique os números.', 'error', 'fas fa-exclamation-triangle');
+            } else {
+                e.target.classList.add('is-valid');
+                e.target.style.borderColor = '#28a745';
+            }
         });
 
         // Funções do popup

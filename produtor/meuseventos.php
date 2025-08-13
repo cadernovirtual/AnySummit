@@ -778,7 +778,6 @@ try {
                                     <th>Categoria</th>
                                     <th>Data</th>
                                     <th>Local</th>
-                                    <th>Preço</th>
                                     <th>Status</th>
                                     <th>Criado</th>
                                     <th>Ações</th>
@@ -833,18 +832,6 @@ try {
                                         </div>
                                     </td>
                                     <td>
-                                        <?php if ($evento['preco_min'] === null): ?>
-                                            <span class="preco-gratuito">Gratuito</span>
-                                        <?php elseif ($evento['preco_min'] == $evento['preco_max']): ?>
-                                            <span class="preco-range">R$ <?php echo number_format($evento['preco_min'], 2, ',', '.'); ?></span>
-                                        <?php else: ?>
-                                            <span class="preco-range">
-                                                R$ <?php echo number_format($evento['preco_min'], 2, ',', '.'); ?> - 
-                                                R$ <?php echo number_format($evento['preco_max'], 2, ',', '.'); ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
                                         <span class="status-badge status-<?php echo $evento['status']; ?>">
                                             <?php echo ucfirst($evento['status']); ?>
                                         </span>
@@ -858,42 +845,70 @@ try {
                                     <td>
                                         <div class="actions-dropdown">
                                             <button class="actions-btn" onClick="toggleDropdown(this)">
-                                                ⋮ Opções
+                                                📝 Evento
                                             </button>
                                             <div class="dropdown-content">
                                                 <a href="/produtor/editar-evento.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    ✏️ Editar
+                                                    ✏️ Editar Evento
                                                 </a>
-                                                <a href="/produtor/personalizar-evento/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    🎨 Personalizar
+                                                <a href="/produtor/setores.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                                    🏢 Setores
                                                 </a>
-                                                <a href="/produtor/whatsapp-config/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    📱 Config. WhatsApp
+                                                <a href="/produtor/lotes.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                                    🏷️ Lotes e Ingressos
                                                 </a>
-                                                <a href="/produtor/gerar-codigos/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    🎫 Gerar Códigos
+                                                <a href="/produtor/cupons.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                                    🎟️ Cupons de Desconto
+                                                </a>
+                                                <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                                    📱 QR Code
+                                                </a>
+                                                <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                                    🤖 Bot WhatsApp
+                                                </a>
+                                                <div class="dropdown-item danger" onClick="excluirEvento(<?php echo $evento['id']; ?>)">
+                                                    🗑️ Excluir
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="actions-dropdown" style="margin-left: 5px;">
+                                            <button class="actions-btn" onClick="toggleDropdown(this)">
+                                                💰 Vendas
+                                            </button>
+                                            <div class="dropdown-content">
+                                                <a href="/produtor/vendas.php?eventoid=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                                    📊 Pedidos
+                                                </a>
+                                                <a href="/produtor/ingressosemitidos.php?eventoid=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                                    🎫 Ingressos Emitidos
+                                                </a>
+                                                <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                                    🎁 Cortesias
+                                                </a>
+                                                <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                                    📧 Mailing
+                                                </a>
+                                                <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                                    💳 Taxas e Juros
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="actions-dropdown" style="margin-left: 5px;">
+                                            <button class="actions-btn" onClick="toggleDropdown(this)">
+                                                🎯 Execução
+                                            </button>
+                                            <div class="dropdown-content">
+                                                <a href="/produtor/equipe/<?php echo $evento['id']; ?>" class="dropdown-item">
+                                                    👥 Equipe Staff
                                                 </a>
                                                 <a href="/produtor/patrocinadores/<?php echo $evento['id']; ?>" class="dropdown-item">
                                                     🤝 Patrocinadores
                                                 </a>
-                                                <a href="/produtor/equipe/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    👥 Equipe
+                                                <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                                    📢 Divulgar
                                                 </a>
-                                                <a href="/produtor/participantes/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    👤 Participantes
-                                                </a>
-                                                <a href="/produtor/vendas.php?eventoid=<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    💰 Vendas
-                                                </a>
-                                                <a href="/produtor/dados-bancarios/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                                    🏦 Dados Bancários
-                                                </a>
-                                                <div class="dropdown-item" onClick="desativarEvento(<?php echo $evento['id']; ?>)">
-                                                    ⏸️ Desativar
-                                                </div>
-                                                <div class="dropdown-item danger" onClick="excluirEvento(<?php echo $evento['id']; ?>)">
-                                                    🗑️ Excluir
-                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -933,38 +948,26 @@ try {
                                 </div>
                                 
                                 <div class="actions-dropdown">
-                                    <button class="actions-btn" onclick="toggleDropdown(this)">⋮</button>
+                                    <button class="actions-btn" onclick="toggleDropdown(this)">📝</button>
                                     <div class="dropdown-content">
                                         <a href="/produtor/editar-evento.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            ✏️ Editar
+                                            ✏️ Editar Evento
                                         </a>
-                                        <a href="/produtor/personalizar-evento/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            🎨 Personalizar
+                                        <a href="/produtor/setores.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                            🏢 Setores
                                         </a>
-                                        <a href="/produtor/whatsapp-config/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            📱 Config. WhatsApp
+                                        <a href="/produtor/lotes.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                            🏷️ Lotes e Ingressos
                                         </a>
-                                        <a href="/produtor/gerar-codigos/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            🎫 Gerar Códigos
+                                        <a href="/produtor/cupons.php?evento_id=<?php echo $evento['id']; ?>" class="dropdown-item">
+                                            🎟️ Cupons de Desconto
                                         </a>
-                                        <a href="/produtor/patrocinadores/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            🤝 Patrocinadores
+                                        <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                            📱 QR Code
                                         </a>
-                                        <a href="/produtor/equipe/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            👥 Equipe
+                                        <a href="#" class="dropdown-item" onclick="alert('Funcionalidade em desenvolvimento'); return false;">
+                                            🤖 Bot WhatsApp
                                         </a>
-                                        <a href="/produtor/participantes/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            👤 Participantes
-                                        </a>
-                                        <a href="/produtor/vendas.php?eventoid=<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            💰 Vendas
-                                        </a>
-                                        <a href="/produtor/dados-bancarios/<?php echo $evento['id']; ?>" class="dropdown-item">
-                                            🏦 Dados Bancários
-                                        </a>
-                                        <div class="dropdown-item" onclick="desativarEvento(<?php echo $evento['id']; ?>)">
-                                            ⏸️ Desativar
-                                        </div>
                                         <div class="dropdown-item danger" onclick="excluirEvento(<?php echo $evento['id']; ?>)">
                                             🗑️ Excluir
                                         </div>
@@ -996,22 +999,6 @@ try {
                                                 📍 <?php echo htmlspecialchars($evento['nome_local'] ?: $evento['cidade']); ?>
                                             <?php else: ?>
                                                 💻 Online
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="info-item">
-                                        <div class="info-label">Preço</div>
-                                        <div class="info-value">
-                                            <?php if ($evento['preco_min'] === null): ?>
-                                                <span class="preco-gratuito">Gratuito</span>
-                                            <?php elseif ($evento['preco_min'] == $evento['preco_max']): ?>
-                                                <span class="preco-range">R$ <?php echo number_format($evento['preco_min'], 2, ',', '.'); ?></span>
-                                            <?php else: ?>
-                                                <span class="preco-range">
-                                                    R$ <?php echo number_format($evento['preco_min'], 2, ',', '.'); ?> - 
-                                                    R$ <?php echo number_format($evento['preco_max'], 2, ',', '.'); ?>
-                                                </span>
                                             <?php endif; ?>
                                         </div>
                                     </div>

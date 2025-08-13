@@ -5,10 +5,8 @@ class AsaasAPI {
     private $access_token;
     
     public function __construct($environment = 'production') {
-	//	$this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjNhYzk1MzI5LWRkZGMtNDRmMy04ODY1LWJmMTA0ZGIxNTVlZTo6JGFhY2hfNjBlYzlkNzktZTEyZS00Njg0LTkxZTAtZTVlZTMzZTlkMjZk';
-        $this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjcyYmVjMTY3LTE1ZjAtNGU4NS04OGVhLTQ3YjYxZmY1ZjAzYjo6JGFhY2hfMTZmYzFlODQtMzYyZi00ZGE3LTgzYzYtZTQxMTFmN2Y1Mzg5';
-		
-		
+        // TOKEN ATUAL MANTIDO (funcionando)
+        $this->access_token = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Ojk5NTM1N2ZmLTA3NTctNDM2Yi1hZGUyLTgxMzFjMWZjMDFlODo6JGFhY2hfMjA5ZDAyYWItNGEyOS00MTg1LTg5ZWMtOTJiYzU3NGUxODlm';
         
         // URL da API
         if ($environment === 'production') {
@@ -19,15 +17,16 @@ class AsaasAPI {
     }
     
     /**
-     * Fazer requisição para a API do Asaas
+     * Fazer requisição para a API do Asaas - VERSÃO SIMPLIFICADA COMO GITHUB
      */
     private function makeRequest($endpoint, $data = null, $method = 'GET') {
         $url = $this->base_url . $endpoint;
         
+        // Headers simples como no GitHub
         $headers = [
             'Content-Type: application/json',
             'access_token: ' . $this->access_token,
-            'User-Agent: AsaasAPI-PHP'
+            'User-Agent: AsaasAPI-PHP'  // CORREÇÃO: User-Agent original
         ];
         
         $ch = curl_init();
@@ -93,21 +92,32 @@ class AsaasAPI {
     }
     
     /**
-     * Criar cobrança com cartão de crédito
+     * Criar cobrança com cartão de crédito - CORREÇÃO: ENDPOINT ORIGINAL
      */
     public function createCreditCardPayment($paymentData) {
-        return $this->makeRequest('/payments', $paymentData, 'POST');
+        return $this->makeRequest('/payments', $paymentData, 'POST');  // CORREÇÃO: não é /lean/payments
     }
     
     /**
-     * Criar cobrança PIX
+     * Criar cobrança PIX - MANTIDO COMO ESTÁ
      */
     public function createPixPayment($paymentData) {
+        // Garantir que seja PIX e configurar adequadamente
+        $paymentData['billingType'] = 'PIX';
+        
+        // Configurações específicas para PIX para evitar emails automáticos
+        if (!isset($paymentData['notificationDisabled'])) {
+            $paymentData['notificationDisabled'] = true;
+        }
+        if (!isset($paymentData['postalService'])) {
+            $paymentData['postalService'] = false;
+        }
+        
         return $this->makeRequest('/payments', $paymentData, 'POST');
     }
     
     /**
-     * Obter QR Code PIX
+     * Obter QR Code PIX - MANTIDO COMO ESTÁ
      */
     public function getPixQrCode($paymentId) {
         return $this->makeRequest('/payments/' . $paymentId . '/pixQrCode');
@@ -125,6 +135,27 @@ class AsaasAPI {
      */
     public function getPaymentStatus($paymentId) {
         return $this->makeRequest('/payments/' . $paymentId);
+    }
+    
+    /**
+     * Alias para getPaymentStatus (compatibilidade)
+     */
+    public function getPayment($paymentId) {
+        return $this->getPaymentStatus($paymentId);
+    }
+    
+    /**
+     * Listar webhooks configurados
+     */
+    public function getWebhooks() {
+        return $this->makeRequest('/webhooks');
+    }
+    
+    /**
+     * Configurar webhook
+     */
+    public function createWebhook($webhookData) {
+        return $this->makeRequest('/webhooks', $webhookData, 'POST');
     }
 }
 ?>

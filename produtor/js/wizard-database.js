@@ -69,6 +69,7 @@
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
+            credentials: 'same-origin',
             body: 'action=iniciar_evento'
         })
         .then(response => response.json())
@@ -124,6 +125,7 @@
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
+            credentials: 'same-origin',
             body: `action=retomar_evento&evento_id=${id}`
         })
         .then(response => response.json())

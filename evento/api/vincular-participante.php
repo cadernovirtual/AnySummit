@@ -5,6 +5,7 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 include("../conm/conn.php");
+include("../../includes/participante-utils.php");
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -70,58 +71,70 @@ try {
         throw new Exception('Este ingresso já está vinculado a um participante');
     }
     
-    // Buscar ou criar participante
-    $participanteid = null;    
-    // Primeiro, verificar se já existe participante com este email para este evento
-    $sql_buscar = "SELECT participanteid FROM participantes WHERE email = ? AND eventoid = ? LIMIT 1";
-    $stmt_buscar = $con->prepare($sql_buscar);
-    $stmt_buscar->bind_param("si", $email, $eventoid);
-    $stmt_buscar->execute();
-    $result_buscar = $stmt_buscar->get_result();
+    // CORREÇÃO: Buscar participante primeiro por CPF (se fornecido), depois por email
+    $participanteid = null;
+    $participante_encontrado_por = null;
     
-    // Preparar JSON dos dados adicionais
-    $dados_adicionais_json = !empty($dados_adicionais) ? json_encode($dados_adicionais, JSON_UNESCAPED_UNICODE) : null;
+    // Limpar CPF para comparação (remover pontos e hífens)
+    $documento_limpo = '';
+    if (!empty($documento)) {
+        $documento_limpo = preg_replace('/[^0-9]/', '', $documento);
+    }
     
-    if ($result_buscar && $result_buscar->num_rows > 0) {
-        // Participante já existe - atualizar dados
-        $participanteid = $result_buscar->fetch_assoc()['participanteid'];
-        error_log("Participante existente encontrado: ID = $participanteid");
+    // PRIORIDADE 1: Buscar por CPF se fornecido
+    if (!empty($documento_limpo) && strlen($documento_limpo) >= 11) {
+        error_log("Buscando participante por CPF: $documento_limpo");
+        $sql_buscar_cpf = "SELECT participanteid, Nome, email FROM participantes 
+                           WHERE REPLACE(REPLACE(REPLACE(COALESCE(CPF, ''), '.', ''), '-', ''), ' ', '') = ? 
+                           AND eventoid = ? LIMIT 1";
+        $stmt_buscar_cpf = $con->prepare($sql_buscar_cpf);
+        $stmt_buscar_cpf->bind_param("si", $documento_limpo, $eventoid);
+        $stmt_buscar_cpf->execute();
+        $result_buscar_cpf = $stmt_buscar_cpf->get_result();
         
-        // Atualizar dados do participante existente
-        $sql_atualizar = "UPDATE participantes SET Nome = ?, celular = ?, CPF = ?, dados_adicionais = ? WHERE participanteid = ?";
-        $stmt_atualizar = $con->prepare($sql_atualizar);
-        $stmt_atualizar->bind_param("ssssi", $nome, $celular, $documento, $dados_adicionais_json, $participanteid);
-        $stmt_atualizar->execute();
-        error_log("Dados do participante atualizados");
-        
-    } else {
-        // Criar novo participante
-        $sql_criar = "INSERT INTO participantes (Nome, email, celular, CPF, eventoid, dados_adicionais) VALUES (?, ?, ?, ?, ?, ?)";
-        $stmt_criar = $con->prepare($sql_criar);
-        $stmt_criar->bind_param("ssssis", $nome, $email, $celular, $documento, $eventoid, $dados_adicionais_json);
-        
-        if ($stmt_criar->execute()) {
-            $participanteid = $con->insert_id;
-            error_log("Novo participante criado: ID = $participanteid");
-        } else {
-            error_log("Erro ao criar participante: " . $con->error);
-            // Tentar buscar novamente (pode ter sido criado por outro processo)
-            $stmt_buscar2 = $con->prepare($sql_buscar);
-            $stmt_buscar2->bind_param("si", $email, $eventoid);
-            $stmt_buscar2->execute();
-            $result_buscar2 = $stmt_buscar2->get_result();
+        if ($result_buscar_cpf && $result_buscar_cpf->num_rows > 0) {
+            $participante_data = $result_buscar_cpf->fetch_assoc();
+            $participanteid = $participante_data['participanteid'];
+            $participante_encontrado_por = 'CPF';
+            error_log("Participante encontrado por CPF: ID = $participanteid, Nome = " . $participante_data['Nome']);
             
-            if ($result_buscar2 && $result_buscar2->num_rows > 0) {
-                $participanteid = $result_buscar2->fetch_assoc()['participanteid'];
-                error_log("Participante encontrado na segunda tentativa: ID = $participanteid");
-            } else {
-                throw new Exception('Erro ao criar participante: ' . $con->error);
+            // Verificar se o email é diferente e alertar
+            if (strtolower($participante_data['email']) !== strtolower($email)) {
+                error_log("ATENÇÃO: CPF encontrado mas email diferente. DB: " . $participante_data['email'] . " vs Novo: $email");
+                // Podemos decidir se atualizamos o email ou não
             }
         }
     }
     
+    // CORREÇÃO APLICADA: Removida busca por email que violava a regra de chave única por CPF
+    // Se não encontrou por CPF, cria novo participante
+    
+    // Preparar JSON dos dados adicionais
+    $dados_adicionais_json = !empty($dados_adicionais) ? json_encode($dados_adicionais, JSON_UNESCAPED_UNICODE) : null;
+    
     if (!$participanteid) {
-        throw new Exception('Não foi possível identificar o participante');
+        // Criar novo participante
+        error_log("Criando novo participante com CPF: $documento_limpo");
+        $sql_criar_participante = "INSERT INTO participantes (Nome, email, CPF, celular, eventoid, dados_adicionais) VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt_criar = $con->prepare($sql_criar_participante);
+        $stmt_criar->bind_param("ssssis", $nome, $email, $documento, $celular, $eventoid, $dados_adicionais_json);
+        
+        if (!$stmt_criar->execute()) {
+            throw new Exception('Erro ao criar participante: ' . $stmt_criar->error);
+        }
+        
+        $participanteid = $con->insert_id;
+        error_log("Novo participante criado: ID = $participanteid");
+    } else {
+        // Atualizar participante existente (encontrado por CPF)
+        error_log("Atualizando participante existente: ID = $participanteid");
+        $sql_atualizar_participante = "UPDATE participantes SET Nome = ?, email = ?, celular = ?, dados_adicionais = ? WHERE participanteid = ?";
+        $stmt_atualizar = $con->prepare($sql_atualizar_participante);
+        $stmt_atualizar->bind_param("ssssi", $nome, $email, $celular, $dados_adicionais_json, $participanteid);
+        
+        if (!$stmt_atualizar->execute()) {
+            throw new Exception('Erro ao atualizar participante: ' . $stmt_atualizar->error);
+        }
     }
     
     // Atualizar o ingresso individual com os dados do participante
@@ -155,6 +168,8 @@ try {
             'participanteid' => $participanteid,
             'nome' => $nome,
             'email' => $email,
+            'cpf' => $documento,
+            'encontrado_por' => $participante_encontrado_por,
             'ingresso_id' => $ingresso_id
         ]
     ]);

@@ -13,21 +13,52 @@ if (!$pedido_id) {
 $contratante_id = $_COOKIE['contratanteid'] ?? 0;
 $usuario_id = $_COOKIE['usuarioid'] ?? 0;
 
-$sql = "SELECT ip.*, 
-               i.titulo as ingresso_titulo,
-               i.descricao as ingresso_descricao
-        FROM tb_itens_pedido ip
-        LEFT JOIN ingressos i ON ip.ingresso_id = i.id
-        LEFT JOIN eventos e ON ip.eventoid = e.id
-        WHERE ip.pedidoid = ? AND e.contratante_id = ? AND e.usuario_id = ?
-        ORDER BY ip.id";
-
-$stmt = mysqli_prepare($con, $sql);
-mysqli_stmt_bind_param($stmt, "iii", $pedido_id, $contratante_id, $usuario_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$itens = mysqli_fetch_all($result, MYSQLI_ASSOC);
-mysqli_stmt_close($stmt);
+// Ajustar verificação dependendo dos cookies disponíveis
+if ($contratante_id > 0) {
+    // Verificação completa com contratante e usuário
+    $sql = "SELECT ip.*, 
+                   i.titulo as ingresso_titulo,
+                   i.descricao as ingresso_descricao
+            FROM tb_itens_pedido ip
+            LEFT JOIN ingressos i ON ip.ingresso_id = i.id
+            LEFT JOIN eventos e ON ip.eventoid = e.id
+            WHERE ip.pedidoid = ? AND e.contratante_id = ? AND e.usuario_id = ?
+            ORDER BY ip.id";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "iii", $pedido_id, $contratante_id, $usuario_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $itens = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        mysqli_stmt_close($stmt);
+    } else {
+        $itens = [];
+        error_log("Erro na query pedido-itens (modo completo): " . mysqli_error($con));
+    }
+} else {
+    // Verificação apenas com usuário
+    $sql = "SELECT ip.*, 
+                   i.titulo as ingresso_titulo,
+                   i.descricao as ingresso_descricao
+            FROM tb_itens_pedido ip
+            LEFT JOIN ingressos i ON ip.ingresso_id = i.id
+            LEFT JOIN eventos e ON ip.eventoid = e.id
+            WHERE ip.pedidoid = ? AND e.usuario_id = ?
+            ORDER BY ip.id";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "ii", $pedido_id, $usuario_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $itens = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        mysqli_stmt_close($stmt);
+    } else {
+        $itens = [];
+        error_log("Erro na query pedido-itens (modo usuario): " . mysqli_error($con));
+    }
+}
 
 if (empty($itens)) {
     echo '<div style="color: #FF5252; text-align: center;">Nenhum item encontrado para este pedido</div>';

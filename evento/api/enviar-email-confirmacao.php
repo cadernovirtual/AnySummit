@@ -4,6 +4,9 @@
  * Inclui informações completas do pedido, evento e ingressos individuais
  */
 
+// Evitar redeclaração da função
+if (!function_exists('enviarEmailConfirmacao')) {
+
 function enviarEmailConfirmacao($pedidoid, $con) {
     error_log("=== INICIO ENVIO EMAIL CONFIRMACAO - Pedido: $pedidoid ===");
     
@@ -323,4 +326,6 @@ function tentarSMTPManual($to, $subject, $html, $smtp_host, $smtp_port, $smtp_us
     
     return $sucesso;
 }
+
+} // Fim do if (!function_exists('enviarEmailConfirmacao'))
 ?>

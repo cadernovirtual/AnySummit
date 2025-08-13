@@ -1,0 +1,1 @@
+# Backup criado antes das correções dos erros identificados

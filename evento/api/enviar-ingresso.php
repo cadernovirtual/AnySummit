@@ -5,6 +5,7 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 include("../conm/conn.php");
+include("enviar-email-confirmacao.php"); // INCLUIR funções SMTP
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -39,7 +40,11 @@ try {
     
     // Verificar se o ingresso existe e está disponível
     $ingresso_id = intval($ingresso_data['id']);
-    $sql_check = "SELECT * FROM tb_ingressos_individuais WHERE id = ? AND status = 'ativo'";
+    $sql_check = "SELECT ii.*, e.nome as evento_nome, e.data_inicio, e.nome_local, 
+                  e.busca_endereco, e.cidade, e.estado 
+                  FROM tb_ingressos_individuais ii
+                  LEFT JOIN eventos e ON ii.eventoid = e.id
+                  WHERE ii.id = ? AND ii.status = 'ativo'";
     $stmt_check = $con->prepare($sql_check);
     
     if (!$stmt_check) {
@@ -56,79 +61,114 @@ try {
     
     $ingresso_db = $result_check->fetch_assoc();
     
-    // Buscar dados completos do evento
-    $evento_dados = null;
-    if ($ingresso_db['eventoid']) {
-        $sql_evento = "SELECT nome, data_inicio, nome_local, busca_endereco FROM eventos WHERE id = ?";
-        $stmt_evento = $con->prepare($sql_evento);
-        if ($stmt_evento) {
-            $stmt_evento->bind_param("i", $ingresso_db['eventoid']);
-            $stmt_evento->execute();
-            $result_evento = $stmt_evento->get_result();
-            if ($result_evento->num_rows > 0) {
-                $evento_dados = $result_evento->fetch_assoc();
-            }
+    // ALTERAÇÃO: Usar SMTP direto em vez de webhook
+    try {
+        $assunto = "{$remetente['nome']} comprou um ingresso para você para o evento {$ingresso_db['evento_nome']}";
+        $link_validacao = 'https://anysummit.com.br/validar-ingresso.php?h=' . $ingresso_db['hash_validacao'];
+        
+        $corpo_email = "
+        <html>
+        <head><meta charset='UTF-8'></head>
+        <body style='font-family: Arial, sans-serif; background: #f8f9fa; padding: 20px;'>
+            <div style='max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                <div style='background: linear-gradient(135deg, #725EFF 0%, #00C2FF 100%); color: white; padding: 30px; text-align: center;'>
+                    <h1 style='margin: 0; font-size: 24px;'>🎟️ Você recebeu um ingresso!</h1>
+                </div>
+                <div style='padding: 30px;'>
+                    <h2 style='color: #333; margin-bottom: 20px;'>" . htmlspecialchars($ingresso_db['evento_nome']) . "</h2>
+                    <p style='color: #666; font-size: 16px; line-height: 1.6;'>
+                        Olá <strong>" . htmlspecialchars($destinatario['nome']) . "</strong>,<br><br>
+                        <strong>" . htmlspecialchars($remetente['nome']) . "</strong> comprou um ingresso para você para o evento 
+                        <strong>" . htmlspecialchars($ingresso_db['evento_nome']) . "</strong>.<br><br>
+                        Para resgatar seu ingresso com QR CODE, clique no botão abaixo e complete o seu cadastro.
+                    </p>";
+                    
+        if (!empty($destinatario['mensagem'])) {
+            $corpo_email .= "
+                    <div style='background: #f0f8ff; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0; border-radius: 5px;'>
+                        <p style='margin: 0; color: #333; font-style: italic;'>
+                            <strong>Mensagem pessoal:</strong><br>
+                            \"" . htmlspecialchars($destinatario['mensagem']) . "\"
+                        </p>
+                    </div>";
         }
+        
+        $corpo_email .= "
+                    <div style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                        <h3 style='color: #333; margin-top: 0;'>📋 Dados do Evento</h3>";
+        
+        if ($ingresso_db['data_inicio']) {
+            $corpo_email .= "<p style='margin: 5px 0; color: #333;'><strong>📅 Data:</strong> " . date('d/m/Y H:i', strtotime($ingresso_db['data_inicio'])) . "</p>";
+        }
+        if ($ingresso_db['nome_local']) {
+            $corpo_email .= "<p style='margin: 5px 0; color: #333;'><strong>📍 Local:</strong> " . htmlspecialchars($ingresso_db['nome_local']) . "</p>";
+        }
+        if ($ingresso_db['busca_endereco']) {
+            $corpo_email .= "<p style='margin: 5px 0; color: #333;'><strong>🗺️ Endereço:</strong> " . htmlspecialchars($ingresso_db['busca_endereco']) . "</p>";
+        }
+        
+        $corpo_email .= "
+                        <h3 style='color: #333; margin: 20px 0 10px 0;'>🎫 Dados do Ingresso</h3>
+                        <p style='margin: 5px 0; color: #333;'><strong>Código:</strong> " . htmlspecialchars($ingresso_db['codigo_ingresso']) . "</p>
+                        <p style='margin: 5px 0; color: #333;'><strong>Tipo:</strong> " . htmlspecialchars($ingresso_db['titulo_ingresso']) . "</p>
+                        <p style='margin: 5px 0; color: #333;'><strong>⚠️ IMPORTANTE:</strong> Este código NÃO é o QR CODE final. Você precisa completar seu cadastro para gerar o QR CODE válido.</p>
+                    </div>
+                    
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='" . $link_validacao . "' style='background: linear-gradient(135deg, #725EFF 0%, #00C2FF 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;'>
+                            🎫 Completar Cadastro e Resgatar Ingresso
+                        </a>
+                    </div>
+                    
+                    <div style='background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                        <p style='margin: 0; color: #856404; font-size: 14px;'>
+                            <strong>⚠️ Ação Necessária:</strong> Clique no link acima para preencher seus dados (nome, CPF, email, WhatsApp e informações adicionais) e ativar seu ingresso com QR CODE.
+                        </p>
+                    </div>
+                    
+                    <p style='color: #999; font-size: 14px; text-align: center; margin-top: 30px;'>
+                        Após completar o cadastro, você receberá seu ingresso oficial com QR CODE válido.
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        
+        // CORREÇÃO: Usar SMTP autenticado
+        $smtp_host = 'mail.anysummit.com.br';
+        $smtp_port = 465;
+        $smtp_user = 'ingressos@anysummit.com.br';
+        $smtp_pass = 'Miran@Janyne@Gustavo';
+        $from_email = 'ingressos@anysummit.com.br';
+        $from_name = 'AnySummit - Ingressos';
+        
+        $resultado_email = enviarEmailSMTP(
+            $destinatario['email'], 
+            $assunto, 
+            $corpo_email, 
+            $smtp_host, 
+            $smtp_port, 
+            $smtp_user, 
+            $smtp_pass, 
+            $from_email, 
+            $from_name
+        );
+        
+        if ($resultado_email === true) {
+            error_log("Email enviado com sucesso via SMTP para: {$destinatario['email']}");
+            $email_enviado = true;
+        } else {
+            error_log("Erro no envio de email via SMTP: " . $resultado_email);
+            throw new Exception("Erro ao enviar email: " . $resultado_email);
+        }
+        
+    } catch (Exception $e) {
+        error_log("Erro ao enviar email do ingresso: " . $e->getMessage());
+        throw new Exception("Erro ao enviar email: " . $e->getMessage());
     }
     
-    // Preparar dados completos para o webhook
-    $webhook_data = [
-        'acao' => 'enviar_ingresso',
-        'timestamp' => date('c'),
-        'ingresso' => [
-            'id' => $ingresso_db['id'],
-            'codigo' => $ingresso_db['codigo_ingresso'],
-            'titulo' => $ingresso_db['titulo_ingresso'],
-            'preco' => floatval($ingresso_db['preco_unitario']),
-            'status' => $ingresso_db['status'],
-            'qr_code_data' => $ingresso_db['qr_code_data'],
-            'hash_validacao' => $ingresso_db['hash_validacao']
-        ],
-        'destinatario' => [
-            'nome' => trim($destinatario['nome']),
-            'email' => trim($destinatario['email']),
-            'whatsapp' => trim($destinatario['whatsapp'] ?? ''),
-            'mensagem' => trim($destinatario['mensagem'] ?? '')
-        ],
-        'evento' => [
-            'id' => $ingresso_db['eventoid'],
-            'nome' => $evento_dados['nome'] ?? 'Any Summit',
-            'data_inicio' => $evento_dados['data_inicio'] ?? null,
-            'local' => $evento_dados['nome_local'] ?? '',
-            'endereco' => $evento_dados['busca_endereco'] ?? ''
-        ],
-        'pedido' => [
-            'id' => $pedido['id'] ?? null,
-            'codigo' => $pedido['codigo'] ?? ''
-        ],
-        'remetente' => [
-            'nome' => $remetente['nome'] ?? '',
-            'email' => $remetente['email'] ?? ''
-        ]
-    ];
-    
-    // URL do webhook
-    $webhook_url = 'https://n8n.webtoyou.com.br/webhook/3e669a00-7990-46b4-a6c7-58018270428a';
-    
-    // Log dos dados que serão enviados
-    error_log('Enviando para webhook: ' . $webhook_url);
-    error_log('Dados do webhook: ' . json_encode($webhook_data));
-    
-    // Enviar para webhook
-    $webhook_response = enviarParaWebhook($webhook_url, $webhook_data);
-    
-    // Log da resposta do webhook
-    error_log('Resposta do webhook: ' . json_encode($webhook_response));
-    
-    // Verificar se o webhook respondeu com sucesso
-    if (!$webhook_response['success']) {
-        // Log do erro mas não falha o processo (para não bloquear o usuário)
-        error_log('Erro no webhook: ' . ($webhook_response['error'] ?? 'Erro desconhecido'));
-    }
-    
-    // Atualizar status do ingresso para "transferido"
+    // Registrar que foi enviado (sem alterar status)
     $sql_update = "UPDATE tb_ingressos_individuais SET 
-                   status = 'transferido',
                    transferido_para_email = ?,
                    data_transferencia = NOW(),
                    atualizado_em = NOW()
@@ -147,14 +187,13 @@ try {
     // Resposta de sucesso
     echo json_encode([
         'success' => true,
-        'message' => 'Ingresso enviado com sucesso',
+        'message' => 'Ingresso enviado com sucesso via SMTP',
         'dados' => [
             'ingresso_id' => $ingresso_id,
             'codigo_ingresso' => $ingresso_db['codigo_ingresso'],
             'destinatario_email' => $destinatario['email'],
-            'webhook_enviado' => $webhook_response['success'] ?? false,
-            'webhook_response' => $webhook_response, // Para debug
-            'webhook_url_usado' => $webhook_url, // Para verificar a URL
+            'metodo_envio' => 'smtp_direto',
+            'link_validacao' => $link_validacao,
             'timestamp' => date('Y-m-d H:i:s')
         ]
     ]);
@@ -170,63 +209,5 @@ try {
             'connection' => $con ? 'ok' : 'erro'
         ]
     ]);
-}
-
-function enviarParaWebhook($url, $data) {
-    try {
-        error_log("Iniciando envio para webhook: $url");
-        
-        $json_data = json_encode($data);
-        error_log("Tamanho dos dados: " . strlen($json_data) . " bytes");
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Content-Length: ' . strlen($json_data)
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Para teste, em produção deve ser true
-        curl_setopt($ch, CURLOPT_VERBOSE, false);
-        
-        $result = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curl_error = curl_error($ch);
-        
-        error_log("HTTP Code: $http_code");
-        error_log("Response: " . substr($result, 0, 500)); // Primeiros 500 chars
-        
-        if ($curl_error) {
-            error_log("Curl Error: $curl_error");
-        }
-        
-        curl_close($ch);
-        
-        if ($result === FALSE) {
-            throw new Exception('Falha na execução do cURL: ' . $curl_error);
-        }
-        
-        if ($http_code >= 400) {
-            throw new Exception("HTTP Error $http_code: $result");
-        }
-        
-        return [
-            'success' => true,
-            'response' => $result,
-            'http_code' => $http_code
-        ];
-        
-    } catch (Exception $e) {
-        error_log("Erro na função enviarParaWebhook: " . $e->getMessage());
-        return [
-            'success' => false,
-            'error' => $e->getMessage()
-        ];
-    }
 }
 ?>

@@ -26,7 +26,7 @@ try {
     
     if ($payment_id) {
         // Consultar pagamento no Asaas
-        $payment = $asaas->getPayment($payment_id);
+        $payment = $asaas->getPaymentStatus($payment_id);
         
         if (!$payment) {
             throw new Exception('Pagamento não encontrado no Asaas');

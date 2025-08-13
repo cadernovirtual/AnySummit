@@ -297,6 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
+            credentials: 'same-origin',
             body: formData
         })
         .then(response => response.json())

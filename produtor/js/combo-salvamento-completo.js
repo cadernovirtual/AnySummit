@@ -45,31 +45,31 @@ document.addEventListener('DOMContentLoaded', function() {
         // Usar sempre o modal de criação como padrão, a menos que edição esteja explicitamente visível
         const prefixo = isEdicao ? 'editCombo' : 'comboTicket';
         
-        console.log(`📝 Modo detectado: ${isEdicao ? 'EDIÇÃO' : 'CRIAÇÃO'} (prefixo: ${prefixo})`);
+        console.log('📝 Modo detectado:', isEdicao ? 'EDIÇÃO' : 'CRIAÇÃO', '(prefixo:', prefixo + ')');
         
         // BUSCAR TÍTULO COM DEBUG
         let titulo = '';
-        const camposTitulo = [`${prefixo}Title`, 'comboTicketTitle', 'editComboTitle'];
+        const camposTitulo = [prefixo + 'Title', 'comboTicketTitle', 'editComboTitle'];
         
         for (const campoId of camposTitulo) {
             const elemento = document.getElementById(campoId);
-            console.log(`🔍 Testando campo título ${campoId}:`, elemento ? 'encontrado' : 'não encontrado', elemento?.value);
+            console.log('🔍 Testando campo título ' + campoId + ':', elemento ? 'encontrado' : 'não encontrado', elemento?.value);
             if (elemento && elemento.value && elemento.value.trim()) {
                 titulo = elemento.value.trim();
-                console.log(`📝 Título encontrado em ${campoId}: "${titulo}"`);
+                console.log('📝 Título encontrado em ' + campoId + ': "' + titulo + '"');
                 break;
             }
         }
         
         // BUSCAR DESCRIÇÃO
         let descricao = '';
-        const camposDescricao = [`${prefixo}Description`, 'comboTicketDescription', 'editComboDescription'];
+        const camposDescricao = [prefixo + 'Description', 'comboTicketDescription', 'editComboDescription'];
         
         for (const campoId of camposDescricao) {
             const elemento = document.getElementById(campoId);
             if (elemento && elemento.value) {
                 descricao = elemento.value.trim();
-                console.log(`📝 Descrição encontrada em ${campoId}: "${descricao}"`);
+                console.log('📝 Descrição encontrada em ' + campoId + ': "' + descricao + '"');
                 break;
             }
         }
@@ -77,23 +77,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // BUSCAR PREÇO COM DEBUG DETALHADO
         let precoRaw = '';
         let elementoPrecoEncontrado = null;
-        const camposPreco = [`${prefixo}Price`, 'comboTicketPrice', 'editComboPrice'];
+        const camposPreco = [prefixo + 'Price', 'comboTicketPrice', 'editComboPrice'];
         
         for (const campoId of camposPreco) {
             const elemento = document.getElementById(campoId);
-            console.log(`🔍 Testando campo preço ${campoId}:`, elemento ? 'encontrado' : 'não encontrado');
+            console.log('🔍 Testando campo preço ' + campoId + ':', elemento ? 'encontrado' : 'não encontrado');
             if (elemento) {
-                console.log(`🔍   - Valor atual: "${elemento.value}"`);
-                console.log(`🔍   - Estilo display: "${elemento.style.display}"`);
-                console.log(`🔍   - Parent modal visível:`, elemento.closest('.modal')?.style.display);
+                console.log('🔍   - Valor atual: "' + elemento.value + '"');
+                console.log('🔍   - Estilo display: "' + elemento.style.display + '"');
+                console.log('🔍   - Parent modal visível:', elemento.closest('.modal')?.style.display);
                 
                 if (elemento.value && elemento.value.trim() !== '' && elemento.value !== 'R$ 0,00') {
                     precoRaw = elemento.value;
                     elementoPrecoEncontrado = campoId;
-                    console.log(`💰 Preço VÁLIDO encontrado em ${campoId}: "${precoRaw}"`);
+                    console.log('💰 Preço VÁLIDO encontrado em ' + campoId + ': "' + precoRaw + '"');
                     break;
                 } else if (elemento.value) {
-                    console.log(`⚠️ Preço encontrado mas inválido em ${campoId}: "${elemento.value}"`);
+                    console.log('⚠️ Preço encontrado mas inválido em ' + campoId + ': "' + elemento.value + '"');
                 }
             }
         }
@@ -104,11 +104,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const todosInputs = document.querySelectorAll('input[type="text"]');
             for (const input of todosInputs) {
                 if (input.id && input.id.toLowerCase().includes('price')) {
-                    console.log(`🔍 Campo preço encontrado: ${input.id} = "${input.value}"`);
+                    console.log('🔍 Campo preço encontrado: ' + input.id + ' = "' + input.value + '"');
                     if (input.value && input.value !== 'R$ 0,00') {
                         precoRaw = input.value;
                         elementoPrecoEncontrado = input.id;
-                        console.log(`💰 Usando preço de ${input.id}: "${precoRaw}"`);
+                        console.log('💰 Usando preço de ' + input.id + ': "' + precoRaw + '"');
                         break;
                     }
                 }
@@ -117,36 +117,36 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const preco = parseFloat(precoRaw.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.')) || 0;
         
-        console.log(`💰 RESULTADO FINAL DO PREÇO:`);
-        console.log(`  - Campo usado: ${elementoPrecoEncontrado}`);
-        console.log(`  - Valor bruto: "${precoRaw}"`);
-        console.log(`  - Valor processado: ${preco}`);
+        console.log('💰 RESULTADO FINAL DO PREÇO:');
+        console.log('  - Campo usado: ' + elementoPrecoEncontrado);
+        console.log('  - Valor bruto: "' + precoRaw + '"');
+        console.log('  - Valor processado: ' + preco);
         
         // BUSCAR LOTE COM DEBUG
         let loteId = null;
-        const camposLote = [`${prefixo}Lote`, 'comboTicketLote', 'editComboTicketLote'];
+        const camposLote = [prefixo + 'Lote', 'comboTicketLote', 'editComboTicketLote'];
         
         for (const campoId of camposLote) {
             const elemento = document.getElementById(campoId);
-            console.log(`🔍 Testando campo lote ${campoId}:`, elemento ? 'encontrado' : 'não encontrado', elemento?.value);
+            console.log('🔍 Testando campo lote ' + campoId + ':', elemento ? 'encontrado' : 'não encontrado', elemento?.value);
             if (elemento && elemento.value && elemento.value !== '0') {
                 loteId = parseInt(elemento.value);
-                console.log(`📦 Lote encontrado em ${campoId}: ${loteId}`);
+                console.log('📦 Lote encontrado em ' + campoId + ': ' + loteId);
                 break;
             }
         }
         
         // Outros campos
-        const inicio_venda = document.getElementById(`${prefixo}SaleStart`)?.value || 
+        const inicio_venda = document.getElementById(prefixo + 'SaleStart')?.value || 
                            document.getElementById('comboSaleStart')?.value || 
                            document.getElementById('editComboSaleStart')?.value || null;
-        const fim_venda = document.getElementById(`${prefixo}SaleEnd`)?.value || 
+        const fim_venda = document.getElementById(prefixo + 'SaleEnd')?.value || 
                          document.getElementById('comboSaleEnd')?.value || 
                          document.getElementById('editComboSaleEnd')?.value || null;
-        const limite_min = parseInt(document.getElementById(`${prefixo}MinQuantity`)?.value ||
+        const limite_min = parseInt(document.getElementById(prefixo + 'MinQuantity')?.value ||
                                   document.getElementById('comboMinQuantity')?.value ||
                                   document.getElementById('editComboMinQuantity')?.value) || 1;
-        const limite_max = parseInt(document.getElementById(`${prefixo}MaxQuantity`)?.value ||
+        const limite_max = parseInt(document.getElementById(prefixo + 'MaxQuantity')?.value ||
                                   document.getElementById('comboMaxQuantity')?.value ||
                                   document.getElementById('editComboMaxQuantity')?.value) || 5;
         
@@ -154,10 +154,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const conteudo_combo = coletarItensDoCombo();
         
         console.log('📊 Dados coletados do combo:');
-        console.log('  titulo:', `"${titulo}" (length: ${titulo?.length})`);
-        console.log('  preco:', preco, `(original: "${precoRaw}")`);
-        console.log('  loteId:', loteId);
-        console.log('  conteudo_combo:', conteudo_combo);
+        console.log('  titulo: "' + titulo + '" (length: ' + (titulo?.length || 0) + ')');
+        console.log('  preco: ' + preco + ' (original: "' + precoRaw + '")');
+        console.log('  loteId: ' + loteId);
+        console.log('  conteudo_combo: ', conteudo_combo);
         
         // Validação
         const erros = [];
@@ -169,15 +169,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!preco || preco <= 0) {
             // Verificar se é realmente um erro ou campo vazio
             if (!precoRaw || precoRaw.trim() === '' || precoRaw === 'R$ 0,00') {
-                erros.push(`Preço inválido: ${preco} (original: "${precoRaw}") - Campo vazio ou não preenchido`);
+                erros.push('Preço inválido: ' + preco + ' (original: "' + precoRaw + '") - Campo vazio ou não preenchido');
             } else {
-                erros.push(`Preço inválido: ${preco} (original: "${precoRaw}") - Erro de formatação`);
+                erros.push('Preço inválido: ' + preco + ' (original: "' + precoRaw + '") - Erro de formatação');
             }
-        }
         }
         
         if (!loteId) {
-            erros.push(`Lote não selecionado: ${loteId}`);
+            erros.push('Lote não selecionado: ' + loteId);
         }
         
         if (!conteudo_combo || conteudo_combo.length === 0) {
@@ -186,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (erros.length > 0) {
             console.error('❌ VALIDAÇÃO DO COMBO FALHOU:');
-            erros.forEach((erro, i) => console.error(`  ${i+1}. ${erro}`));
+            erros.forEach((erro, i) => console.error('  ' + (i+1) + '. ' + erro));
             return null;
         }
         
@@ -222,8 +221,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('📦 Coletando itens do combo via comboItems global:', window.comboItems);
             
             window.comboItems.forEach((item, index) => {
-                console.log(`📋 Processando item ${index}:`, item);
-                console.log(`📋 Propriedades disponíveis:`, Object.keys(item));
+                console.log('📋 Processando item ' + index + ':', item);
+                console.log('📋 Propriedades disponíveis:', Object.keys(item));
                 
                 // BUSCAR ID EM MÚLTIPLAS PROPRIEDADES - INCLUINDO ticketId
                 const ingressoId = parseInt(item.ticket_id) || 
@@ -239,15 +238,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                  parseInt(item.qtd) ||
                                  null;
                 
-                console.log(`🔍 ID extraído: ${ingressoId} (de ${item.ticketId || item.ticket_id || item.id})`);
-                console.log(`🔍 Quantidade extraída: ${quantidade} (de ${item.quantity || item.quantidade})`);
+                console.log('🔍 ID extraído: ' + ingressoId + ' (de ' + (item.ticketId || item.ticket_id || item.id) + ')');
+                console.log('🔍 Quantidade extraída: ' + quantidade + ' (de ' + (item.quantity || item.quantidade) + ')');
                 
                 if (ingressoId && quantidade && quantidade > 0) {
                     itens.push({
                         ingresso_id: ingressoId,
                         quantidade: quantidade
                     });
-                    console.log(`✅ Item adicionado: ingresso_id=${ingressoId}, quantidade=${quantidade}`);
+                    console.log('✅ Item adicionado: ingresso_id=' + ingressoId + ', quantidade=' + quantidade);
                 } else {
                     console.warn('⚠️ Item ignorado (ID ou quantidade inválidos):', {
                         item: item,
@@ -275,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             ingresso_id: ingressoId,
                             quantidade: quantidade
                         });
-                        console.log(`📦 Item DOM adicionado: ingresso_id=${ingressoId}, quantidade=${quantidade}`);
+                        console.log('📦 Item DOM adicionado: ingresso_id=' + ingressoId + ', quantidade=' + quantidade);
                     } else {
                         console.warn('⚠️ Item DOM ignorado:', { ticketId, quantity, element });
                     }
@@ -291,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('💾 Salvando combo no banco:', dadosCombo);
         
         const eventoId = new URLSearchParams(window.location.search).get('evento_id');
-        const formData = `action=salvar_ingresso_individual&evento_id=${eventoId}&ingresso=${encodeURIComponent(JSON.stringify(dadosCombo))}`;
+        const formData = 'action=salvar_ingresso_individual&evento_id=' + eventoId + '&ingresso=' + encodeURIComponent(JSON.stringify(dadosCombo));
         
         try {
             const response = await fetch('/produtor/ajax/wizard_evento.php', {
@@ -299,22 +298,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
+                credentials: 'same-origin',
                 body: formData
             });
             
             const data = await response.json();
             
             if (data.sucesso) {
-                console.log(`✅ Combo salvo com ID: ${data.ingresso_id}`);
+                console.log('✅ Combo salvo com ID: ' + data.ingresso_id);
                 
                 // Atualizar elemento na interface com o ID
                 atualizarElementoComboComId(data.ingresso_id, dadosCombo);
                 
                 // Feedback visual
-                mostrarFeedbackCombo(`Combo salvo automaticamente!`, 'sucesso');
+                mostrarFeedbackCombo('Combo salvo automaticamente!', 'sucesso');
             } else {
-                console.error(`❌ Erro ao salvar combo:`, data.erro);
-                mostrarFeedbackCombo(`Erro ao salvar combo: ${data.erro}`, 'erro');
+                console.error('❌ Erro ao salvar combo:', data.erro);
+                mostrarFeedbackCombo('Erro ao salvar combo: ' + data.erro, 'erro');
             }
         } catch (error) {
             console.error('❌ Erro na requisição do combo:', error);
@@ -337,25 +337,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             ultimoItem.ticketData.id = comboId;
             ultimoItem.ticketData.ingresso_id = comboId;
-            ultimoItem.ticketData = { ...ultimoItem.ticketData, ...dadosCombo };
+            ultimoItem.ticketData = Object.assign(ultimoItem.ticketData, dadosCombo);
             
-            console.log(`✅ Elemento combo atualizado com ID ${comboId}`);
+            console.log('✅ Elemento combo atualizado com ID ' + comboId);
         }
     }
     
     function mostrarFeedbackCombo(mensagem, tipo) {
         const feedback = document.createElement('div');
-        feedback.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 4px;
-            color: white;
-            font-weight: 500;
-            z-index: 10000;
-            ${tipo === 'sucesso' ? 'background-color: #28a745;' : 'background-color: #dc3545;'}
-        `;
+        feedback.style.cssText = 
+            'position: fixed;' +
+            'top: 20px;' +
+            'right: 20px;' +
+            'padding: 12px 20px;' +
+            'border-radius: 4px;' +
+            'color: white;' +
+            'font-weight: 500;' +
+            'z-index: 10000;' +
+            (tipo === 'sucesso' ? 'background-color: #28a745;' : 'background-color: #dc3545;');
+        
         feedback.textContent = mensagem;
         
         document.body.appendChild(feedback);

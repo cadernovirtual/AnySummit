@@ -6,12 +6,15 @@ $current_dir = basename(dirname($_SERVER['REQUEST_URI']));
 // Define qual menu deve estar ativo
 $meuseventos_active = '';
 $organizadores_active = '';
+$conta_corrente_active = '';
 $config_active = '';
 
 if ($current_page === 'meuseventos' || strpos($_SERVER['REQUEST_URI'], '/meuseventos') !== false) {
     $meuseventos_active = 'active';
 } elseif ($current_page === 'organizadores' || strpos($_SERVER['REQUEST_URI'], '/organizadores') !== false) {
     $organizadores_active = 'active';
+} elseif ($current_page === 'conta-corrente' || strpos($_SERVER['REQUEST_URI'], '/conta-corrente') !== false) {
+    $conta_corrente_active = 'active';
 } elseif ($current_page === 'config' || strpos($_SERVER['REQUEST_URI'], '/config') !== false) {
     $config_active = 'active';
 }
@@ -26,6 +29,11 @@ if ($current_page === 'meuseventos' || strpos($_SERVER['REQUEST_URI'], '/meuseve
     <div class="menu-item <?php echo $organizadores_active; ?>" onclick="window.location.href='/produtor/organizadores.php'">
         <span class="menu-icon">🏢</span>
         <span>Organizadores</span>
+    </div>
+    
+    <div class="menu-item <?php echo $conta_corrente_active; ?>" onclick="alert('Funcionalidade em desenvolvimento')">
+        <span class="menu-icon">💳</span>
+        <span>Conta Corrente</span>
     </div>
     
     <div class="menu-item <?php echo $config_active; ?>" onclick="window.location.href='/produtor/config.php'">

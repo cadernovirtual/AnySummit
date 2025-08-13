@@ -174,6 +174,112 @@ $nome_produtor_display = !empty($evento['nome_exibicao']) ? $evento['nome_exibic
             font-weight: bold;
             margin-right: 0.5rem;
         }
+        
+        /* Modal de Pagamento Aprovado */
+        .payment-success-modal {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .success-animation {
+            position: relative;
+            margin: 0 auto 1rem;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .pix-icon-animated {
+            font-size: 4rem;
+            animation: pixBounce 2s ease-in-out infinite;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+        
+        .checkmark-circle {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: checkmarkPop 0.8s ease-out 1s both;
+            transform: scale(0);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .checkmark {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            animation: checkmarkDraw 0.5s ease-out 1.2s both;
+            opacity: 0;
+        }
+        
+        .success-title {
+            color: #28a745;
+            font-weight: 700;
+            font-size: 1.8rem;
+            animation: slideInUp 0.6s ease-out 0.3s both;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        
+        .success-message {
+            color: #6c757d;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            animation: slideInUp 0.6s ease-out 0.5s both;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        
+        .success-loader {
+            animation: slideInUp 0.6s ease-out 0.7s both;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        
+        /* Animações */
+        @keyframes pixBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.1); }
+        }
+        
+        @keyframes checkmarkPop {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(-45deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        
+        @keyframes checkmarkDraw {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes slideInUp {
+            0% { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
+        /* Efeito de backdrop personalizado */
+        .modal.show {
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-backdrop.show {
+            background: rgba(0, 0, 0, 0.6);
+        }
     </style>
 </head>
 
@@ -285,7 +391,7 @@ $nome_produtor_display = !empty($evento['nome_exibicao']) ? $evento['nome_exibic
                         
                         <div class="alert alert-warning mt-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Importante:</strong> O pagamento via PIX deve ser realizado em até 24 horas. 
+                            <strong>Importante:</strong> O pagamento via PIX deve ser realizado hoje. 
                             Após esse prazo, o pedido será cancelado automaticamente.
                         </div>
                     </div>
@@ -309,6 +415,38 @@ $nome_produtor_display = !empty($evento['nome_exibicao']) ? $evento['nome_exibic
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Pagamento Aprovado -->
+    <div class="modal fade" id="modalPagamentoAprovado" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content payment-success-modal">
+                <div class="modal-body text-center p-5">
+                    <div class="success-animation">
+                        <div class="pix-icon-animated">💳</div>
+                        <div class="checkmark-circle">
+                            <div class="checkmark">✓</div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="success-title mt-4 mb-3">
+                        Acabamos de Receber o seu PIX!
+                    </h3>
+                    
+                    <p class="success-message mb-4">
+                        <strong>Obrigado!</strong> Seu pagamento foi processado com sucesso.<br>
+                        Você será redirecionado em alguns segundos...
+                    </p>
+                    
+                    <div class="success-loader">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Redirecionando...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -582,6 +720,42 @@ $nome_produtor_display = !empty($evento['nome_exibicao']) ? $evento['nome_exibic
             document.getElementById('pix-content').style.display = 'block';
         }
 
+        function mostrarModalPagamentoAprovado() {
+            // Criar instância do modal Bootstrap
+            const modalElement = document.getElementById('modalPagamentoAprovado');
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: 'static',  // Não fechar clicando fora
+                keyboard: false      // Não fechar com ESC
+            });
+            
+            // Mostrar o modal
+            modal.show();
+            
+            // Adicionar efeitos sonoros se suportado
+            try {
+                // Som de sucesso (opcional - pode ser removido se não desejar)
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+                oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) {
+                // Som não suportado, continuar sem ele
+                console.log('Audio não suportado');
+            }
+        }
+
         function copyPixCode() {
             const pixCode = document.getElementById('pix-code').textContent;
             
@@ -614,19 +788,23 @@ $nome_produtor_display = !empty($evento['nome_exibicao']) ? $evento['nome_exibic
                     if (result.success && result.status === 'aprovado') {
                         clearInterval(checkPaymentInterval);
                         
-                        // Redirecionar para página de sucesso com ID do pedido
+                        // Salvar dados do pagamento aprovado
                         sessionStorage.setItem('pagamento_aprovado', JSON.stringify(result));
-                        alert('Pagamento aprovado! Redirecionando...');
                         
-                        // Usar pedido_id da URL se disponível, senão tentar do resultado
-                        const pedidoId = '<?php echo $pedido_id; ?>' || 
-                                        (result.pedido && result.pedido.codigo_pedido) || '';
+                        // Mostrar modal de sucesso animado
+                        mostrarModalPagamentoAprovado();
                         
-                        if (pedidoId) {
-                            window.location.href = 'pagamento-sucesso.php?pedido_id=' + encodeURIComponent(pedidoId);
-                        } else {
-                            window.location.href = 'pagamento-sucesso.php';
-                        }
+                        // Redirecionar após animação
+                        setTimeout(() => {
+                            const pedidoId = '<?php echo $pedido_id; ?>' || 
+                                            (result.pedido && result.pedido.codigo_pedido) || '';
+                            
+                            if (pedidoId) {
+                                window.location.href = 'pagamento-sucesso.php?pedido_id=' + encodeURIComponent(pedidoId);
+                            } else {
+                                window.location.href = 'pagamento-sucesso.php';
+                            }
+                        }, 4000); // 4 segundos para ver a animação
                     }
                 } catch (error) {
                     console.error('Erro ao verificar pagamento:', error);
@@ -639,8 +817,11 @@ $nome_produtor_display = !empty($evento['nome_exibicao']) ? $evento['nome_exibic
             return parseFloat(price).toFixed(2).replace('.', ',');
         }
 
-        // Timer de 24 horas
-        let timeRemaining = 24 * 60 * 60; // 24 horas em segundos
+        // Timer até o final do dia (23:59:59)
+        const now = new Date();
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+        let timeRemaining = Math.floor((endOfDay.getTime() - now.getTime()) / 1000);
         
         const timerInterval = setInterval(() => {
             const hours = Math.floor(timeRemaining / 3600);

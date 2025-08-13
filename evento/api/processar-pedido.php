@@ -464,6 +464,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Capturar dados JSON da requisição
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input) {
@@ -519,29 +520,100 @@ try {
         $nome = mysqli_real_escape_string($con, $participante['nome'] . ' ' . $participante['sobrenome']);
         $email = mysqli_real_escape_string($con, $participante['email']);
         $whatsapp = mysqli_real_escape_string($con, $participante['whatsapp']);
+        $cpf = isset($participante['cpf']) ? mysqli_real_escape_string($con, $participante['cpf']) : '';
         
-        // Primeiro, tentar buscar participante existente
-        $check_sql = "SELECT participanteid FROM participantes WHERE email = '$email' LIMIT 1";
-        $check_result = $con->query($check_sql);
+        // CORREÇÃO: Buscar participante primeiro por CPF (se fornecido), depois por email
+        $participanteid = null;
         
-        if ($check_result && $check_result->num_rows > 0) {
-            // Participante já existe
-            $participanteid = $check_result->fetch_assoc()['participanteid'];
-        } else {
-            // Tentar criar novo participante
-            $insert_sql = "INSERT INTO participantes (Nome, email, celular, eventoid) 
-                          VALUES ('$nome', '$email', '$whatsapp', $eventoid)";
+        // Limpar CPF para comparação
+        $cpf_limpo = '';
+        if (!empty($cpf)) {
+            $cpf_limpo = preg_replace('/[^0-9]/', '', $cpf);
+        }
+        
+        // PRIORIDADE 1: Buscar por CPF se fornecido
+        if (!empty($cpf_limpo) && strlen($cpf_limpo) >= 11) {
+            $check_cpf_sql = "SELECT participanteid, Nome, email FROM participantes 
+                              WHERE REPLACE(REPLACE(REPLACE(COALESCE(CPF, ''), '.', ''), '-', ''), ' ', '') = '$cpf_limpo' 
+                              AND eventoid = $eventoid LIMIT 1";
+            $check_cpf_result = $con->query($check_cpf_sql);
+            
+            if ($check_cpf_result && $check_cpf_result->num_rows > 0) {
+                $participante_data = $check_cpf_result->fetch_assoc();
+                $participanteid = $participante_data['participanteid'];
+                error_log("Participante encontrado por CPF: ID = $participanteid");
+                
+                // Atualizar dados se necessário
+                $update_sql = "UPDATE participantes SET Nome = '$nome', email = '$email', celular = '$whatsapp' WHERE participanteid = $participanteid";
+                $con->query($update_sql);
+            }
+        }
+        
+        // PRIORIDADE 2: Se não encontrou por CPF, buscar por email
+        if (!$participanteid) {
+            $check_email_sql = "SELECT participanteid, Nome, CPF FROM participantes WHERE email = '$email' AND eventoid = $eventoid LIMIT 1";
+            $check_email_result = $con->query($check_email_sql);
+            
+            if ($check_email_result && $check_email_result->num_rows > 0) {
+                $participante_data = $check_email_result->fetch_assoc();
+                $participanteid = $participante_data['participanteid'];
+                error_log("Participante encontrado por email: ID = $participanteid");
+                
+                // Verificar conflito de CPF
+                if (!empty($cpf_limpo) && !empty($participante_data['CPF'])) {
+                    $cpf_db_limpo = preg_replace('/[^0-9]/', '', $participante_data['CPF']);
+                    if ($cpf_db_limpo !== $cpf_limpo) {
+                        throw new Exception("Conflito: Este email já está associado a outro CPF no sistema.");
+                    }
+                }
+                
+                // CORREÇÃO: Atualizar dados SEM sobrescrever CPF se já existir
+                if (!empty($participante_data['CPF'])) {
+                    // Se participante já tem CPF, não sobrescrever - apenas atualizar outros dados
+                    $update_sql = "UPDATE participantes SET Nome = '$nome', celular = '$whatsapp' WHERE participanteid = $participanteid";
+                    error_log("Atualizando participante existente (preservando CPF): ID = $participanteid");
+                } else {
+                    // Se participante não tem CPF, pode adicionar
+                    $update_sql = "UPDATE participantes SET Nome = '$nome', celular = '$whatsapp', CPF = '$cpf' WHERE participanteid = $participanteid";
+                    error_log("Atualizando participante e adicionando CPF: ID = $participanteid");
+                }
+                $con->query($update_sql);
+            }
+        }
+        
+        // Se não encontrou, criar novo participante
+        if (!$participanteid) {
+            $insert_sql = "INSERT INTO participantes (Nome, email, celular, CPF, eventoid) 
+                          VALUES ('$nome', '$email', '$whatsapp', '$cpf', $eventoid)";
             
             if ($con->query($insert_sql)) {
                 $participanteid = $con->insert_id;
+                error_log("Novo participante criado: ID = $participanteid");
             } else {
-                // Se deu erro, pode ser que alguém criou entre nossa verificação e inserção
-                // Tentar buscar novamente
-                $check_result2 = $con->query($check_sql);
-                if ($check_result2 && $check_result2->num_rows > 0) {
-                    $participanteid = $check_result2->fetch_assoc()['participanteid'];
-                } else {
-                    throw new Exception('Erro ao processar participante: ' . $con->error);
+                $error_msg = $con->error;
+                error_log("Erro ao criar participante: $error_msg");
+                
+                // Se deu erro de duplicata, tentar buscar novamente
+                if (strpos($error_msg, 'Duplicate') !== false || strpos($error_msg, 'duplicate') !== false) {
+                    // Tentar buscar por CPF primeiro
+                    if (!empty($cpf_limpo)) {
+                        $check_cpf_result2 = $con->query($check_cpf_sql);
+                        if ($check_cpf_result2 && $check_cpf_result2->num_rows > 0) {
+                            $participanteid = $check_cpf_result2->fetch_assoc()['participanteid'];
+                        }
+                    }
+                    
+                    // Se não encontrou por CPF, buscar por email
+                    if (!$participanteid) {
+                        $check_email_result2 = $con->query($check_email_sql);
+                        if ($check_email_result2 && $check_email_result2->num_rows > 0) {
+                            $participanteid = $check_email_result2->fetch_assoc()['participanteid'];
+                        }
+                    }
+                }
+                
+                if (!$participanteid) {
+                    throw new Exception('Erro ao processar participante: ' . $error_msg);
                 }
             }
         }
@@ -684,17 +756,22 @@ try {
     $comprador_tipo_documento = mysqli_real_escape_string($con, $comprador['tipo_documento']);
     $comprador_cep = mysqli_real_escape_string($con, $comprador['cep']);
     
+    // Dados do cupom se aplicado
+    $cupom_id = isset($carrinho['cupom']) && isset($carrinho['cupom']['id']) ? intval($carrinho['cupom']['id']) : null;
+    $desconto_cupom = isset($carrinho['desconto_cupom']) ? floatval($carrinho['desconto_cupom']) : 0;
+    
     // Gerar código único do pedido
     $codigo_pedido = 'PED_' . date('Ymd') . '_' . uniqid();
     
     $sql_pedido = "INSERT INTO tb_pedidos (
         eventoid, participanteid, compradorid, valor_total, metodo_pagamento, parcelas,
         comprador_nome, comprador_documento, comprador_tipo_documento, comprador_cep,
-        codigo_pedido
+        codigo_pedido, cupom_id, desconto_cupom, status_pagamento, created_at, updated_at
     ) VALUES (
         $eventoid, $participanteid, $compradorid, $valor_total, '$metodo_pagamento', $parcelas,
         '$comprador_nome', '$comprador_documento', '$comprador_tipo_documento', '$comprador_cep',
-        '$codigo_pedido'
+        '$codigo_pedido', " . ($cupom_id ? $cupom_id : 'NULL') . ", $desconto_cupom, " . 
+        ($metodo_pagamento === 'gratuito' ? "'aprovado'" : "'pendente'") . ", NOW(), NOW()
     )";
     
     if (!$con->query($sql_pedido)) {

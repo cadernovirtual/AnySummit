@@ -41,91 +41,161 @@ try {
         throw new Exception("Email inválido");
     }
     
-    // Verifica se o participante já existe
-    $sql_check = "SELECT participanteid FROM participantes WHERE CPF = ? AND eventoid = ?";
+    // Verifica se o participante já existe por CPF
+    $sql_check = "SELECT participanteid, Nome, email FROM participantes WHERE REPLACE(REPLACE(REPLACE(CPF, '.', ''), '-', ''), ' ', '') = ? AND eventoid = ?";
     $stmt_check = mysqli_prepare($con, $sql_check);
     mysqli_stmt_bind_param($stmt_check, "si", $cpf_clean, $eventoid);
     mysqli_stmt_execute($stmt_check);
     $result = mysqli_stmt_get_result($stmt_check);
     
     if (mysqli_num_rows($result) > 0) {
-        throw new Exception("Participante já cadastrado com este CPF");
-    }
-    mysqli_stmt_close($stmt_check);
-    
-    // Processa a foto se fornecida
-    $nome_foto = null;
-    if (!empty($_POST['photoData'])) {
-        $photo_data = $_POST['photoData'];
+        // Participante já existe - ATUALIZAR ao invés de dar erro
+        $participante_existente = mysqli_fetch_assoc($result);
+        $participante_id = $participante_existente['participanteid'];
+        mysqli_stmt_close($stmt_check);
         
-        // Remove o prefixo "data:image/jpeg;base64,"
-        if (strpos($photo_data, 'data:image/jpeg;base64,') === 0) {
-            $photo_data = substr($photo_data, strlen('data:image/jpeg;base64,'));
-        }
-        
-        // Decodifica a imagem
-        $photo_decoded = base64_decode($photo_data);
-        
-        if ($photo_decoded !== false) {
-            // Cria diretório se não existir
-            $upload_dir = 'fotos_participantes/';
-            if (!is_dir($upload_dir)) {
-                mkdir($upload_dir, 0755, true);
+        // Processa a foto se fornecida (mesmo processo)
+        $nome_foto = null;
+        if (!empty($_POST['photoData'])) {
+            $photo_data = $_POST['photoData'];
+            
+            // Remove o prefixo "data:image/jpeg;base64,"
+            if (strpos($photo_data, 'data:image/jpeg;base64,') === 0) {
+                $photo_data = substr($photo_data, strlen('data:image/jpeg;base64,'));
             }
             
-            // Nome único para o arquivo
-            $nome_foto = 'foto_' . $cpf_clean . '_' . time() . '.jpg';
-            $caminho_foto = $upload_dir . $nome_foto;
+            // Decodifica a imagem
+            $photo_decoded = base64_decode($photo_data);
             
-            // Salva a foto
-            if (!file_put_contents($caminho_foto, $photo_decoded)) {
-                throw new Exception("Erro ao salvar a foto");
+            if ($photo_decoded !== false) {
+                // Cria diretório se não existir
+                $upload_dir = 'fotos_participantes/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                // Nome único para o arquivo
+                $nome_foto = 'foto_' . $cpf_clean . '_' . time() . '.jpg';
+                $caminho_foto = $upload_dir . $nome_foto;
+                
+                // Salva a foto
+                if (!file_put_contents($caminho_foto, $photo_decoded)) {
+                    throw new Exception("Erro ao salvar a foto");
+                }
             }
         }
-    }
-    
-    // Insere no banco de dados
-    $sql_insert = "INSERT INTO participantes (Nome, email, CPF, celular, tipoingresso, eventoid, thumb) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?)";
-    
-    $stmt_insert = mysqli_prepare($con, $sql_insert);
-    
-    if ($stmt_insert) {
-        mysqli_stmt_bind_param($stmt_insert, "sssssis", 
-            $nome, 
-            $email, 
-            $cpf_clean, 
-            $celular, 
-            $tipoingresso, 
-            $eventoid,
-            $nome_foto
-        );
         
-        if (mysqli_stmt_execute($stmt_insert)) {
-            $participante_id = mysqli_insert_id($con);
-            
+        // Atualiza dados do participante existente
+        $sql_update = "UPDATE participantes SET Nome = ?, email = ?, celular = ?, tipoingresso = ?, thumb = COALESCE(?, thumb) WHERE participanteid = ?";
+        $stmt_update = mysqli_prepare($con, $sql_update);
+        
+        if (!$stmt_update) {
+            // Se houve erro, remove a foto se foi salva
+            if (!empty($nome_foto) && file_exists($upload_dir . $nome_foto)) {
+                unlink($upload_dir . $nome_foto);
+            }
+            throw new Exception("Erro na preparação da query de atualização: " . mysqli_error($con));
+        }
+        
+        mysqli_stmt_bind_param($stmt_update, "sssssi", $nome, $email, $celular, $tipoingresso, $nome_foto, $participante_id);
+        
+        if (mysqli_stmt_execute($stmt_update)) {
             $response = [
                 'success' => true,
-                'message' => 'Participante credenciado com sucesso',
+                'message' => 'Dados do participante atualizados com sucesso (CPF já cadastrado)',
                 'participante_id' => $participante_id,
                 'nome' => $nome,
-                'foto_salva' => !empty($nome_foto)
+                'foto_salva' => !empty($nome_foto),
+                'acao' => 'atualizado'
             ];
         } else {
             // Se houve erro, remove a foto se foi salva
             if (!empty($nome_foto) && file_exists($upload_dir . $nome_foto)) {
                 unlink($upload_dir . $nome_foto);
             }
-            throw new Exception("Erro ao salvar participante no banco de dados: " . mysqli_error($con));
+            throw new Exception("Erro ao atualizar participante no banco de dados: " . mysqli_error($con));
         }
         
-        mysqli_stmt_close($stmt_insert);
+        mysqli_stmt_close($stmt_update);
+        
     } else {
-        // Se houve erro, remove a foto se foi salva
-        if (!empty($nome_foto) && file_exists($upload_dir . $nome_foto)) {
-            unlink($upload_dir . $nome_foto);
+        mysqli_stmt_close($stmt_check);
+    
+        // Processa a foto se fornecida
+        $nome_foto = null;
+        if (!empty($_POST['photoData'])) {
+            $photo_data = $_POST['photoData'];
+            
+            // Remove o prefixo "data:image/jpeg;base64,"
+            if (strpos($photo_data, 'data:image/jpeg;base64,') === 0) {
+                $photo_data = substr($photo_data, strlen('data:image/jpeg;base64,'));
+            }
+            
+            // Decodifica a imagem
+            $photo_decoded = base64_decode($photo_data);
+            
+            if ($photo_decoded !== false) {
+                // Cria diretório se não existir
+                $upload_dir = 'fotos_participantes/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                // Nome único para o arquivo
+                $nome_foto = 'foto_' . $cpf_clean . '_' . time() . '.jpg';
+                $caminho_foto = $upload_dir . $nome_foto;
+                
+                // Salva a foto
+                if (!file_put_contents($caminho_foto, $photo_decoded)) {
+                    throw new Exception("Erro ao salvar a foto");
+                }
+            }
         }
-        throw new Exception("Erro na preparação da query de inserção: " . mysqli_error($con));
+        
+        // Insere novo participante no banco de dados
+        $sql_insert = "INSERT INTO participantes (Nome, email, CPF, celular, tipoingresso, eventoid, thumb) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt_insert = mysqli_prepare($con, $sql_insert);
+        
+        if ($stmt_insert) {
+            mysqli_stmt_bind_param($stmt_insert, "sssssis", 
+                $nome, 
+                $email, 
+                $cpf_clean, 
+                $celular, 
+                $tipoingresso, 
+                $eventoid,
+                $nome_foto
+            );
+            
+            if (mysqli_stmt_execute($stmt_insert)) {
+                $participante_id = mysqli_insert_id($con);
+                
+                $response = [
+                    'success' => true,
+                    'message' => 'Participante credenciado com sucesso',
+                    'participante_id' => $participante_id,
+                    'nome' => $nome,
+                    'foto_salva' => !empty($nome_foto),
+                    'acao' => 'criado'
+                ];
+            } else {
+                // Se houve erro, remove a foto se foi salva
+                if (!empty($nome_foto) && file_exists($upload_dir . $nome_foto)) {
+                    unlink($upload_dir . $nome_foto);
+                }
+                throw new Exception("Erro ao salvar participante no banco de dados: " . mysqli_error($con));
+            }
+            
+            mysqli_stmt_close($stmt_insert);
+        } else {
+            // Se houve erro, remove a foto se foi salva
+            if (!empty($nome_foto) && file_exists($upload_dir . $nome_foto)) {
+                unlink($upload_dir . $nome_foto);
+            }
+            throw new Exception("Erro na preparação da query de inserção: " . mysqli_error($con));
+        }
     }
     
 } catch (Exception $e) {

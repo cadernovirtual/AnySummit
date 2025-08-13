@@ -2,8 +2,9 @@
 include("conm/conn.php");
 include("../includes/imagem-helpers.php");
 
-// Verificar se foi redirecionado de pagamento pendente
+// Verificar se foi redirecionado de pagamento pendente ou tempo expirado
 $payment_status = isset($_GET['status']) ? $_GET['status'] : '';
+$checkout_expired = isset($_GET['expired']) ? $_GET['expired'] : false;
 
 // Pegar o slug do evento da URL
 $slug = '';
@@ -73,6 +74,9 @@ $sql_ingressos = "
             OR 
             -- Se o lote for do tipo 'quantidade', trazer todos
             l.tipo = 'quantidade'
+            OR
+            -- Se o lote tem tipo NULL, considerar válido também
+            l.tipo IS NULL
             OR
             -- Se não há lote associado, trazer também
             l.id IS NULL
@@ -251,7 +255,10 @@ $data_inicio = formatarData($evento['data_inicio'], $evento['timezone']);
 $data_fim = formatarData($evento['data_fim'], $evento['timezone']);
 
 // Determinar se é evento de múltiplos dias
-$mesmo_dia = date('Y-m-d', $data_inicio['timestamp']) === date('Y-m-d', $data_fim['timestamp']);
+$mesmo_dia = true; // Padrão para eventos sem data fim
+if (!empty($data_inicio) && !empty($data_fim)) {
+    $mesmo_dia = date('Y-m-d', $data_inicio['timestamp']) === date('Y-m-d', $data_fim['timestamp']);
+}
 
 // Montar endereço completo
 $endereco_completo = '';
@@ -472,19 +479,43 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
 
             .info-content h5 {
                 font-size: 1rem;
+                text-align: center;
             }
 
             .date-info, .time-info {
                 font-size: 0.9rem;
                 justify-content: center;
+                text-align: center;
             }
 
             .address-details {
                 font-size: 0.85rem;
+                text-align: center;
             }
 
             .address-details div {
                 justify-content: center;
+                text-align: center;
+            }
+
+            /* Centralizar especificamente location-info */
+            .location-info {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .location-info h6 {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .online-info, .location-tbd {
+                text-align: center;
+                align-items: center;
             }
 
             /* Botão de calendário responsivo */
@@ -538,15 +569,23 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
             .date-info, .time-info {
                 justify-content: center;
                 font-size: 0.85rem;
+                text-align: center;
             }
 
             .address-details div {
                 justify-content: center;
                 font-size: 0.8rem;
+                text-align: center;
             }
 
             .location-info h6 {
                 font-size: 0.95rem;
+                text-align: center;
+            }
+
+            .location-info {
+                text-align: center;
+                width: 100%;
             }
 
             /* Botão de calendário em telas pequenas */
@@ -720,6 +759,22 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
     </div>
     <?php endif; ?>
 
+    <!-- Notificação de Checkout Expirado -->
+    <?php if ($checkout_expired): ?>
+    <div class="alert alert-info alert-dismissible fade show m-0" role="alert" style="border-radius: 0; border: none; background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
+        <div class="container">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle text-info me-3 fs-4"></i>
+                <div class="flex-grow-1">
+                    <strong><i class="fas fa-hourglass-end me-1"></i> Tempo de Compra Expirado</strong><br>
+                    <small>Sua sessão de compra anterior expirou. Selecione novamente os ingressos desejados.</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Hero Section -->
     <section class="hero-section<?php echo !empty($evento['imagem_fundo']) ? ' hero-with-background' : ''; ?>" id="evento" 
              >
@@ -730,10 +785,12 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
                         <div class="mb-3">
                             <span class="badge bg-primary rounded-pill px-3 py-2">
                                 <i class="fas fa-calendar me-1"></i>
-                                <?php if ($mesmo_dia): ?>
-                                    <?php echo $data_inicio['data']; ?> • <?php echo $data_inicio['hora']; ?> > <?php echo $data_fim['hora']; ?>
-                                <?php else: ?>
+                                <?php if ($mesmo_dia && !empty($data_fim)): ?>
+                                    <?php echo $data_inicio['data']; ?> • <?php echo $data_inicio['hora']; ?><?php if (!empty($data_fim)): ?> > <?php echo $data_fim['hora']; ?><?php endif; ?>
+                                <?php elseif (!empty($data_fim)): ?>
                                     <?php echo $data_inicio['data']; ?> • <?php echo $data_inicio['hora']; ?> > <?php echo $data_fim['data']; ?> • <?php echo $data_fim['hora']; ?>
+                                <?php else: ?>
+                                    <?php echo $data_inicio['data']; ?> • <?php echo $data_inicio['hora']; ?>
                                 <?php endif; ?>
                             </span>
                             <?php if ($evento['tipo_local'] == 'online'): ?>
@@ -939,20 +996,24 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
                                         <div class="date-info mb-2">
                                             <i class="fas fa-calendar text-primary me-2"></i>
                                             <span class="fw-medium">
-                                                <?php if ($mesmo_dia): ?>
+                                                <?php if ($mesmo_dia || empty($data_fim)): ?>
                                                     <?php echo $data_inicio['data']; ?>
-                                                <?php else: ?>
+                                                <?php elseif (!empty($data_fim)): ?>
                                                     <?php echo $data_inicio['data']; ?> até <?php echo $data_fim['data']; ?>
+                                                <?php else: ?>
+                                                    <?php echo $data_inicio['data']; ?>
                                                 <?php endif; ?>
                                             </span>
                                         </div>
                                         <div class="time-info">
                                             <i class="fas fa-clock text-primary me-2"></i>
                                             <span>
-                                                <?php if ($mesmo_dia): ?>
+                                                <?php if ($mesmo_dia && !empty($data_fim)): ?>
                                                     <?php echo $data_inicio['hora']; ?> às <?php echo $data_fim['hora']; ?>
-                                                <?php else: ?>
+                                                <?php elseif (!empty($data_fim)): ?>
                                                     <?php echo $data_inicio['hora']; ?> até <?php echo $data_fim['hora']; ?>
+                                                <?php else: ?>
+                                                    <?php echo $data_inicio['hora']; ?>
                                                 <?php endif; ?>
                                             </span>
                                         </div>
@@ -1216,7 +1277,20 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
         if (phpIngressos && phpIngressos.length > 0) {
             // Substituir os dados estáticos pelos dados reais
             tickets = phpIngressos.map((ingresso, index) => {
-                const disponivel = ingresso.quantidade_total - ingresso.quantidade_vendida - ingresso.quantidade_reservada;
+                // CORRIGIDO: Lógica para quantidade disponível
+                let disponivel;
+                let maxQuantity;
+                
+                if (ingresso.quantidade_total <= 0) {
+                    // Quantidade ilimitada - sem verificação de estoque
+                    disponivel = true; // Sempre disponível
+                    maxQuantity = ingresso.limite_max > 0 ? ingresso.limite_max : 999; // Usa limite_max ou valor alto
+                } else {
+                    // Quantidade limitada - fazer verificação de estoque
+                    disponivel = ingresso.quantidade_total - ingresso.quantidade_vendida - ingresso.quantidade_reservada;
+                    maxQuantity = ingresso.limite_max > 0 ? Math.min(disponivel, ingresso.limite_max) : disponivel;
+                }
+                
                 const preco = parseFloat(ingresso.preco || 0);
                 const taxa = parseFloat(ingresso.taxa_plataforma || 0);
                 
@@ -1252,8 +1326,8 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
                     originalPrice: preco, // Preço original sem lote
                     currentPrice: precoFinal, // Preço com ajuste do lote
                     quantity: 0,
-                    maxQuantity: ingresso.limite_max > 0 ? Math.min(disponivel, ingresso.limite_max) : 0,
-                    available: disponivel > 0 && ingresso.ativo == 1,
+                    maxQuantity: maxQuantity,
+                    available: (ingresso.quantidade_total <= 0) ? (ingresso.ativo == 1) : (disponivel > 0 && ingresso.ativo == 1),
                     taxa_plataforma: taxa,
                     // NOVOS CAMPOS
                     tipo: ingresso.tipo,
@@ -1339,7 +1413,7 @@ $logomarca_organizador = !empty($evento['logomarca']) ? $evento['logomarca'] : '
             nome: <?php echo json_encode($evento['nome']); ?>,
             descricao: <?php echo json_encode(strip_tags($evento['descricao'])); ?>,
             dataInicio: '<?php echo $evento['data_inicio']; ?>',
-            dataFim: '<?php echo $evento['data_fim']; ?>',
+            dataFim: <?php echo json_encode($evento['data_fim'] ?: $evento['data_inicio']); ?>,
             timezone: '<?php echo $evento['timezone'] ?: 'America/Sao_Paulo'; ?>',
             local: <?php echo json_encode($evento['tipo_local'] == 'online' ? 'Evento Online' : $endereco_completo); ?>,
             url: window.location.href
@@ -1459,17 +1533,11 @@ END:VCALENDAR`;
                 });
             }
             
-            // Se não há ingressos selecionados, criar um padrão para teste
+            // Se não há ingressos selecionados, exibir erro
             if (totalSelecionado === 0) {
-                console.log('⚠️ Nenhum ingresso selecionado, criando ingresso padrão');
-                ingressosSelecionados = [{
-                    id: 1,
-                    nome: 'Almoço (dois dias)',
-                    preco: 150.00,
-                    quantidade: 1,
-                    subtotal: 150.00
-                }];
-                totalSelecionado = 1;
+                console.log('⚠️ Nenhum ingresso selecionado');
+                alert('Por favor, selecione pelo menos um ingresso antes de continuar.');
+                return;
             }
             
             // Criar carrinho
@@ -1481,8 +1549,18 @@ END:VCALENDAR`;
                 },
                 ingressos: ingressosSelecionados,
                 subtotal: ingressosSelecionados.reduce((sum, ing) => sum + ing.subtotal, 0),
-                total: ingressosSelecionados.reduce((sum, ing) => sum + ing.subtotal, 0)
+                total: ingressosSelecionados.reduce((sum, ing) => sum + ing.subtotal, 0),
+                cupom: cupomAplicado,
+                desconto_cupom: cupomAplicado ? obterDescontoCupom(ingressosSelecionados.reduce((sum, ing) => sum + ing.subtotal, 0)) : 0
             };
+            
+            // Recalcular total com desconto se houver cupom
+            if (cupomAplicado) {
+                const valorSubtotal = carrinho.subtotal;
+                const desconto = obterDescontoCupom(valorSubtotal);
+                carrinho.desconto_cupom = desconto;
+                carrinho.total = Math.max(0, valorSubtotal - desconto);
+            }
             
             console.log('🛒 Carrinho criado:', carrinho);
             
@@ -1504,7 +1582,7 @@ END:VCALENDAR`;
         }
         
         // Forçar habilitação do botão após carregar
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoads', function() {
             setTimeout(function() {
                 const mobileBuyBtn = document.getElementById('mobile-buy-btn');
                 if (mobileBuyBtn) {
@@ -1513,6 +1591,251 @@ END:VCALENDAR`;
                 }
             }, 3000);
         });
+    </script>
+
+    <!-- Sistema de Cupons de Desconto -->
+    <script>
+        // Variável global para armazenar cupom aplicado
+        let cupomAplicado = null;
+        
+        // Função para normalizar código promocional
+        function normalizarCodigo(codigo) {
+            // Converter para maiúsculas
+            codigo = codigo.toUpperCase();
+            
+            // Remover acentos
+            const acentos = {
+                'À': 'A', 'Á': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A', 'Å': 'A',
+                'Æ': 'AE', 'Ç': 'C',
+                'È': 'E', 'É': 'E', 'Ê': 'E', 'Ë': 'E',
+                'Ì': 'I', 'Í': 'I', 'Î': 'I', 'Ï': 'I',
+                'Ð': 'D', 'Ñ': 'N',
+                'Ò': 'O', 'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O', 'Ø': 'O',
+                'Ù': 'U', 'Ú': 'U', 'Û': 'U', 'Ü': 'U',
+                'Ý': 'Y', 'Þ': 'TH', 'ß': 'SS'
+            };
+            
+            for (let acento in acentos) {
+                codigo = codigo.replace(new RegExp(acento, 'g'), acentos[acento]);
+            }
+            
+            // Substituir espaços por underscore
+            codigo = codigo.replace(/\s/g, '_');
+            
+            // Remover caracteres especiais (manter apenas letras, números e underscore)
+            codigo = codigo.replace(/[^A-Z0-9_]/g, '');
+            
+            return codigo;
+        }
+        
+        // Aplicar normalização em tempo real nos campos de código promocional
+        document.addEventListener('DOMContentLoaded', function() {
+            const desktopPromoCode = document.getElementById('desktop-promo-code');
+            const mobilePromoCode = document.getElementById('mobile-promo-code');
+            
+            function aplicarNormalizacao(event) {
+                const input = event.target;
+                const posicaoCursor = input.selectionStart;
+                const valorOriginal = input.value;
+                const valorNormalizado = normalizarCodigo(valorOriginal);
+                
+                if (valorOriginal !== valorNormalizado) {
+                    input.value = valorNormalizado;
+                    // Tentar manter a posição do cursor
+                    const novaPosicao = Math.min(posicaoCursor, valorNormalizado.length);
+                    input.setSelectionRange(novaPosicao, novaPosicao);
+                }
+            }
+            
+            if (desktopPromoCode) {
+                desktopPromoCode.addEventListener('input', aplicarNormalizacao);
+            }
+            
+            if (mobilePromoCode) {
+                mobilePromoCode.addEventListener('input', aplicarNormalizacao);
+            }
+        });
+        
+        // Função para aplicar código promocional
+        async function applyPromoCode() {
+            // Determinar qual campo usar (desktop ou mobile)
+            const desktopInput = document.getElementById('desktop-promo-code');
+            const mobileInput = document.getElementById('mobile-promo-code');
+            const desktopBtn = document.getElementById('desktop-promo-btn');
+            const mobileBtn = document.getElementById('mobile-promo-btn');
+            
+            let input, btn;
+            if (window.innerWidth <= 991 && mobileInput) {
+                input = mobileInput;
+                btn = mobileBtn;
+            } else if (desktopInput) {
+                input = desktopInput;
+                btn = desktopBtn;
+            } else {
+                return;
+            }
+            
+            const codigo = input.value.trim();
+            
+            if (!codigo) {
+                mostrarMensagemCupom('Por favor, digite um código promocional', 'warning');
+                return;
+            }
+            
+            // Normalizar código
+            const codigoNormalizado = normalizarCodigo(codigo);
+            input.value = codigoNormalizado;
+            
+            // Desabilitar botão durante validação
+            const btnOriginalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                const response = await fetch('/evento/api/validar-cupom.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        codigo: codigoNormalizado,
+                        evento_id: <?php echo $evento['id']; ?>
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Cupom válido
+                    cupomAplicado = data.cupom;
+                    mostrarMensagemCupom(data.message, 'success');
+                    
+                    // Atualizar visual do campo para indicar cupom aplicado
+                    input.classList.add('is-valid');
+                    input.classList.remove('is-invalid');
+                    
+                    // Atualizar botão para mostrar que está aplicado
+                    btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-success');
+                    
+                    // Recalcular totais se houver função para isso
+                    if (typeof recalcularTotais === 'function') {
+                        recalcularTotais();
+                    }
+                    
+                } else {
+                    // Cupom inválido
+                    cupomAplicado = null;
+                    mostrarMensagemCupom(data.message, 'error');
+                    
+                    input.classList.add('is-invalid');
+                    input.classList.remove('is-valid');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao validar cupom:', error);
+                mostrarMensagemCupom('Erro ao validar cupom. Tente novamente.', 'error');
+                cupomAplicado = null;
+            } finally {
+                // Reabilitar botão
+                btn.disabled = false;
+                if (!cupomAplicado) {
+                    btn.innerHTML = btnOriginalText;
+                }
+            }
+        }
+        
+        // Função para mostrar mensagens de cupom com estilo
+        function mostrarMensagemCupom(mensagem, tipo) {
+            // Remover alertas anteriores
+            const alertsAnteriores = document.querySelectorAll('.alert-cupom');
+            alertsAnteriores.forEach(alert => alert.remove());
+            
+            // Determinar classes CSS baseado no tipo
+            let classes = 'alert alert-cupom alert-dismissible fade show mt-3';
+            let icone = '';
+            
+            switch (tipo) {
+                case 'success':
+                    classes += ' alert-success';
+                    icone = '<i class="fas fa-check-circle me-2"></i>';
+                    break;
+                case 'error':
+                    classes += ' alert-danger';
+                    icone = '<i class="fas fa-exclamation-circle me-2"></i>';
+                    break;
+                case 'warning':
+                    classes += ' alert-warning';
+                    icone = '<i class="fas fa-exclamation-triangle me-2"></i>';
+                    break;
+                default:
+                    classes += ' alert-info';
+                    icone = '<i class="fas fa-info-circle me-2"></i>';
+            }
+            
+            // Criar elemento do alerta
+            const alertElement = document.createElement('div');
+            alertElement.className = classes;
+            alertElement.innerHTML = `
+                ${icone}
+                ${mensagem}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // Encontrar onde inserir o alerta (após o campo de código promocional)
+            const desktopPromoDiv = document.querySelector('#desktop-promo-code')?.closest('.mt-4');
+            const mobilePromoDiv = document.querySelector('#mobile-promo-code')?.closest('.mt-4');
+            
+            if (window.innerWidth <= 991 && mobilePromoDiv) {
+                mobilePromoDiv.appendChild(alertElement);
+            } else if (desktopPromoDiv) {
+                desktopPromoDiv.appendChild(alertElement);
+            }
+            
+            // Remover automaticamente após 5 segundos se for sucesso
+            if (tipo === 'success') {
+                setTimeout(() => {
+                    if (alertElement.parentNode) {
+                        alertElement.remove();
+                    }
+                }, 5000);
+            }
+        }
+        
+        // Função para obter desconto do cupom aplicado
+        function obterDescontoCupom(valorTotal) {
+            if (!cupomAplicado) {
+                return 0;
+            }
+            
+            if (cupomAplicado.tipo_desconto === 'percentual') {
+                return (valorTotal * cupomAplicado.valor_desconto) / 100;
+            } else if (cupomAplicado.tipo_desconto === 'valor') {
+                // Limitar o desconto ao valor total (não pode ficar negativo)
+                return Math.min(cupomAplicado.valor_desconto, valorTotal);
+            }
+            
+            return 0;
+        }
+        
+        // Função para verificar se compra ficou gratuita
+        function isCompraGratuita(valorTotal) {
+            if (!cupomAplicado) {
+                return false;
+            }
+            
+            const desconto = obterDescontoCupom(valorTotal);
+            return (valorTotal - desconto) <= 0;
+        }
+        
+        // Função de processamento de compra para desktop (similar à mobile)
+        window.processarCompra = function() {
+            console.log('🛒 processarCompra (desktop) chamada');
+            
+            // Usar a mesma lógica da função mobile
+            comprarIngressoMobile();
+        };
     </script>
 </body>
 </html>

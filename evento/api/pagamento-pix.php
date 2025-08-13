@@ -73,14 +73,35 @@ try {
     
     $valor = floatval($pedidoData['valor_total']);
     
-    // Dados da cobrança PIX
+    // Configurar timezone para São Paulo
+    date_default_timezone_set('America/Sao_Paulo');
+    
+    // Dados da cobrança PIX (configurado para QR Code imediato)
     $paymentData = [
         'customer' => $customer['id'],
         'billingType' => 'PIX',
         'value' => $valor,
-        'dueDate' => date('Y-m-d', strtotime('+1 day')), // Vencimento para 1 dia
+        'dueDate' => date('Y-m-d'), // CORRIGIDO: Vencimento para hoje (PIX QR Code imediato)
         'description' => 'Ingresso(s) - ' . ($pedidoData['evento_nome'] ?? 'Evento'),
-        'externalReference' => $pedidoData['codigo_pedido'] ?? $pedidoData['pedidoid']
+        'externalReference' => $pedidoData['codigo_pedido'] ?? $pedidoData['pedidoid'],
+        
+        // Configurações para PIX QR Code imediato
+        'postalService' => false,           // Não enviar pelos correios
+        'notificationDisabled' => false,   // CORRIGIDO: Manter webhooks habilitados para detectar pagamento
+        
+        // Configurações específicas para PIX imediato
+        'fine' => [
+            'value' => 0                    // Sem multa
+        ],
+        'interest' => [
+            'value' => 0                    // Sem juros
+        ],
+        'discount' => [
+            'value' => 0,                   // Sem desconto
+            'dueDateLimitDays' => 0
+        ],
+        
+        // Configurações específicas para PIX imediato (sem callback desnecessário)
     ];
     
     error_log('Dados do pagamento PIX: ' . print_r($paymentData, true));

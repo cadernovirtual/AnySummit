@@ -282,13 +282,6 @@
                     </div>
                     
                     ${renderComboContent(ticket.comboItens)}
-                    
-                    ${ticket.maxQuantity > 0 ? `
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Máximo ${ticket.maxQuantity} ingressos por pessoa
-                    </small>
-                    ` : ''}
                 </div>
             `).join('');
 
@@ -330,7 +323,6 @@
                         <div class="col">Total:</div>
                         <div class="col-auto">R$ ${formatPrice(total)}</div>
                     </div>
-                    <small class="text-muted">ou 12x R$ ${formatPrice(total / 12)}</small>
                 `;
                 
                 if (mobileSummary) mobileSummary.innerHTML = summaryHtml;

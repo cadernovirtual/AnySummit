@@ -1,10 +1,39 @@
 <?php
 include("../conm/conn.php");
 
-// Verificar se o ingresso_id foi fornecido
+// Função para decodificar hash do ingresso
+function decodificarHashIngresso($hash) {
+    global $con;
+    
+    $sql = "SELECT ii.id, ii.criado_em 
+            FROM tb_ingressos_individuais ii 
+            WHERE SHA2(CONCAT('AnySummit2025@#$%ingresso', ii.id, UNIX_TIMESTAMP(ii.criado_em)), 256) = ?
+            LIMIT 1";
+    
+    $stmt = $con->prepare($sql);
+    $stmt->bind_param("s", $hash);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        return $row['id'];
+    }
+    
+    return false;
+}
+
+// Verificar se o hash ou ingresso_id foi fornecido
+$hash = isset($_GET['h']) ? trim($_GET['h']) : '';
 $ingresso_id = isset($_GET['ingresso_id']) ? intval($_GET['ingresso_id']) : 0;
 
-if (!$ingresso_id) {
+// Decodificar hash se fornecido
+if (!empty($hash)) {
+    $ingresso_id = decodificarHashIngresso($hash);
+    if (!$ingresso_id) {
+        die('Hash inválido ou ingresso não encontrado');
+    }
+} elseif (!$ingresso_id) {
     die('ID do ingresso não fornecido');
 }
 
@@ -42,6 +71,297 @@ try {
     }
     
     $ingresso = $result->fetch_assoc();
+    
+    // VERIFICAÇÃO PARA PARTICIPANTE_ID
+    if (empty($ingresso['participanteid'])) {
+        ?>
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Voucher - <?php echo htmlspecialchars($ingresso['evento_nome']); ?></title>
+            
+            <!-- Bootstrap CSS -->
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <!-- Font Awesome -->
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+            <!-- Google Fonts -->
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            
+            <style>
+                body {
+                    font-family: 'Inter', sans-serif;
+                    background: linear-gradient(135deg, #0F0F23 0%, #1A1A2E 50%, #16213E 100%);
+                    min-height: 100vh;
+                    padding: 20px 0;
+                    margin: 0;
+                }
+                
+                .main-container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 80vh;
+                }
+                
+                .voucher-card {
+                    border-radius: 20px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    border: 1px solid rgba(255, 193, 7, 0.3);
+                    background: rgba(26, 26, 46, 0.95);
+                    backdrop-filter: blur(15px);
+                    overflow: hidden;
+                    width: 100%;
+                    max-width: 600px;
+                }
+                
+                .header-gradient {
+                    background: linear-gradient(135deg, #FFC107 0%, #FF8F00 100%);
+                    color: white;
+                    padding: 2rem;
+                    text-align: center;
+                    position: relative;
+                }
+                
+                .content {
+                    background: white;
+                    padding: 2rem;
+                    text-align: center;
+                }
+                
+                .warning-icon {
+                    font-size: 4rem;
+                    color: #FFC107;
+                    margin-bottom: 1rem;
+                }
+                
+                .warning-title {
+                    color: #495057;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                }
+                
+                .warning-message {
+                    color: #6c757d;
+                    font-size: 1.1rem;
+                    line-height: 1.6;
+                    margin-bottom: 2rem;
+                }
+                
+                .voucher-code {
+                    font-size: 18px;
+                    font-weight: 700;
+                    font-family: 'Courier New', monospace;
+                    color: #FFC107;
+                    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 143, 0, 0.1));
+                    padding: 15px;
+                    border-radius: 15px;
+                    border: 2px solid #FFC107;
+                    text-align: center;
+                    letter-spacing: 2px;
+                    margin: 15px 0;
+                    text-transform: uppercase;
+                }
+                
+                .event-info {
+                    background: rgba(255, 193, 7, 0.1);
+                    border: 1px solid rgba(255, 193, 7, 0.2);
+                    padding: 20px;
+                    border-radius: 12px;
+                    margin: 20px 0;
+                    text-align: left;
+                }
+                
+                .btn-action {
+                    background: linear-gradient(135deg, #FFC107 0%, #FF8F00 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 10px;
+                    font-weight: 600;
+                    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+                    transition: all 0.3s ease;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin: 0 5px;
+                }
+                
+                .btn-action:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 35px rgba(255, 193, 7, 0.6);
+                    color: white;
+                    text-decoration: none;
+                }
+                
+                .btn-secondary {
+                    background: linear-gradient(135deg, #6c757d, #495057);
+                }
+                
+                @media print {
+                    body {
+                        background: white !important;
+                    }
+                    .voucher-card {
+                        box-shadow: none !important;
+                        border: 2px solid #FFC107 !important;
+                    }
+                    .header-gradient {
+                        background: linear-gradient(135deg, #FFC107 0%, #FF8F00 100%) !important;
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="main-container">
+                <div class="voucher-card">
+                    <!-- Header -->
+                    <div class="header-gradient">
+                        <h1 class="mb-2 fs-2">
+                            <i class="fas fa-ticket-alt me-2"></i>
+                            Voucher de Evento
+                        </h1>
+                        <h3 class="mb-0 opacity-90"><?php echo htmlspecialchars($ingresso['evento_nome']); ?></h3>
+                    </div>
+                    
+                    <!-- Conteúdo Principal -->
+                    <div class="content">
+                        <div class="warning-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        
+                        <h2 class="warning-title">Voucher Aguardando Vinculação</h2>
+                        
+                        <div class="alert alert-danger mb-3" role="alert" style="background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.3); color: #dc3545; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>⚠️ Atenção: Esse documento não garante acesso ao evento!</strong>
+                        </div>
+                        
+                        <p class="warning-message">
+                            <strong>Para gerar o ingresso com QR CODE para esse voucher é necessário vinculá-lo à pessoa que efetivamente participará do evento.</strong>
+                        </p>
+                        
+                        <!-- Código do Voucher -->
+                        <div class="voucher-code">
+                            <?php echo htmlspecialchars($ingresso['codigo_ingresso']); ?>
+                        </div>
+                        
+                        <!-- Informações do Evento -->
+                        <div class="event-info">
+                            <h5 class="mb-3">
+                                <i class="fas fa-info-circle text-warning me-2"></i>
+                                Informações do Evento
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Evento:</strong><br>
+                                    <span class="text-muted"><?php echo htmlspecialchars($ingresso['evento_nome']); ?></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Tipo de Ingresso:</strong><br>
+                                    <span class="text-muted"><?php echo htmlspecialchars($ingresso['titulo_ingresso']); ?></span>
+                                </div>
+                            </div>
+                            
+                            <?php 
+                            $data_evento = '';
+                            if ($ingresso['data_inicio']) {
+                                $data_evento = date('d/m/Y \à\s H\hi', strtotime($ingresso['data_inicio']));
+                            }
+                            ?>
+                            
+                            <?php if ($data_evento): ?>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <strong>Data:</strong><br>
+                                    <span class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        <?php echo $data_evento; ?>
+                                    </span>
+                                </div>
+                                <?php if ($ingresso['nome_local']): ?>
+                                <div class="col-md-6">
+                                    <strong>Local:</strong><br>
+                                    <span class="text-muted">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        <?php echo htmlspecialchars($ingresso['nome_local']); ?>
+                                        <?php if ($ingresso['cidade']): ?>
+                                            <br><small><?php echo htmlspecialchars($ingresso['cidade']); ?>
+                                            <?php if ($ingresso['estado']): ?>
+                                                - <?php echo htmlspecialchars($ingresso['estado']); ?>
+                                            <?php endif; ?></small>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <strong>Código do Voucher:</strong><br>
+                                    <span class="text-muted"><?php echo htmlspecialchars($ingresso['codigo_ingresso']); ?></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Pedido:</strong><br>
+                                    <span class="text-muted"><?php echo htmlspecialchars($ingresso['codigo_pedido']); ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Instruções -->
+                        <div class="alert alert-warning mt-4" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                Como proceder:
+                            </h6>
+                            <ul class="mb-0 text-start">
+                                <li><strong>Se foi você quem fez a compra:</strong> No corpo do email de confirmação que você recebeu clique no botão "Vincular Participante" e faça a identificação e a impressão do ingresso.</li>
+                                <li><strong>Se você recebeu esse voucher de alguém:</strong> No seu email também existe um botão "Vincular Participante". Clique nele, identifique o participante e o ingresso oficial será gerado.</li>
+                                <li><strong>Caso não tenha recebido nenhum desses emails ou estiver com dificuldades:</strong> Contate diretamente o organizador do evento, identifique-se e forneça o código desse voucher: <strong><?php echo htmlspecialchars($ingresso['codigo_ingresso']); ?></strong></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Botões de Ação -->
+                        <div class="mt-4">
+                            <button class="btn-action" onclick="window.print()">
+                                <i class="fas fa-print"></i>
+                                Imprimir Voucher
+                            </button>
+                            
+                            <button class="btn-action btn-secondary" onclick="window.close()">
+                                <i class="fas fa-times"></i>
+                                Fechar
+                            </button>
+                        </div>
+                        
+                        <!-- Informações de Contato -->
+                        <?php if (!empty($ingresso['organizador_nome'])): ?>
+                        <div class="mt-4 pt-3 border-top">
+                            <small class="text-muted">
+                                <i class="fas fa-building me-1"></i>
+                                Evento organizado por: <strong><?php echo htmlspecialchars($ingresso['organizador_nome']); ?></strong>
+                            </small>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bootstrap JS -->
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
     
     // Formatações para exibição
     $data_evento = '';

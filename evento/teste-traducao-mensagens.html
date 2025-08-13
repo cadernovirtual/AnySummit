@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Tradução de Mensagens</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .original { background: #ffe6e6; margin-bottom: 10px; padding: 10px; border-radius: 4px; }
+        .translated { background: #e6ffe6; padding: 10px; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-test { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Tradução de Mensagens de Erro</h1>
+    
+    <div class="test-case">
+        <h3>Caso 1: Mensagem real recebida pelo usuário</h3>
+        <div class="original">
+            <strong>Original:</strong><br>
+            Problema no pagamento: Erro ao processar pagamento: Erro HTTP 400: [{"code":"invalid_creditCard","description":"Transa\u00e7\u00e3o n\u00e3o autorizada. Verifique os dados do cart\u00e3o de cr\u00e9dito e tente novamente."}]
+        </div>
+        <div class="translated" id="result1">
+            <strong>Traduzida:</strong><br>
+            <span id="translated1">Clique no botão para testar</span>
+        </div>
+        <button class="btn-test" onclick="testMessage1()">Testar Tradução</button>
+    </div>
+
+    <div class="test-case">
+        <h3>Caso 2: Outros tipos de erro</h3>
+        <div class="original">
+            <strong>Original:</strong><br>
+            Erro HTTP 400: [{"code":"insufficient_funds","description":"Saldo insuficiente"}]
+        </div>
+        <div class="translated" id="result2">
+            <strong>Traduzida:</strong><br>
+            <span id="translated2">Clique no botão para testar</span>
+        </div>
+        <button class="btn-test" onclick="testMessage2()">Testar Tradução</button>
+    </div>
+
+    <div class="test-case">
+        <h3>Caso 3: Mensagem com Unicode</h3>
+        <div class="original">
+            <strong>Original:</strong><br>
+            [{"code":"card_expired","description":"Cart\u00e3o expirado. Verifique a data de validade."}]
+        </div>
+        <div class="translated" id="result3">
+            <strong>Traduzida:</strong><br>
+            <span id="translated3">Clique no botão para testar</span>
+        </div>
+        <button class="btn-test" onclick="testMessage3()">Testar Tradução</button>
+    </div>
+
+    <script>
+        /**
+         * Traduz mensagens de erro técnicas para mensagens amigáveis
+         * (Cópia da função implementada no checkout)
+         */
+        function translateErrorMessage(errorMessage) {
+            // Decodificar caracteres Unicode se existirem
+            let message = errorMessage;
+            
+            // Decodificar \u00e7 para ç e outros caracteres especiais
+            message = message.replace(/\\u([0-9a-fA-F]{4})/g, function (match, code) {
+                return String.fromCharCode(parseInt(code, 16));
+            });
+            
+            // Extrair mensagens específicas do Asaas se existirem
+            try {
+                // Tentar extrair array de erros JSON do Asaas
+                const jsonMatch = message.match(/\[{.*}\]/);
+                if (jsonMatch) {
+                    const errors = JSON.parse(jsonMatch[0]);
+                    if (errors && errors.length > 0) {
+                        const error = errors[0];
+                        
+                        // Mensagens específicas por código de erro do Asaas
+                        const errorTranslations = {
+                            'invalid_creditCard': 'Cartão de crédito recusado. Verifique os dados do cartão e tente novamente.',
+                            'insufficient_funds': 'Saldo insuficiente no cartão. Tente com outro cartão ou forma de pagamento.',
+                            'card_expired': 'Cartão expirado. Verifique a data de validade ou use outro cartão.',
+                            'invalid_cvv': 'Código de segurança (CVV) inválido. Verifique os 3 dígitos no verso do cartão.',
+                            'card_blocked': 'Cartão bloqueado. Entre em contato com seu banco ou use outro cartão.',
+                            'invalid_card_number': 'Número do cartão inválido. Verifique os 16 dígitos digitados.',
+                            'transaction_not_allowed': 'Transação não permitida. Entre em contato com seu banco.',
+                            'exceeds_limit': 'Valor excede o limite do cartão. Tente um valor menor ou outro cartão.',
+                            'issuer_unavailable': 'Banco emissor indisponível no momento. Tente novamente em alguns minutos.',
+                            'invalid_transaction': 'Dados da transação inválidos. Verifique todas as informações.',
+                            'fraud_suspected': 'Transação suspeita bloqueada por segurança. Entre em contato com seu banco.',
+                            'invalid_merchant': 'Problema com o estabelecimento. Tente novamente ou entre em contato conosco.'
+                        };
+                        
+                        // Se tem tradução específica, usar ela
+                        if (errorTranslations[error.code]) {
+                            return errorTranslations[error.code];
+                        }
+                        
+                        // Se tem descrição mas não tem tradução, usar descrição limpa
+                        if (error.description) {
+                            return error.description;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('Erro ao parsear JSON:', e);
+            }
+            
+            // Verificações por palavras-chave na mensagem (fallback)
+            const keywordTranslations = {
+                'não autorizada': 'Cartão recusado pela operadora. Verifique os dados ou tente outro cartão.',
+                'transação não autorizada': 'Cartão recusado pela operadora. Verifique os dados ou tente outro cartão.',
+                'cartão inválido': 'Dados do cartão inválidos. Verifique número, validade e CVV.',
+                'saldo insuficiente': 'Saldo insuficiente no cartão. Tente com outro cartão.',
+                'cartão expirado': 'Cartão expirado. Verifique a data de validade.',
+                'cvv inválido': 'Código de segurança (CVV) incorreto. Verifique os 3 dígitos no verso.',
+                'cartão bloqueado': 'Cartão bloqueado. Entre em contato com seu banco.',
+                'limite excedido': 'Limite do cartão excedido. Tente um valor menor.',
+                'timeout': 'Tempo limite excedido. Tente novamente.',
+                'connection': 'Erro de conexão. Verifique sua internet e tente novamente.',
+                'network': 'Erro de rede. Tente novamente em alguns instantes.'
+            };
+            
+            // Verificar palavras-chave
+            for (const [keyword, translation] of Object.entries(keywordTranslations)) {
+                if (message.toLowerCase().includes(keyword.toLowerCase())) {
+                    return translation;
+                }
+            }
+            
+            // Remover prefixos técnicos comuns
+            message = message.replace(/^Erro ao processar pagamento:\s*/i, '');
+            message = message.replace(/^Erro HTTP \d+:\s*/i, '');
+            message = message.replace(/^Problema no pagamento:\s*/i, '');
+            
+            // Se ainda tem JSON ou códigos técnicos, usar mensagem genérica amigável
+            if (message.includes('[{') || message.includes('HTTP') || message.includes('code":')) {
+                return 'Não foi possível processar o pagamento com este cartão. Verifique os dados ou tente outro cartão.';
+            }
+            
+            // Retornar mensagem limpa
+            return message || 'Erro no processamento do pagamento. Tente novamente.';
+        }
+
+        function testMessage1() {
+            const original = 'Problema no pagamento: Erro ao processar pagamento: Erro HTTP 400: [{"code":"invalid_creditCard","description":"Transa\\u00e7\\u00e3o n\\u00e3o autorizada. Verifique os dados do cart\\u00e3o de cr\\u00e9dito e tente novamente."}]';
+            const translated = translateErrorMessage(original);
+            document.getElementById('translated1').textContent = translated;
+        }
+
+        function testMessage2() {
+            const original = 'Erro HTTP 400: [{"code":"insufficient_funds","description":"Saldo insuficiente"}]';
+            const translated = translateErrorMessage(original);
+            document.getElementById('translated2').textContent = translated;
+        }
+
+        function testMessage3() {
+            const original = '[{"code":"card_expired","description":"Cart\\u00e3o expirado. Verifique a data de validade."}]';
+            const translated = translateErrorMessage(original);
+            document.getElementById('translated3').textContent = translated;
+        }
+    </script>
+</body>
+</html>

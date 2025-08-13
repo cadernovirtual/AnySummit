@@ -1047,30 +1047,32 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
         .setores-badges-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 12px;
             margin-top: 10px;
             min-height: 40px;
-            padding: 10px;
+            padding: 15px;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            background: rgba(248, 250, 252, 0.5);
+            background: transparent;
+            overflow: visible;
         }
         
         .setor-badge {
             position: relative;
             display: inline-flex;
             align-items: center;
-            padding: 6px 20px 6px 12px;
+            padding: 6px 24px 6px 12px;
             border-radius: 20px;
             font-size: 11px;
             font-weight: 500;
             color: white;
             max-width: 150px;
-            overflow: hidden;
+            overflow: visible;
             text-overflow: ellipsis;
             white-space: nowrap;
             transition: all 0.3s ease;
             cursor: default;
+            margin: 4px;
         }
         
         .setor-badge:hover {
@@ -1090,15 +1092,15 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
         
         .setor-badge-remove {
             position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 18px;
-            height: 18px;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: rgba(255, 68, 68, 0.9);
             color: white;
             border: 2px solid white;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -1106,6 +1108,8 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
             justify-content: center;
             transition: all 0.3s ease;
             line-height: 1;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .setor-badge-remove:hover {
@@ -3003,11 +3007,26 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                      headers: {
                          'Content-Type': 'application/x-www-form-urlencoded'
                      },
+                     credentials: 'same-origin',
                      body: 'action=iniciar_evento'
                  });
                  
-                 const data = await response.json();
-                 console.log('📡 Resposta do servidor:', data);
+                 // Debug da resposta
+                 const responseText = await response.text();
+                 console.log('📡 Raw response text:', responseText);
+                 console.log('📡 Response length:', responseText.length);
+                 console.log('📡 First 100 chars:', responseText.substring(0, 100));
+                 
+                 // Tentar parsear JSON
+                 let data;
+                 try {
+                     data = JSON.parse(responseText);
+                     console.log('📡 Parsed JSON:', data);
+                 } catch (e) {
+                     console.error('❌ Erro ao parsear JSON:', e);
+                     console.error('❌ Response text:', responseText);
+                     throw e;
+                 }
                  
                  if (data.sucesso) {
                      eventoId = data.evento_id;
@@ -3027,13 +3046,60 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
              }
          }
          
-         // Interceptar função nextStep para salvar dados automaticamente
+         // Interceptar função nextStep para criar evento ao sair da etapa 1
          const originalNextStep = window.nextStep;
          
          window.nextStep = async function() {
-             if (!eventoId && !window.currentEventoId) {
-                 console.warn('⚠️ Evento não criado ainda, tentando criar...');
-                 await iniciarEventoRascunho();
+             const currentStep = getCurrentStep();
+             console.log('🔄 NextStep chamado, etapa atual:', currentStep);
+             
+             // CRIAR EVENTO AO SAIR DA ETAPA 1
+             if (currentStep === 1 && !eventoId && !window.currentEventoId) {
+                 console.log('🆕 CRIANDO EVENTO ao sair da etapa 1...');
+                 
+                 // Coletar dados da etapa 1
+                 const nomeEvento = document.getElementById('nome')?.value || '';
+                 const categoriaId = document.getElementById('categoria')?.value || '';
+                 const descricaoEvento = document.getElementById('descricao')?.value || '';
+                 
+                 if (!nomeEvento.trim()) {
+                     alert('Por favor, preencha o nome do evento antes de continuar.');
+                     return false;
+                 }
+                 
+                 try {
+                     const response = await fetch('/produtor/ajax/wizard_evento.php', {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/x-www-form-urlencoded'
+                         },
+                         credentials: 'same-origin',
+                         body: `action=criar_evento_etapa1&nome=${encodeURIComponent(nomeEvento)}&categoria_id=${categoriaId}&descricao=${encodeURIComponent(descricaoEvento)}`
+                     });
+                     
+                     const responseText = await response.text();
+                     console.log('📡 Resposta criar evento:', responseText);
+                     
+                     const data = JSON.parse(responseText);
+                     
+                     if (data.sucesso) {
+                         eventoId = data.evento_id;
+                         window.currentEventoId = eventoId;
+                         console.log('✅ Evento criado com ID:', eventoId);
+                         
+                         // Atualizar URL
+                         const newURL = window.location.pathname + '?evento_id=' + eventoId;
+                         window.history.replaceState({}, '', newURL);
+                     } else {
+                         console.error('❌ Erro ao criar evento:', data.erro);
+                         alert('Erro ao criar evento: ' + data.erro);
+                         return false;
+                     }
+                 } catch (error) {
+                     console.error('❌ Erro na requisição:', error);
+                     alert('Erro de conexão ao criar evento.');
+                     return false;
+                 }
              }
              
              const currentEventId = eventoId || window.currentEventoId;
@@ -3080,6 +3146,7 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
                      headers: {
                          'Content-Type': 'application/x-www-form-urlencoded'
                      },
+                     credentials: 'same-origin',
                      body: `action=salvar_etapa&evento_id=${eventoId}&etapa=${currentStep}&dados=${encodeURIComponent(JSON.stringify(dadosParaSalvar))}`
                  });
                  
@@ -3149,14 +3216,9 @@ $parametros = mysqli_fetch_assoc($result_parametros) ?: [
              return dados;
          }
          
-         // Inicializar sistema ao carregar a página
+         // Sistema não cria evento automaticamente - apenas quando sair da etapa 1
          document.addEventListener('DOMContentLoaded', function() {
-             console.log('🚀 Inicializando sistema de rascunho...');
-             
-             // Aguardar um pouco para garantir que outros scripts carregaram
-             setTimeout(async () => {
-                 await iniciarEventoRascunho();
-             }, 1000);
+             console.log('🚀 Sistema de criação de evento na etapa 1 ativo...');
          });
          
          // Tornar disponível globalmente

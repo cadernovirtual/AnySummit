@@ -13,24 +13,58 @@ if (!$pedido_id) {
 $contratante_id = $_COOKIE['contratanteid'] ?? 0;
 $usuario_id = $_COOKIE['usuarioid'] ?? 0;
 
-$sql = "SELECT ii.*, 
-               i.titulo as ingresso_titulo,
-               ii.participante_nome,
-               ii.participante_email,
-               p.celular as participante_celular
-        FROM tb_ingressos_individuais ii
-        LEFT JOIN ingressos i ON ii.ingresso_id = i.id
-        LEFT JOIN participantes p ON ii.participanteid = p.participanteid
-        LEFT JOIN eventos e ON ii.eventoid = e.id
-        WHERE ii.pedidoid = ? AND e.contratante_id = ? AND e.usuario_id = ?
-        ORDER BY ii.codigo_ingresso";
-
-$stmt = mysqli_prepare($con, $sql);
-mysqli_stmt_bind_param($stmt, "iii", $pedido_id, $contratante_id, $usuario_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$ingressos = mysqli_fetch_all($result, MYSQLI_ASSOC);
-mysqli_stmt_close($stmt);
+// Ajustar verificação dependendo dos cookies disponíveis
+if ($contratante_id > 0) {
+    // Verificação completa com contratante e usuário
+    $sql = "SELECT ii.*, 
+                   i.titulo as ingresso_titulo,
+                   ii.participante_nome,
+                   ii.participante_email,
+                   p.celular as participante_celular
+            FROM tb_ingressos_individuais ii
+            LEFT JOIN ingressos i ON ii.ingresso_id = i.id
+            LEFT JOIN participantes p ON ii.participanteid = p.participanteid
+            LEFT JOIN eventos e ON ii.eventoid = e.id
+            WHERE ii.pedidoid = ? AND e.contratante_id = ? AND e.usuario_id = ?
+            ORDER BY ii.codigo_ingresso";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "iii", $pedido_id, $contratante_id, $usuario_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $ingressos = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        mysqli_stmt_close($stmt);
+    } else {
+        $ingressos = [];
+        error_log("Erro na query pedido-ingressos (modo completo): " . mysqli_error($con));
+    }
+} else {
+    // Verificação apenas com usuário
+    $sql = "SELECT ii.*, 
+                   i.titulo as ingresso_titulo,
+                   ii.participante_nome,
+                   ii.participante_email,
+                   p.celular as participante_celular
+            FROM tb_ingressos_individuais ii
+            LEFT JOIN ingressos i ON ii.ingresso_id = i.id
+            LEFT JOIN participantes p ON ii.participanteid = p.participanteid
+            LEFT JOIN eventos e ON ii.eventoid = e.id
+            WHERE ii.pedidoid = ? AND e.usuario_id = ?
+            ORDER BY ii.codigo_ingresso";
+    
+    $stmt = mysqli_prepare($con, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "ii", $pedido_id, $usuario_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $ingressos = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        mysqli_stmt_close($stmt);
+    } else {
+        $ingressos = [];
+        error_log("Erro na query pedido-ingressos (modo usuario): " . mysqli_error($con));
+    }
+}
 
 if (empty($ingressos)) {
     echo '<div style="color: #FF5252; text-align: center;">Nenhum ingresso encontrado para este pedido</div>';

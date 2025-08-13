@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const response = await fetch('/produtor/ajax/wizard_evento.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            credentials: 'same-origin',
             body: `action=obter_tipo_lote&lote_id=${loteId}&evento_id=${eventoId}`
         });
         

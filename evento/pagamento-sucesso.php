@@ -1,8 +1,8 @@
 <?php
 session_start();
-include("conm/conn.php");
-include("api/enviar-email-confirmacao.php");
-include("api/notificar-organizador.php");
+include_once("conm/conn.php");
+include_once("api/enviar-email-confirmacao.php");
+include_once("api/notificar-organizador.php");
 
 // Verificar se existe sessão válida ou se foi passado um pedido_id válido
 $acesso_autorizado = false;
@@ -84,30 +84,9 @@ try {
             exit;
         }
         
-        // Se o pagamento foi aprovado, tentar enviar email de confirmação como backup
-        // (caso o webhook ainda não tenha sido processado)
-        if (($pedido_data['status_pagamento'] === 'pago' || $pedido_data['status_pagamento'] === 'aprovado') && 
-            $pedido_data['comprador_email']) {
-            try {
-                // Enviar email de confirmação como backup
-                $email_backup = enviarEmailConfirmacao($pedido_data['pedidoid'], $con);
-                if ($email_backup) {
-                    error_log("Email de confirmação (backup) enviado para pedido: " . $pedido_data['pedidoid']);
-                } else {
-                    error_log("Falha no envio de email de confirmação (backup) para pedido: " . $pedido_data['pedidoid']);
-                }
-                
-                // Enviar notificação para organizador como backup
-                $notificacao_backup = notificarOrganizadorCompra($pedido_data['pedidoid'], $con);
-                if ($notificacao_backup === true) {
-                    error_log("Notificação organizador (backup) enviada para pedido: " . $pedido_data['pedidoid']);
-                } else {
-                    error_log("Falha notificação organizador (backup) para pedido: " . $pedido_data['pedidoid']);
-                }
-            } catch (Exception $e) {
-                error_log("Erro no envio de email de confirmação (backup): " . $e->getMessage());
-            }
-        }
+        // CORREÇÃO: REMOVIDO - Não enviar emails duplicados aqui
+        // Os emails de confirmação e notificação já foram enviados quando o pagamento foi processado
+        // Esta página é apenas para mostrar o resultado e permitir ações nos ingressos
         
         // Buscar itens do pedido
         $sql_itens = "SELECT ip.*, i.titulo as ingresso_titulo, i.descricao as ingresso_descricao, i.tipo as ingresso_tipo
@@ -154,7 +133,7 @@ try {
         $sql_ingressos = "SELECT 
             ii.id, ii.codigo_ingresso, ii.titulo_ingresso, ii.preco_unitario, ii.status,
             ii.participanteid, ii.participante_nome, ii.participante_email, ii.participante_documento,
-            ii.data_vinculacao, ii.utilizado, ii.data_utilizacao
+            ii.data_vinculacao, ii.utilizado, ii.data_utilizacao, ii.hash_validacao
             FROM tb_ingressos_individuais ii 
             WHERE ii.pedidoid = ? 
             ORDER BY ii.id";
@@ -299,11 +278,11 @@ unset($_SESSION['checkout_start_time']);
                 <div class="bg-light p-4 rounded mb-4">
                     <h6 class="fw-bold mb-3">Detalhes do Pedido</h6>
                     <div class="row text-start">
-                        <div class="col-6">
+                        <div class="col-lg-4 col-md-5 mb-3">
                             <strong>Número do Pedido:</strong><br>
                             <span class="text-muted"><?php echo $pedido_data ? htmlspecialchars($pedido_data['codigo_pedido']) : $pedido_id; ?></span>
                         </div>
-                        <div class="col-6">
+                        <div class="col-lg-8 col-md-7 mb-3">
                             <strong>Data:</strong><br>
                             <span class="text-muted"><?php echo $pedido_data ? date('d/m/Y H:i', strtotime($pedido_data['data_pedido'])) : date('d/m/Y H:i'); ?></span>
                         </div>
@@ -340,25 +319,55 @@ unset($_SESSION['checkout_start_time']);
                             <!-- Seção de Ingressos Individuais -->
                             <?php if (!empty($ingressos_individuais)): ?>
                             <hr class="my-4">
-                            <h6 class="fw-bold mb-4 text-start">
+                            <h6 class="fw-bold mb-3 text-start">
                                 <i class="fas fa-ticket-alt me-2 text-primary"></i>
-                                Seus Ingressos Individuais
+                                Aqui estão os ingressos que você comprou
                             </h6>
-                            <div id="ingressos-individuais">
+                            
+                            <!-- Instruções -->
+                            <div class="alert alert-info mb-4" style="text-align: left;">
+                                <h6><i class="fas fa-info-circle me-2"></i>Próximos passos:</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Emita cada ingresso comprado</strong> identificando os dados do seu portador.</li>
+                                    <li><strong>Você também terá a opção</strong> de enviar o ingresso para uso de outra pessoa.</li>
+                                    <li><strong>Para entrar no evento</strong> será necessário apresentar o ingresso emitido impresso ou digital.</li>
+                                </ul>
+                            </div>
+                            <div id="ingressos-individuais" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%); padding: 20px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); border: 2px dashed #6c757d; position: relative;">
+                                <!-- Header decorativo para simular perfuração de ticket -->
+                                <div style="position: absolute; top: -8px; left: 20px; right: 20px; height: 16px; background: repeating-linear-gradient(90deg, transparent 0px, transparent 8px, #6c757d 8px, #6c757d 12px); opacity: 0.3;"></div>
+                                
+                                <div style="text-align: center; margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(0,123,255,0.3);">
+                                    <h5 style="margin: 0; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                                        <i class="fas fa-ticket-alt me-2"></i>
+                                        SEUS INGRESSOS ADQUIRIDOS
+                                    </h5>
+                                    <small style="opacity: 0.9;">Emita cada ingresso individualmente identificando o portador</small>
+                                </div>
+                                
                                 <?php foreach ($ingressos_individuais as $index => $ingresso): ?>
-                                <div class="card mb-3 shadow-sm" style="border: 1px solid #e9ecef; border-radius: 12px; overflow: hidden;">
-                                    <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 2px solid #dee2e6;">
+                                <div class="card mb-4 shadow-lg" style="border: none; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); position: relative; border-left: 8px solid #007bff;">
+                                    <!-- Decoração lateral tipo ticket -->
+                                    <div style="position: absolute; left: -4px; top: 50%; transform: translateY(-50%); width: 8px; height: 40px; background: #28a745; border-radius: 0 4px 4px 0;"></div>
+                                    
+                                    <div class="card-header" style="background: linear-gradient(135deg, #e9f4ff 0%, #cce7ff 100%); border-bottom: 3px solid #007bff; padding: 20px;">
                                         <div class="row align-items-center">
                                             <div class="col-md-8">
-                                                <h6 class="mb-0 fw-bold text-dark">
-                                                    <i class="fas fa-qrcode me-2 text-primary"></i>
+                                                <h6 class="mb-1 fw-bold text-dark" style="font-size: 1.1rem;">
+                                                    <i class="fas fa-qrcode me-2 text-primary" style="font-size: 1.3rem;"></i>
                                                     <?php echo htmlspecialchars($ingresso['titulo_ingresso']); ?>
                                                 </h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar-alt me-1"></i>
+                                                    Ingresso #{$index + 1}
+                                                </small>
                                             </div>
                                             <div class="col-md-4 text-end">
-                                                <span class="badge bg-primary fs-6" style="font-family: 'Courier New', monospace; letter-spacing: 1px;">
-                                                    <?php echo htmlspecialchars($ingresso['codigo_ingresso']); ?>
-                                                </span>
+                                                <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 10px 15px; border-radius: 25px; display: inline-block; box-shadow: 0 4px 15px rgba(0,123,255,0.3);">
+                                                    <span class="badge bg-transparent text-white fs-6" style="font-family: 'Courier New', monospace; letter-spacing: 2px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                                                        <?php echo htmlspecialchars($ingresso['codigo_ingresso']); ?>
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -374,7 +383,7 @@ unset($_SESSION['checkout_start_time']);
                                                             </div>
                                                         </div>
                                                         <div>
-                                                            <div class="fw-bold text-success">Vinculado - <?php echo htmlspecialchars($ingresso['participante_nome']); ?></div>
+                                                            <div class="fw-bold text-success">Ingresso Emitido - <?php echo htmlspecialchars($ingresso['participante_nome']); ?></div>
                                                             <?php if ($ingresso['participante_email']): ?>
                                                             <small class="text-muted">
                                                                 <i class="fas fa-envelope me-1"></i>
@@ -383,81 +392,41 @@ unset($_SESSION['checkout_start_time']);
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
-                                                <?php elseif ($ingresso['status'] === 'transferido'): ?>
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="me-3">
-                                                            <div class="bg-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                                                                <i class="fas fa-exchange-alt text-white"></i>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div class="fw-bold text-info">Transferido - Disponível para vinculação</div>
-                                                            <small class="text-muted">Este ingresso pode ser vinculado a um participante</small>
-                                                        </div>
-                                                    </div>
                                                 <?php else: ?>
                                                     <div class="d-flex align-items-center">
                                                         <div class="me-3">
                                                             <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                                                                <i class="fas fa-user-slash text-white"></i>
+                                                                <i class="fas fa-exclamation-triangle text-white"></i>
                                                             </div>
                                                         </div>
                                                         <div>
-                                                            <div class="fw-bold text-warning">Não Vinculado - Ingresso disponível para uso</div>
+                                                            <div class="fw-bold text-warning">Ingresso aguardando emissão</div>
+                                                            <small class="text-muted">Clique em "Emitir Ingresso" para identificar o portador</small>
                                                         </div>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                         
-                                        <!-- Botões de Ação -->
-                                        <?php if (!$ingresso['participanteid']): ?>
-                                        <div class="row mb-2 g-2">
-                                            <div class="col-6">
-                                                <button class="btn btn-vincular btn-sm w-100" style="height:50px;" onClick="vincularParticipante(<?php echo $ingresso['id']; ?>)">
-                                                    <i class="fas fa-user-plus me-1"></i>
-                                                    Vincular Participante
-                                                </button>
-                                            </div>
-                                            <div class="col-6">
-                                                <button class="btn btn-enviar btn-sm w-100" style="height:50px;" onClick="enviarIngresso(<?php echo $ingresso['id']; ?>)">
-                                                    <i class="fas fa-paper-plane me-1"></i>
-                                                    Enviar Ingresso
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <?php elseif (in_array($ingresso['status'], ['ativo', 'transferido'])): ?>
-                                        <div class="row mb-2 g-2">
-                                            <div class="col-12">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-info-circle me-1"></i>
-                                                    Ingresso já vinculado e pronto para uso
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <?php endif; ?>
-                                        
+                                        <!-- Botão único: Emitir Ingresso -->
                                         <div class="row mb-3">
                                             <div class="col-12">
-                                                <button class="btn btn-visualizar btn-sm w-100" onClick="verIngresso(<?php echo $ingresso['id']; ?>)">
-                                                    <i class="fas fa-eye me-2"></i>
-                                                    Visualizar Ingresso
-                                                </button>
+                                                <a href="https://anysummit.com.br/validar-ingresso.php?h=<?php echo $ingresso['hash_validacao']; ?>" 
+                                                   class="btn btn-primary w-100" 
+                                                   target="_blank"
+                                                   style="background: linear-gradient(135deg, #725EFF 0%, #00C2FF 100%); border: none;">
+                                                    <i class="fas fa-id-card me-2"></i>
+                                                    Emitir Ingresso
+                                                </a>
                                             </div>
                                         </div>
                                         
                                         <!-- Informações do Ingresso -->
                                         <div class="row text-center pt-3" style="border-top: 1px solid #dee2e6;">
-                                            <div class="col-md-6">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-money-bill-wave me-1"></i>
-                                                    <strong>R$ <?php echo number_format($ingresso['preco_unitario'], 2, ',', '.'); ?></strong>
-                                                </small>
-                                            </div>
-                                            <div class="col-md-6">
+                                            <div class="col-12">
                                                 <small class="text-muted">
                                                     <i class="fas fa-info-circle me-1"></i>
-                                                    Status: <?php echo ucfirst($ingresso['status']); ?>
+                                                    Status: <?php echo $ingresso['participante_nome'] ? 'Emitido' : 'Pendente'; ?>
                                                 </small>
                                             </div>
                                         </div>
@@ -472,29 +441,8 @@ unset($_SESSION['checkout_start_time']);
                     </div>
                 </div>
 
-                <!-- Próximos Passos -->
-                <div class="alert alert-info text-start">
-                    <h6><i class="fas fa-info-circle me-2"></i>Próximos Passos:</h6>
-                    <ul class="mb-0">
-                        <li>Vincule ou envie seus ingressos</li>
-                        <li>O ingresso so é valido apos vincular a uma pessoa ou ele se vincular.</li>
-                        <li>Apresente o ingresso (impresso ou digital) no dia do evento</li>
-                        <li>Chegue com antecedência para evitar filas</li>
-                    </ul>
-                </div>
-
                 <!-- Ações -->
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button class="btn btn-primary-gradient me-md-2" onClick="baixarIngressosPDF()">
-                        <i class="fas fa-print me-2"></i>
-                        Ver/Imprimir Ingressos
-                    </button>
-                    <?php if (!empty($ingressos_individuais)): ?>
-                    <button class="btn btn-success me-md-2" onClick="vincularTodosParticipantes()">
-                        <i class="fas fa-users me-2"></i>
-                        Vincular Participantes
-                    </button>
-                    <?php endif; ?>
                     <?php 
                     // Definir URL de voltar
                     $url_voltar = '/';
@@ -522,607 +470,12 @@ unset($_SESSION['checkout_start_time']);
         </div>
     </div>
 
-    <!-- Modal para Vincular Participante -->
-    <div class="modal fade" id="modalVincularParticipante" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Vincular Participante ao Ingresso</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formVincularParticipante">
-                        <input type="hidden" id="ingresso_id" name="ingresso_id">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Código do Ingresso:</label>
-                            <div id="codigo_ingresso_display" class="fw-bold text-primary"></div>
-                        </div>
-                        
-                        <!-- Opção para usar dados do comprador -->
-                        <?php if ($pedido_data && ($pedido_data['comprador_nome_completo'] || $pedido_data['comprador_nome'])): ?>
-                        <div class="mb-3">
-                            <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <i class="fas fa-user-check text-primary me-2"></i>
-                                            <strong class="text-primary">Usar dados do comprador</strong>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-user me-1"></i>
-                                            <?php echo htmlspecialchars($pedido_data['comprador_nome_completo'] ?: $pedido_data['comprador_nome']); ?>
-                                            <?php if ($pedido_data['comprador_email']): ?>
-                                                <br><i class="fas fa-envelope me-1"></i>
-                                                <?php echo htmlspecialchars($pedido_data['comprador_email']); ?>
-                                            <?php endif; ?>
-                                            <?php if ($pedido_data['comprador_celular'] || $pedido_data['comprador_telefone']): ?>
-                                                <br><i class="fas fa-phone me-1"></i>
-                                                <?php echo htmlspecialchars($pedido_data['comprador_celular'] ?: $pedido_data['comprador_telefone']); ?>
-                                            <?php endif; ?>
-                                        </small>
-                                    </div>
-                                    <button type="button" class="btn btn-primary btn-sm ms-3" onclick="usarDadosComprador()" style="min-width: 120px;">
-                                        <i class="fas fa-copy me-1"></i>
-                                        Preencher
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <div class="mb-3">
-                            <label for="participante_nome" class="form-label">Nome Completo *</label>
-                            <input type="text" class="form-control" id="participante_nome" name="participante_nome" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="participante_email" class="form-label">E-mail *</label>
-                            <input type="email" class="form-control" id="participante_email" name="participante_email" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="participante_documento" class="form-label">CPF</label>
-                            <input type="text" class="form-control" id="participante_documento" name="participante_documento" placeholder="000.000.000-00">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="participante_celular" class="form-label">Celular</label>
-                            <input type="text" class="form-control" id="participante_celular" name="participante_celular" placeholder="(11) 99999-9999">
-                        </div>
-
-                        <!-- Campos Adicionais Dinâmicos -->
-                        <?php if (!empty($evento_data['campos_adicionais'])): ?>
-                            <hr class="my-4">
-                            <h6 class="mb-3">
-                                <i class="fas fa-clipboard-list me-2"></i>
-                                Informações Adicionais
-                            </h6>
-                            <?php foreach ($evento_data['campos_adicionais'] as $campo): ?>
-                                <div class="mb-3">
-                                    <label for="campo_<?php echo htmlspecialchars($campo['campo']); ?>" class="form-label">
-                                        <?php echo htmlspecialchars($campo['label']); ?>
-                                        <?php if ($campo['obrigatorio']): ?>
-                                            <span class="text-danger">*</span>
-                                        <?php endif; ?>
-                                    </label>
-
-                                    <?php if ($campo['tipo'] === 'texto'): ?>
-                                        <input type="text" 
-                                               class="form-control" 
-                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
-                                    
-                                    <?php elseif ($campo['tipo'] === 'selecao' && !empty($campo['opcoes'])): ?>
-                                        <select class="form-control" 
-                                                id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                                name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                                <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
-                                            <option value="">Selecione...</option>
-                                            <?php foreach ($campo['opcoes'] as $opcao): ?>
-                                                <option value="<?php echo htmlspecialchars($opcao); ?>">
-                                                    <?php echo htmlspecialchars($opcao); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    
-                                    <?php elseif ($campo['tipo'] === 'url'): ?>
-                                        <input type="url" 
-                                               class="form-control" 
-                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               placeholder="https://exemplo.com"
-                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
-                                    
-                                    <?php elseif ($campo['tipo'] === 'email'): ?>
-                                        <input type="email" 
-                                               class="form-control" 
-                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               placeholder="email@exemplo.com"
-                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
-                                    
-                                    <?php else: ?>
-                                        <input type="text" 
-                                               class="form-control" 
-                                               id="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               name="campo_<?php echo htmlspecialchars($campo['campo']); ?>"
-                                               <?php echo $campo['obrigatorio'] ? 'required' : ''; ?>>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-
-                        <!-- Aviso Importante -->
-                        <div class="alert alert-warning mt-4">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Atenção:</strong> Depois de associar esse voucher a uma pessoa, os dados não poderão ser mais alterados.
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onClick="salvarVinculacao()">Vincular Participante</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Enviar Ingresso -->
-    <div class="modal fade" id="modalEnviarIngresso" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
-                    <h5 class="modal-title">
-                        <i class="fas fa-paper-plane me-2"></i>
-                        Enviar Ingresso
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Envie este ingresso para alguém usar!</strong><br>
-                        A pessoa receberá os dados do ingresso e poderá usá-lo no evento.
-                    </div>
-                    
-                    <form id="formEnviarIngresso">
-                        <input type="hidden" id="enviar_ingresso_id" name="ingresso_id">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Ingresso:</label>
-                            <div id="enviar_codigo_ingresso_display" class="fw-bold text-primary fs-5"></div>
-                            <div id="enviar_tipo_ingresso_display" class="text-muted"></div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="enviar_nome" class="form-label">
-                                <i class="fas fa-user me-1"></i>
-                                Nome Completo *
-                            </label>
-                            <input type="text" class="form-control" id="enviar_nome" name="nome" required 
-                                   placeholder="Nome de quem vai usar o ingresso">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="enviar_email" class="form-label">
-                                <i class="fas fa-envelope me-1"></i>
-                                E-mail *
-                            </label>
-                            <input type="email" class="form-control" id="enviar_email" name="email" required
-                                   placeholder="email@exemplo.com">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="enviar_whatsapp" class="form-label">
-                                <i class="fab fa-whatsapp me-1"></i>
-                                WhatsApp
-                            </label>
-                            <input type="text" class="form-control" id="enviar_whatsapp" name="whatsapp"
-                                   placeholder="(11) 99999-9999">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="enviar_mensagem" class="form-label">
-                                <i class="fas fa-comment me-1"></i>
-                                Mensagem (Opcional)
-                            </label>
-                            <textarea class="form-control" id="enviar_mensagem" name="mensagem" rows="3"
-                                      placeholder="Deixe uma mensagem para quem vai receber o ingresso..."></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn btn-success" onClick="confirmarEnvioIngresso()">
-                        <i class="fas fa-paper-plane me-1"></i>
-                        Enviar Ingresso
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
         function formatPrice(price) {
             return price.toFixed(2).replace('.', ',');
-        }
-        
-        // Variáveis globais
-        const pedidoId = <?php echo json_encode($pedido_data ? $pedido_data['pedidoid'] : null); ?>;
-        const ingressosIndividuais = <?php echo json_encode($ingressos_individuais); ?>;
-        
-        // Dados do comprador para uso no modal
-        const dadosComprador = {
-            nome: <?php echo json_encode($pedido_data ? ($pedido_data['comprador_nome_completo'] ?: $pedido_data['comprador_nome']) : ''); ?>,
-            email: <?php echo json_encode($pedido_data ? $pedido_data['comprador_email'] : ''); ?>,
-            celular: <?php echo json_encode($pedido_data ? ($pedido_data['comprador_celular'] ?: $pedido_data['comprador_telefone']) : ''); ?>,
-            cpf: <?php echo json_encode($pedido_data ? ($pedido_data['comprador_cpf'] ?: $pedido_data['comprador_documento']) : ''); ?>
-        };
-        
-        // Função para usar dados do comprador no modal
-        function usarDadosComprador() {
-            let camposPreenchidos = 0;
-            
-            if (dadosComprador.nome) {
-                document.getElementById('participante_nome').value = dadosComprador.nome;
-                camposPreenchidos++;
-            }
-            if (dadosComprador.email) {
-                document.getElementById('participante_email').value = dadosComprador.email;
-                camposPreenchidos++;
-            }
-            if (dadosComprador.celular) {
-                document.getElementById('participante_celular').value = dadosComprador.celular;
-                camposPreenchidos++;
-            }
-            if (dadosComprador.cpf) {
-                document.getElementById('participante_documento').value = dadosComprador.cpf;
-                camposPreenchidos++;
-            }
-            
-            // Feedback visual
-            const btn = event.target;
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = `<i class="fas fa-check me-1"></i> ${camposPreenchidos} dados copiados!`;
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-success');
-            btn.disabled = true;
-            
-            setTimeout(() => {
-                btn.innerHTML = textoOriginal;
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-primary');
-                btn.disabled = false;
-            }, 3000);
-        }
-        
-        // Função para baixar PDF dos ingressos
-        function baixarIngressosPDF() {
-            if (!pedidoId) {
-                alert('Erro: Pedido não encontrado');
-                return;
-            }
-            
-            // Usar a versão que ficou melhor (visualização/impressão)
-            window.open(`api/gerar-ingressos-pdf.php?pedido_id=${pedidoId}`, '_blank');
-        }
-        
-        // Função de debug para testar a API
-        function debugVincularAPI(ingressoId) {
-            const dadosDebug = {
-                ingresso_id: ingressoId,
-                participante_nome: 'Teste Debug',
-                participante_email: 'debug@teste.com',
-                participante_documento: '123.456.789-00',
-                participante_celular: '(11) 99999-9999'
-            };
-            
-            console.log('=== DEBUG API VINCULAR ===');
-            console.log('Enviando dados:', dadosDebug);
-            
-            fetch('api/vincular-participante.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(dadosDebug)
-            })
-            .then(response => {
-                console.log('Status da resposta:', response.status);
-                return response.text(); // Usar .text() primeiro para ver a resposta bruta
-            })
-            .then(text => {
-                console.log('Resposta bruta:', text);
-                try {
-                    const json = JSON.parse(text);
-                    console.log('JSON parseado:', json);
-                } catch (e) {
-                    console.error('Erro ao parsear JSON:', e);
-                }
-            })
-            .catch(error => {
-                console.error('Erro na requisição:', error);
-            });
-        }
-        
-        // Função para abrir modal de vinculação de participante
-        function vincularParticipante(ingressoId) {
-            const ingresso = ingressosIndividuais.find(i => i.id == ingressoId);
-            if (!ingresso) {
-                alert('Erro: Ingresso não encontrado');
-                return;
-            }
-            
-            console.log('Abrindo modal para ingresso:', ingresso); // Debug
-            
-            // Preencher dados do modal
-            document.getElementById('ingresso_id').value = ingressoId;
-            document.getElementById('codigo_ingresso_display').textContent = ingresso.codigo_ingresso;
-            
-            // Limpar formulário
-            document.getElementById('formVincularParticipante').reset();
-            document.getElementById('ingresso_id').value = ingressoId;
-            
-            // Abrir modal
-            const modal = new bootstrap.Modal(document.getElementById('modalVincularParticipante'));
-            modal.show();
-        }
-        
-        // Função para salvar vinculação
-        async function salvarVinculacao() {
-            const form = document.getElementById('formVincularParticipante');
-            const formData = new FormData(form);
-            
-            // Validar campos obrigatórios
-            const nome = formData.get('participante_nome').trim();
-            const email = formData.get('participante_email').trim();
-            
-            if (!nome || !email) {
-                alert('Por favor, preencha os campos obrigatórios (Nome e E-mail)');
-                return;
-            }
-
-            // Coletar campos adicionais
-            const campos_adicionais = {};
-            const campos_extras = form.querySelectorAll('[name^="campo_"]');
-            
-            // Validar campos adicionais obrigatórios
-            let camposObrigatoriosVazios = [];
-            campos_extras.forEach(campo => {
-                const nomeCampo = campo.name.replace('campo_', '');
-                const valor = campo.value.trim();
-                
-                // Verificar se é obrigatório (tem asterisco na label)
-                const label = form.querySelector(`label[for="${campo.id}"]`);
-                const isObrigatorio = label && label.innerHTML.includes('text-danger');
-                
-                if (isObrigatorio && !valor) {
-                    const labelText = label.textContent.replace('*', '').trim();
-                    camposObrigatoriosVazios.push(labelText);
-                }
-                
-                if (valor) {
-                    campos_adicionais[nomeCampo] = valor;
-                }
-            });
-
-            if (camposObrigatoriosVazios.length > 0) {
-                alert('Por favor, preencha os campos obrigatórios: ' + camposObrigatoriosVazios.join(', '));
-                return;
-            }
-            
-            // Preparar dados para envio
-            const dados = {
-                ingresso_id: formData.get('ingresso_id'),
-                participante_nome: nome,
-                participante_email: email,
-                participante_documento: formData.get('participante_documento').trim(),
-                participante_celular: formData.get('participante_celular').trim(),
-                dados_adicionais: campos_adicionais
-            };
-            
-            // Debug: log dos dados que serão enviados
-            console.log('Dados a serem enviados:', dados);
-            console.log('Ingresso ID:', dados.ingresso_id);
-            console.log('Lista de ingressos:', ingressosIndividuais);
-            
-            try {
-                // Desabilitar botão durante envio
-                const btnSalvar = event.target;
-                btnSalvar.disabled = true;
-                btnSalvar.textContent = 'Vinculando...';
-                
-                const response = await fetch('api/vincular-participante.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dados)
-                });
-                
-                console.log('Response status:', response.status);
-                
-                const result = await response.json();
-                console.log('Response data:', result);
-                
-                if (result.success) {
-                    // Atualizar interface
-                    const participanteSpan = document.getElementById(`participante-${dados.ingresso_id}`);
-                    if (participanteSpan) {
-                        participanteSpan.textContent = dados.participante_nome;
-                    }
-                    
-                    // Fechar modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalVincularParticipante'));
-                    modal.hide();
-                    
-                    alert('Participante vinculado com sucesso!');
-                    
-                    // Recarregar página para atualizar dados
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                    
-                } else {
-                    alert('Erro ao vincular participante: ' + result.message);
-                }
-                
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('Erro de conexão. Tente novamente.');
-            } finally {
-                // Reabilitar botão
-                btnSalvar.disabled = false;
-                btnSalvar.textContent = 'Vincular Participante';
-            }
-        }
-        
-        // Função para vincular todos os participantes de uma vez
-        function vincularTodosParticipantes() {
-            const naoVinculados = ingressosIndividuais.filter(i => !i.participanteid);
-            
-            if (naoVinculados.length === 0) {
-                alert('Todos os ingressos já estão vinculados!');
-                return;
-            }
-            
-            if (confirm(`Deseja vincular participantes aos ${naoVinculados.length} ingressos não vinculados?`)) {
-                // Para simplicidade, abrir modal do primeiro não vinculado
-                vincularParticipante(naoVinculados[0].id);
-            }
-        }
-        
-        // Função para enviar ingresso
-        function enviarIngresso(ingressoId) {
-            const ingresso = ingressosIndividuais.find(i => i.id == ingressoId);
-            if (!ingresso) {
-                alert('Erro: Ingresso não encontrado');
-                return;
-            }
-            
-            // Preencher dados do modal
-            document.getElementById('enviar_ingresso_id').value = ingressoId;
-            document.getElementById('enviar_codigo_ingresso_display').textContent = ingresso.codigo_ingresso;
-            document.getElementById('enviar_tipo_ingresso_display').textContent = ingresso.titulo_ingresso;
-            
-            // Limpar formulário
-            document.getElementById('formEnviarIngresso').reset();
-            document.getElementById('enviar_ingresso_id').value = ingressoId;
-            
-            // Abrir modal
-            const modal = new bootstrap.Modal(document.getElementById('modalEnviarIngresso'));
-            modal.show();
-        }
-        
-        // Função para confirmar envio do ingresso
-        async function confirmarEnvioIngresso() {
-            const form = document.getElementById('formEnviarIngresso');
-            const formData = new FormData(form);
-            
-            // Validar campos obrigatórios
-            const nome = formData.get('nome').trim();
-            const email = formData.get('email').trim();
-            
-            if (!nome || !email) {
-                alert('Por favor, preencha os campos obrigatórios (Nome e E-mail)');
-                return;
-            }
-            
-            const ingressoId = formData.get('ingresso_id');
-            const ingresso = ingressosIndividuais.find(i => i.id == ingressoId);
-            
-            // Preparar dados para webhook
-            const dadosEnvio = {
-                ingresso: {
-                    id: ingresso.id,
-                    codigo: ingresso.codigo_ingresso,
-                    titulo: ingresso.titulo_ingresso,
-                    preco: ingresso.preco_unitario,
-                    status: ingresso.status
-                },
-                destinatario: {
-                    nome: nome,
-                    email: email,
-                    whatsapp: formData.get('whatsapp').trim(),
-                    mensagem: formData.get('mensagem').trim()
-                },
-                evento: {
-                    id: <?php echo json_encode($pedido_data ? $pedido_data['eventoid'] : null); ?>
-                },
-                pedido: {
-                    id: pedidoId,
-                    codigo: <?php echo json_encode($pedido_data ? $pedido_data['codigo_pedido'] : null); ?>
-                },
-                remetente: {
-                    nome: <?php echo json_encode($pedido_data ? $pedido_data['comprador_nome'] : null); ?>,
-                    email: <?php echo json_encode($pedido_data ? $pedido_data['comprador_email'] : null); ?>
-                }
-            };
-            
-            try {
-                // Desabilitar botão durante envio
-                const btnEnviar = event.target;
-                btnEnviar.disabled = true;
-                btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Enviando...';
-                
-                console.log('Enviando dados:', dadosEnvio); // Debug
-                
-                const response = await fetch('api/enviar-ingresso.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dadosEnvio)
-                });
-                
-                console.log('Response status:', response.status); // Debug
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const result = await response.json();
-                console.log('Result:', result); // Debug
-                
-                if (result.success) {
-                    // Fechar modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEnviarIngresso'));
-                    modal.hide();
-                    
-                    alert('Ingresso enviado com sucesso!');
-                    
-                    // Opcional: Recarregar página para atualizar status
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                    
-                } else {
-                    alert('Erro ao enviar ingresso: ' + result.message);
-                    console.error('Erro do servidor:', result);
-                }
-                
-            } catch (error) {
-                console.error('Erro completo:', error);
-                alert('Erro de conexão: ' + error.message + '\n\nVerifique o console para mais detalhes.');
-            } finally {
-                // Reabilitar botão
-                btnEnviar.disabled = false;
-                btnEnviar.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Enviar Ingresso';
-            }
-        }
-        
-        // Função para visualizar ingresso individual
-        function verIngresso(ingressoId) {
-            // Abrir página de visualização do ingresso específico
-            window.open(`api/ver-ingresso-individual.php?ingresso_id=${ingressoId}`, '_blank');
         }
 
         function loadOrderDetails() {
@@ -1142,9 +495,13 @@ unset($_SESSION['checkout_start_time']);
                 });
                 
                 if (carrinho.desconto > 0) {
+                    const codigoCupom = carrinho.cupom ? ` (${carrinho.cupom.codigo})` : '';
                     html += `
                         <div class="d-flex justify-content-between mb-2 text-success">
-                            <span>Desconto aplicado:</span>
+                            <span>
+                                <i class="fas fa-tag me-1"></i>
+                                Desconto aplicado${codigoCupom}:
+                            </span>
                             <span>-R$ ${formatPrice(carrinho.desconto)}</span>
                         </div>
                     `;
@@ -1174,11 +531,6 @@ unset($_SESSION['checkout_start_time']);
                 document.getElementById('order-details').innerHTML = html;
             }
             <?php endif; ?>
-        }
-
-        function downloadTickets() {
-            // Simular download dos ingressos
-            alert('Download dos ingressos iniciado! Verifique sua pasta de Downloads.');
         }
 
         // Inicializar página
